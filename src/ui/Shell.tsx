@@ -6,6 +6,7 @@ import type { EntryDraft } from "./EntryForm";
 import { api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
+import { Home } from "./Home";
 
 const screens = [
   { id: "home", label: "Home", phoneOnly: true },
@@ -29,7 +30,8 @@ export function Shell({ me }: { me: Me }) {
 }
 
 function ShellInner({ me }: { me: Me }) {
-  const [screen, setScreen] = useState<string>(location.hash.slice(1) || "budget");
+  const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
+  const [screen, setScreen] = useState<string>(location.hash.slice(1) || (isPhone ? "home" : "budget"));
   const [lists, setLists] = useState<Lists | null>(null);
   const [draft, setDraft] = useState<EntryDraft | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -77,8 +79,10 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
-        {screen === "budget" || screen === "home" ? (
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={screen === "home" && isPhone ? { paddingTop: 0 } : undefined}>
+        {screen === "home" && lists ? (
+          <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} />
+        ) : screen === "budget" || screen === "home" ? (
           <Budget me={me} showBarsDefault={me.showBars ?? true} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         ) : screen === "transactions" && lists ? (
           <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />

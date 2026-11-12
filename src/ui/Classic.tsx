@@ -198,34 +198,46 @@ function Editable({ value, onSave, muted, placeholder }: { value: number; onSave
   return <input autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setText(null); }} className="w-full text-right rounded px-1 outline-none text-[13px]" style={{ border: "1px solid var(--navy)", background: "var(--card)", height: 24 }} />;
 }
 
-/** The "Variable Projected Workbook" as a panel with the same figures. */
+/** The "Variable Projected Workbook" as a panel: one shaded box per step, the result row of each box highlighted. */
 function Explain({ data }: { data: ClassicPayload }) {
   const list = data.lines.filter((l) => l.section === "variable" && LIST.has(l.name) && l.projection);
-  const H = ({ children }: { children: ReactNode }) => <div className="text-[11px] font-semibold uppercase tracking-wider pt-3 pb-1" style={{ color: "var(--muted)" }}>{children}</div>;
-  const R = ({ k, v, bold }: { k: string; v: string; bold?: boolean }) => <div className="flex justify-between text-[13px] py-1" style={{ borderTop: "1px solid var(--border-soft)", fontWeight: bold ? 700 : undefined }}><span style={{ color: bold ? undefined : "var(--text-2)" }}>{k}</span><span>{v}</span></div>;
-  const person = (p: "D" | "E", name: string) => { const s = data.people[p]; return (
-    <>
-      <H>{name}</H>
-      <R k="Projected variable (½ shared + own)" v={formatMoney(s.projectedVariable)} />
-      <R k="Plus recurring (own + ½ shared, budget)" v={formatMoney(s.projectedVariable + s.recurringBudget)} />
-      <R k={`Minus income (${s.incomeActualTyped ? "received" : "expected"})`} v={formatMoney(s.projectedSavings)} bold />
-    </>
-  ); };
-  return (
-    <div className="flex flex-col">
-      <h2 className="font-bold text-base">How the projection works</h2>
-      <p className="text-[13px] mt-1" style={{ color: "var(--text-2)" }}>{data.daysElapsed} days elapsed, {data.daysLeft} left. Each list below spends at its average daily rate for the days left; every other line counts its budget.</p>
-      {list.map((l) => (
-        <div key={l.key}>
-          <H>{l.column === "shared" ? "" : l.column === "D" ? "David · " : "Elizabeth · "}{l.name}</H>
-          <R k="Total remaining" v={formatMoney(l.projection!.remaining)} />
-          <R k="Avg daily spend so far" v={formatMoney(l.projection!.avgDaily)} />
-          <R k="Projected remaining" v={formatMoney(l.projection!.projectedRemaining)} bold />
+  const colTone = (c: ClassicColumn) => tone(COLS.find((x) => x.id === c)!.tone);
+  const Box = ({ title, t, rows, note }: { title: string; t: ReturnType<typeof tone>; rows: { k: string; v: number; result?: boolean }[]; note?: string }) => (
+    <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: `1px solid ${t.box}` }}>
+      <div className="px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: t.box, color: "#1A1D23" }}>{title}</div>
+      {note && <div className="px-3.5 pt-2 text-xs" style={{ color: "var(--muted)" }}>{note}</div>}
+      {rows.map((r, i) => (
+        <div key={i} className="flex justify-between gap-3 px-3.5 text-[13px]" style={{ padding: r.result ? "9px 14px" : "7px 14px", borderTop: i ? "1px solid var(--border-soft)" : undefined, fontWeight: r.result ? 700 : undefined, background: r.result ? t.soft : undefined, color: r.result ? "#1A1D23" : undefined }}>
+          <span style={{ color: r.result ? "#1A1D23" : "var(--text-2)" }}>{r.k}</span><span style={{ color: r.result && r.v < 0 ? "#8c1d18" : undefined }}>{formatMoney(r.v)}</span>
         </div>
       ))}
-      <H>Shared variable</H>
-      <R k="Projected spend" v={formatMoney(data.sharedProjectedSpend)} />
-      <R k="Half" v={formatMoney(Math.round(data.sharedProjectedSpend / 2))} bold />
+    </div>
+  );
+  const person = (p: "D" | "E", name: string) => { const s = data.people[p]; const t = colTone(p); return (
+    <Box key={p} title={`${name} · projected savings`} t={t} rows={[
+      { k: "Projected variable (½ shared + own)", v: s.projectedVariable },
+      { k: "Plus recurring (own + ½ shared, budget)", v: s.projectedVariable + s.recurringBudget },
+      { k: `Income (${s.incomeActualTyped ? "received" : "expected"})`, v: s.incomeActualTyped ? s.incomeActual : s.incomeBudget },
+      { k: "Projected savings (income − spend)", v: s.projectedSavings, result: true },
+    ]} />
+  ); };
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <h2 className="font-bold text-base">How the projection works</h2>
+        <p className="text-[13px] mt-1" style={{ color: "var(--text-2)" }}><strong>{data.daysElapsed}</strong> days elapsed, <strong>{data.daysLeft}</strong> left. Each list below keeps spending at its average daily rate for the days left; every other line counts its budget.</p>
+      </div>
+      {list.map((l) => (
+        <Box key={l.key} title={`${l.column === "shared" ? "Shared" : l.column === "D" ? "David" : "Elizabeth"} · ${l.name}`} t={colTone(l.column)} rows={[
+          { k: `Remaining now (budget ${formatMoney(l.budget)} − spent ${formatMoney(l.actual)})`, v: l.projection!.remaining },
+          { k: `Average daily spend so far`, v: l.projection!.avgDaily },
+          { k: `Projected remaining at month end`, v: l.projection!.projectedRemaining, result: true },
+        ]} />
+      ))}
+      <Box title="Shared variable · projected spend" t={colTone("shared")} note="Budget minus the projected remaining of the three lists; the other shared lines count their budget." rows={[
+        { k: "Projected spend", v: data.sharedProjectedSpend },
+        { k: "Each person's half", v: Math.round(data.sharedProjectedSpend / 2), result: true },
+      ]} />
       {person("D", "David")}
       {person("E", "Elizabeth")}
     </div>

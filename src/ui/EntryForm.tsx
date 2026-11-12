@@ -45,7 +45,7 @@ export function emptyDraft(lists: Lists, me: { initial?: string }, accountId?: s
   };
 }
 
-const field = "w-full rounded-lg px-3 py-2.5 text-[15px] outline-none";
+const field = "w-full rounded-lg px-3 py-2.5 text-[15px] outline-none sel";
 const fieldStyle = { border: "1px solid var(--field)", background: "var(--card)", color: "var(--text)" } as const;
 const chip = (on: boolean) => ({
   border: on ? "2px solid var(--navy)" : "1px solid var(--field)", background: on ? "var(--selected)" : "var(--card)", color: on ? "var(--accent-text)" : "var(--text-2)",

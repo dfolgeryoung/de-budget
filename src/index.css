@@ -87,3 +87,12 @@ body {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .stripes { background: repeating-linear-gradient(135deg, var(--green) 0 5px, var(--green-stripe) 5px 10px); }
+
+/* Styled selects: no native arrow, our own chevron with room for it */
+select.sel {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa3af' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 0.7rem center;
+}
+select.sel.on { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>"); }

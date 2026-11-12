@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { formatMoney } from "../budget/money";
 import { addMonths } from "../budget/dates";
 import type { MonthPayload } from "../server/month";
+import { Chevron } from "./icons";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
@@ -46,9 +47,9 @@ export function Budget({ showBars }: { showBars: boolean }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button aria-label="Previous month" onClick={() => setMonth(addMonths(data.month, -1))} className="w-9 h-9 rounded-full" style={{ border: "1px solid var(--field)", background: "var(--card)" }}>‹</button>
+          <button aria-label="Previous month" onClick={() => setMonth(addMonths(data.month, -1))} className="w-9 h-9 rounded-full inline-flex items-center justify-center" style={{ border: "1px solid var(--field)", background: "var(--card)", color: "var(--muted)" }}><Chevron dir="left" /></button>
           <h1 className="text-xl font-bold">{label(data.month)}</h1>
-          <button aria-label="Next month" onClick={() => setMonth(addMonths(data.month, 1))} className="w-9 h-9 rounded-full" style={{ border: "1px solid var(--field)", background: "var(--card)" }}>›</button>
+          <button aria-label="Next month" onClick={() => setMonth(addMonths(data.month, 1))} className="w-9 h-9 rounded-full inline-flex items-center justify-center" style={{ border: "1px solid var(--field)", background: "var(--card)", color: "var(--muted)" }}><Chevron dir="right" /></button>
         </div>
         <div className="flex items-center gap-3 rounded-xl px-4 py-2" style={{ background: rtaColor.bg, color: rtaColor.fg, boxShadow: rtaColor.glow }}>
           <span className="text-xs font-semibold uppercase tracking-wider">Ready to Assign</span>
@@ -84,7 +85,7 @@ export function Budget({ showBars }: { showBars: boolean }) {
                 className="w-full grid text-left text-[13px] font-semibold px-4 py-2"
                 style={{ gridTemplateColumns: "minmax(0,1fr) 110px 110px 130px", background: "var(--group)", color: "var(--text-2)", borderTop: "1px solid var(--border)" }}
               >
-                <span>{open ? "▾" : "▸"} {g.name}</span>
+                <span className="inline-flex items-center gap-1.5"><Chevron dir={open ? "down" : "right"} size={12} /> {g.name}</span>
                 <span className="text-right hidden md:block">{formatMoney(tot("assigned"))}</span>
                 <span className="text-right hidden md:block">{formatMoney(tot("activity"))}</span>
                 <span className="text-right">{formatMoney(tot("available"))}</span>

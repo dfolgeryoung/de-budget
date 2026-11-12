@@ -5,7 +5,7 @@ import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
 import { EntryForm, draftFromRow, emptyDraft, type EntryDraft } from "./EntryForm";
 import { Sheet } from "./Sheet";
-import { EntryRow, LEDGER_COLS } from "./EntryRow";
+import { EntryRow, LEDGER_COLS, LEDGER_MIN } from "./EntryRow";
 import type { MonthPayload } from "../server/month";
 import { Select } from "./Select";
 
@@ -149,6 +149,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         <button onClick={() => setOnlyMismatch((v) => !v)} className={"pill" + (onlyMismatch ? " on" : "")} style={{ background: onlyMismatch ? "var(--navy)" : "var(--card)", color: onlyMismatch ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyMismatch ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Bank mismatches</span></button>
       </div>
 
+      {/* below LEDGER_MIN the entry box and ledger scroll sideways together rather than clipping the last columns */}
+      <div className="flex flex-col gap-3 overflow-x-auto pb-1"><div className="flex flex-col gap-3" style={{ minWidth: LEDGER_MIN }}>
       {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); load(); }} />}
 
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -230,6 +232,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
           </div>
         ))}
       </div>
+      </div></div>
     </div>
   );
 }

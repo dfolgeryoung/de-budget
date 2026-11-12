@@ -8,7 +8,9 @@ import { Select, Popover, type SelectOption } from "./Select";
 import { ArrowRight, Calendar, Check } from "./icons";
 
 /** Column template shared by the ledger header, ledger rows and the entry rows, so everything lines up. */
-export const LEDGER_COLS = "96px minmax(130px,1.2fr) 130px minmax(150px,1fr) minmax(80px,0.9fr) 110px 92px 92px 96px 28px";
+export const LEDGER_COLS = "86px minmax(100px,1.2fr) minmax(84px,0.8fr) minmax(110px,1fr) minmax(50px,0.8fr) minmax(70px,0.7fr) 82px 82px 86px 28px";
+/** the narrowest the ledger grid goes before the card scrolls sideways instead of clipping */
+export const LEDGER_MIN = 860;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const pretty = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
@@ -245,7 +247,7 @@ function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; 
   }
   return (
     <>
-      <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="fld flex items-center gap-1 rounded-md px-2 min-w-0 overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
+      <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="fld flex items-center gap-1 rounded-md px-2 min-w-0 w-full overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
         {chosen.length === 0 && <span className="text-[13px] truncate">Tags</span>}
         {chosen.map((t) => <span key={t.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0 leading-4" style={{ background: t.color, color: "#1A1D23" }}>{t.name}</span>)}
       </button>

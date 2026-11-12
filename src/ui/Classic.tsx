@@ -39,10 +39,10 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
   const lines = (c: ClassicColumn, s: "recurring" | "variable") => data.lines.filter((l) => l.column === c && l.section === s);
 
   const Row = ({ label, budget, actual, bold, bg, onBudget, children }: { label: ReactNode; budget?: number | null; actual?: number | null; bold?: boolean; bg?: string; onBudget?: (v: number) => void; children?: ReactNode }) => (
-    <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: bold ? "9px 14px" : "8px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: bold ? 700 : undefined, background: bg }}>
+    <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: bold ? "9px 14px" : "8px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: bold ? 700 : undefined, background: bg, color: bg ? "#1A1D23" : undefined }}>
       <span className="min-w-0 truncate flex items-center gap-2">{label}{children}</span>
       <span className="text-right">{budget == null ? "" : onBudget ? <Editable value={budget} onSave={onBudget} muted={!bold} /> : <span style={{ color: bold ? undefined : "var(--muted)" }}>{formatMoney(budget)}</span>}</span>
-      <span className="text-right" style={{ color: actual === 0 ? "var(--faint)" : undefined }}>{actual == null ? "" : actual === 0 ? "—" : formatMoney(actual)}</span>
+      <span className="text-right" style={{ color: actual === 0 ? (bg ? "#6B7684" : "var(--faint)") : undefined }}>{actual == null ? "" : actual === 0 ? "—" : formatMoney(actual)}</span>
     </div>
   );
 
@@ -76,8 +76,8 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
     const t = tone(p === "D" ? "david" : "eliz");
     const s = data.people[p];
     const line = (label: ReactNode, budget: ReactNode, actual: ReactNode, opts: { bold?: boolean; color?: string; bg?: string } = {}) => (
-      <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: "7px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: opts.bold ? 700 : undefined, color: opts.color, background: opts.bg }}>
-        <span style={{ color: opts.color ?? (opts.bold ? undefined : "var(--muted)") }}>{label}</span><span className="text-right" style={{ color: opts.bold ? undefined : "var(--muted)" }}>{budget}</span><span className="text-right">{actual}</span>
+      <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: "7px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: opts.bold ? 700 : undefined, color: opts.bg ? "#1A1D23" : opts.color, background: opts.bg }}>
+        <span style={{ color: opts.bg ? "#1A1D23" : opts.color ?? (opts.bold ? undefined : "var(--muted)") }}>{label}</span><span className="text-right" style={{ color: opts.bold ? undefined : "var(--muted)" }}>{budget}</span><span className="text-right" style={{ color: opts.bg ? "#1A1D23" : undefined }}>{actual}</span>
       </div>
     );
     return (
@@ -89,7 +89,7 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
         {line("Savings so far", formatMoney(s.savingsBudget), <span style={{ color: s.savingsActual < 0 ? "var(--red-text)" : "var(--green-text)", fontWeight: 600 }}>{formatMoney(s.savingsActual)}</span>)}
         {line(<span className="inline-flex items-center gap-1.5">Projected savings<button aria-label="How the projection works" onClick={() => setExplain(true)} className="inline-flex w-4 h-4 rounded-full items-center justify-center text-[10px] font-bold" style={{ border: "1.5px solid currentColor" }}>i</button></span>, "", <span style={{ color: s.projectedSavings < 0 ? "var(--red-text)" : "var(--green-text)" }}>{formatMoney(s.projectedSavings)}</span>, { bold: true, color: t.dark })}
         {line("Retirement + 529 contributions", "", formatMoney(s.contributions))}
-        {line("Total put away", "", <span style={{ color: s.putAway < 0 ? "var(--red-text)" : undefined }}>{formatMoney(s.putAway)}</span>, { bold: true, bg: t.soft })}
+        {line("Total put away", "", <span style={{ color: s.putAway < 0 ? "#8c1d18" : "#1A1D23" }}>{formatMoney(s.putAway)}</span>, { bold: true, bg: t.soft })}
       </div>
     );
   };

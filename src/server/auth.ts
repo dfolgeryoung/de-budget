@@ -28,7 +28,21 @@ export const authConfig: AuthConfig = {
   pages: { signIn: "/signin", error: "/signin" },
 };
 
-export const handleAuth = (req: Request) => Auth(req, authConfig);
+/**
+ * Behind Vercel's proxy the function sees http://host/...; the real scheme and host arrive in
+ * X-Forwarded-Proto / X-Forwarded-Host. Auth.js builds redirect URIs from the request URL, so fix it first.
+ */
+export function externalRequest(req: Request): Request {
+  const url = new URL(req.url);
+  const proto = req.headers.get("x-forwarded-proto");
+  const host = req.headers.get("x-forwarded-host");
+  if (proto) url.protocol = `${proto.split(",")[0]!.trim()}:`;
+  if (host) url.host = host.split(",")[0]!.trim();
+  if (url.href === req.url) return req;
+  return new Request(url, req);
+}
+
+export const handleAuth = (req: Request) => Auth(externalRequest(req), authConfig);
 
 export interface SessionUser {
   id: string;
@@ -38,7 +52,7 @@ export interface SessionUser {
 
 /** Read the session from the request cookies; null when signed out. */
 export async function getSessionUser(req: Request): Promise<SessionUser | null> {
-  const url = new URL(req.url);
+  const url = new URL(externalRequest(req).url);
   const sessionReq = new Request(`${url.origin}/api/auth/session`, { headers: req.headers });
   const res = await Auth(sessionReq, authConfig);
   if (!res.ok) return null;

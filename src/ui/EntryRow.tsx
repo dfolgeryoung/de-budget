@@ -13,7 +13,7 @@ export const LEDGER_COLS = "96px minmax(130px,1.2fr) 130px minmax(150px,1fr) min
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const pretty = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
 const fs = { border: "1px solid var(--field)", backgroundColor: "var(--card)", color: "var(--text)", height: 34 } as const;
-const field = "rounded-md px-2.5 text-[13px] outline-none w-full min-w-0 focus:ring-2";
+const field = "fld rounded-md px-2.5 text-[13px] outline-none w-full min-w-0";
 const pillCls = "inline-flex items-center rounded-full text-[12px] font-semibold leading-none select-none";
 const pill = (on: boolean, disabled = false) => ({ height: 32, padding: "0 14px", background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}`, opacity: disabled ? 0.5 : 1 });
 
@@ -128,7 +128,7 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
 
       {/* the main row: the same columns as the ledger */}
       <div className="grid items-center px-4 py-2" style={{ gridTemplateColumns: LEDGER_COLS, gap: 10 }}>
-        <span className="flex items-center rounded-md min-w-0" style={fs}>
+        <span className="fld flex items-center rounded-md min-w-0" style={fs}>
           <input aria-label="Date" value={dateText} onChange={(e) => setDateText(e.target.value)} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") commitDate(); else enterSaves(e); }} className="w-full min-w-0 px-2.5 text-[13px] bg-transparent outline-none h-full" />
           <label aria-label="Pick a date" title="Pick a date" className="relative w-7 h-full inline-flex items-center justify-center cursor-pointer shrink-0" style={{ color: "var(--muted)" }}>
             <Calendar />
@@ -171,7 +171,7 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
         <TagPicker lists={lists} value={d.tagIds} onChange={(tagIds) => set({ tagIds })} />
         <input aria-label="Outflow" value={out} onChange={(e) => { setOut(e.target.value); if (e.target.value) setInn(""); }} onKeyDown={enterSaves} inputMode="decimal" placeholder="0.00" className={field + " text-right"} style={fs} />
         <input aria-label="Inflow" value={inn} onChange={(e) => { setInn(e.target.value); if (e.target.value) { setOut(""); if (!d.categoryId && !d.transfer) set({ categoryId: "rta" }); } }} onKeyDown={enterSaves} inputMode="decimal" placeholder="0.00" className={field + " text-right"} style={{ ...fs, color: "var(--green-text)" }} />
-        <button aria-label={isNew ? "Save entry" : "Save changes"} title={isNew ? "Save (Enter)" : "Save changes (Enter)"} onClick={save} disabled={busy} className="rounded-md inline-flex items-center justify-center text-white disabled:opacity-60 justify-self-end" style={{ height: 34, width: 60, padding: 0, lineHeight: 0, background: dup ? "var(--yellow)" : "var(--green-solid)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" }}><Check size={18} /></button>
+        <button aria-label={isNew ? "Save entry" : "Save changes"} title={isNew ? "Save (Enter)" : "Save changes (Enter)"} onClick={save} disabled={busy} className="rounded-md inline-flex items-center justify-center text-white disabled:opacity-60 justify-self-end" style={{ height: 34, width: 48, padding: 0, lineHeight: 0, background: dup ? "var(--yellow)" : "var(--green-solid)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)", transition: "filter 100ms" }} onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")} onMouseLeave={(e) => (e.currentTarget.style.filter = "")}><Check size={18} /></button>
         {onCancel ? <button aria-label="Cancel" title="Cancel (Esc)" onClick={onCancel} className="h-[34px] inline-flex items-center justify-center text-lg" style={{ color: "var(--muted)" }}>✕</button> : <span />}
       </div>
 
@@ -227,7 +227,7 @@ function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; 
   const chosen = lists.tags.filter((t) => value.includes(t.id));
   return (
     <>
-      <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex items-center gap-1 rounded-md px-2 min-w-0 overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
+      <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="fld flex items-center gap-1 rounded-md px-2 min-w-0 overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
         {chosen.length === 0 && <span className="text-[13px] truncate">Tags</span>}
         {chosen.map((t) => <span key={t.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0 leading-4" style={{ background: t.color, color: "#1A1D23" }}>{t.name}</span>)}
       </button>

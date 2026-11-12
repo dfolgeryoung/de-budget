@@ -63,15 +63,15 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{acct ? acct.name : "Transactions"}</h1>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="fld rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
       </div>
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!month} ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} searchable={false} />
         {lists.tags.length > 0 && <Select pill on={!!tag} ariaLabel="Tag filter" value={tag} onChange={setTag} placeholder="Tags" options={[{ value: "", label: "All tags" }, ...lists.tags.map((t) => ({ value: t.id, label: t.name }))]} />}
-        <button onClick={() => setOnlyHidden((v) => !v)} className="pill" style={{ background: onlyHidden ? "var(--navy)" : "var(--card)", color: onlyHidden ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyHidden ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Hidden only</span></button>
-        <button onClick={() => setOnlyMismatch((v) => !v)} className="pill" style={{ background: onlyMismatch ? "var(--navy)" : "var(--card)", color: onlyMismatch ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyMismatch ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Bank mismatches</span></button>
+        <button onClick={() => setOnlyHidden((v) => !v)} className={"pill" + (onlyHidden ? " on" : "")} style={{ background: onlyHidden ? "var(--navy)" : "var(--card)", color: onlyHidden ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyHidden ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Hidden only</span></button>
+        <button onClick={() => setOnlyMismatch((v) => !v)} className={"pill" + (onlyMismatch ? " on" : "")} style={{ background: onlyMismatch ? "var(--navy)" : "var(--card)", color: onlyMismatch ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyMismatch ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Bank mismatches</span></button>
       </div>
 
       {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); load(); }} />}

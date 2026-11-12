@@ -85,6 +85,12 @@ html, body, #root { height: 100%; }
 /* Pills (filters, options) share one size so rows of them line up; the text is trimmed to cap height so it sits
    dead-centre whatever the font's ascent/descent (Barlow's are lopsided). Older browsers get a 1px nudge instead. */
 .pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; flex-shrink: 0; }
+.pill:not(.on):not([aria-pressed="true"]):not(:disabled):hover { background: var(--hover) !important; border-color: var(--muted) !important; }
+.pill.on:hover, .pill[aria-pressed="true"]:hover { filter: brightness(1.12); }
+/* entry fields and dropdown triggers: a darker edge under the cursor, the accent edge while focused */
+.fld { transition: border-color 100ms, box-shadow 100ms; }
+.fld:hover { border-color: var(--muted) !important; }
+.fld:focus, .fld:focus-within { border-color: var(--accent-text) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-text) 22%, transparent); outline: none; }
 .tb { text-box: trim-both cap alphabetic; }
 /* a trimmed label that also truncates must not clip its descenders */
 .tb.truncate { overflow: clip; overflow-clip-margin: 4px; }

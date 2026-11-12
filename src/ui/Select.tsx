@@ -15,8 +15,8 @@ export function Popover({ anchor, open, onClose, width = 220, children, panelRef
     const w = Math.max(r.width, width);
     const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
     const below = window.innerHeight - r.bottom - 8, above = r.top - 8;
-    if (below >= 240 || below >= above) setPos({ top: r.bottom + 4, left, width: w, maxH: Math.min(560, below) });
-    else setPos({ bottom: window.innerHeight - r.top + 4, left, width: w, maxH: Math.min(560, above) });
+    if (below >= 240 || below >= above) setPos({ top: r.bottom + 4, left, width: w, maxH: Math.min(720, below) });
+    else setPos({ bottom: window.innerHeight - r.top + 4, left, width: w, maxH: Math.min(720, above) });
   }, [open, anchor, width]);
   useEffect(() => {
     if (!open) return;
@@ -84,7 +84,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
     <>
       <button ref={btn} type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setOpen(true); } }}
-        className={(pill ? "pill " : "inline-flex items-center gap-1.5 ") + "min-w-0 outline-none focus-visible:ring-2 " + className} style={{ ...trig, ...style }}>
+        className={(pill ? "pill " + (on ? "on " : "") : "fld inline-flex items-center gap-1.5 ") + "min-w-0 outline-none " + className} style={{ ...trig, ...style }}>
         {prefix}
         <span className="tb truncate flex-1 text-left leading-none">{current ? current.label : placeholder}</span>
         <Chevron dir="down" size={pill ? 12 : 14} className="shrink-0" style={{ opacity: 0.7, transform: open ? "rotate(180deg)" : undefined }} />

@@ -131,7 +131,8 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const rtaColor = rta === 0 ? { bg: "var(--green-solid)", fg: "#fff", glow: "0 0 0 3px rgba(47,191,98,0.18), 0 4px 14px rgba(47,191,98,0.35)" } : rta > 0 ? { bg: "var(--yellow-bg)", fg: "var(--yellow-text)", glow: "none" } : { bg: "var(--red-bg)", fg: "var(--red-text)", glow: "none" };
   const visibleIds = data.groups.flatMap((g) => g.categories).filter((id) => !data.categories[id]?.hidden);
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
-  const tb = "inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold";
+  const tb = "tb-btn inline-flex items-center gap-1.5 rounded-md px-2.5 h-7 text-[13px] font-semibold leading-none";
+  const ic = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
   const panel = open ? (
     <CategoryPanel
       key={open}
@@ -180,10 +181,10 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
         <div className="flex-1 min-w-0 rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap" style={{ background: "var(--card-alt)", borderBottom: "1px solid var(--border)" }}>
             <div className="flex items-center gap-1" style={{ color: "var(--accent-text)" }}>
-              <button className={tb} onClick={() => toast("Adding categories arrives with Settings in phase 4")}>+ Category</button>
-              <button className={tb} onClick={undo}>Undo</button>
-              <button className={tb} onClick={redo}>Redo</button>
-              <button className={tb} onClick={async () => setRecent(recent ? null : await api(`/moves/${data.month}`))}>Recent moves</button>
+              <button className={tb} onClick={() => toast("Adding categories arrives with Settings in phase 4")}><svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Category</button>
+              <button className={tb} onClick={undo} title="Undo the last move"><svg {...ic}><polyline points="9 14 4 9 9 4" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg>Undo</button>
+              <button className={tb} onClick={redo} title="Redo"><svg {...ic}><polyline points="15 14 20 9 15 4" /><path d="M20 9H10a6 6 0 0 0 0 12h3" /></svg>Redo</button>
+              <button className={tb + (recent ? " on" : "")} onClick={async () => setRecent(recent ? null : await api(`/moves/${data.month}`))}><svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>Recent moves</button>
             </div>
             <div className="flex rounded-md p-0.5" style={{ background: "var(--group)" }} role="group" aria-label="Row density">
               <button aria-label="Show progress bars" title="Show progress bars" aria-pressed={bars} onClick={() => setBars(true)} className="w-9 h-7 rounded inline-flex items-center justify-center" style={bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>

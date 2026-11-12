@@ -190,8 +190,9 @@ function goalFor(goals: GoalIn[], categoryId: string, month: MonthKey): GoalIn |
 export function neededThisMonth(goal: GoalIn | null, carriedIn: Cents, available: Cents, month: MonthKey): Cents {
   if (!goal) return 0;
   if (goal.targetDate) {
+    // what is still missing before this month's assignment, spread over the months left (this one included)
     const left = Math.max(1, monthsBetween(month, monthOf(goal.targetDate)) + 1);
-    return Math.max(0, Math.ceil(Math.max(0, goal.amount - available) / left));
+    return Math.max(0, Math.ceil(Math.max(0, goal.amount - carriedIn) / left));
   }
   const freq = Math.max(1, goal.frequencyMonths ?? 1);
   if (goal.type === "set_aside") return Math.round(goal.amount / freq);

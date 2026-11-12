@@ -8,6 +8,7 @@ import { importSheetExport } from "./importer.js";
 import { monthPayload } from "./month.js";
 import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
+import { classicPayload, saveClassicTyped } from "./classic.js";
 import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
@@ -117,6 +118,24 @@ app.post("/auto-assign", async (c) => {
   return c.json({ moveIds: ids });
 });
 app.get("/category/:id/history/:month", async (c) => c.json(await categoryHistory(db, c.req.param("id"), c.req.param("month"))));
+
+// ---------- classic ----------
+const validMonth = (s: string | undefined) => (s && /^\d{4}-\d{2}-01$/.test(s) ? s : null);
+app.get("/classic/:month", async (c) => {
+  const m = validMonth(c.req.param("month"));
+  if (!m) return c.json({ error: "month must be YYYY-MM-01" }, 400);
+  return c.json(await classicPayload(db, m, today(), c.get("user").id));
+});
+app.get("/classic", async (c) => c.json(await classicPayload(db, today().slice(0, 7) + "-01", today(), c.get("user").id)));
+const classicTypedSchema = z.object({ owner: z.enum(["D", "E", "shared"]), income: z.number().int().optional(), incomeActual: z.number().int().optional(), typed: z.record(z.string(), z.number().int()).optional() });
+app.put("/classic/:month", async (c) => {
+  const m = validMonth(c.req.param("month"));
+  if (!m) return c.json({ error: "month must be YYYY-MM-01" }, 400);
+  const body = classicTypedSchema.safeParse(await c.req.json());
+  if (!body.success) return c.json({ error: body.error.issues.map((i) => i.message).join("; ") }, 400);
+  await saveClassicTyped(db, m, c.get("user").id, body.data);
+  return c.json({ ok: true });
+});
 
 // Daily job (Vercel cron): recurring entries, pushes, sheet mirror, backups, Monday summary.
 app.get("/cron/daily", async (c) => {

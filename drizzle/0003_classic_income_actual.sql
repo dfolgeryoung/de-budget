@@ -1,0 +1,1 @@
+ALTER TABLE "classic_month" ADD COLUMN "income_actual" bigint DEFAULT 0 NOT NULL;

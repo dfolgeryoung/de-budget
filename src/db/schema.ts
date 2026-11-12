@@ -277,7 +277,8 @@ export const classicMonth = pgTable(
     id: text("id").primaryKey(),
     month: date("month").notNull(),
     owner: owner("owner").notNull(), // D | E | shared
-    income: bigint("income", { mode: "number" }).notNull().default(0), // cents, typed
+    income: bigint("income", { mode: "number" }).notNull().default(0), // cents, typed budget
+    incomeActual: bigint("income_actual", { mode: "number" }).notNull().default(0), // cents, typed actual (0 = not typed yet)
     typedBudgets: jsonb("typed_budgets").$type<Record<string, number>>(), // line name -> cents (Internet, Power, ...)
     ...audit,
   },

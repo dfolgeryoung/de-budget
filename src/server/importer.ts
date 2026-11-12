@@ -6,6 +6,7 @@
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { parseExport } from "../budget/parseExport.js";
+import { layoutFromState, SPLIT_BUCKETS } from "../budget/classicFromState.js";
 import { mapState, slug, cents, tabToMonth, type SheetState } from "../budget/fromState.js";
 import { monthOf } from "../budget/dates.js";
 import { defaultEmoji } from "../budget/emoji.js";
@@ -54,6 +55,10 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
   await db.insert(t.categoryGroups).values(m.groups.map((g) => ({ id: g.id, name: g.name, sortOrder: g.sortOrder, system: g.system, updatedBy: byUserId })));
   const catIn = m.input.categories;
   const pinnedIndex = new Map((state.pinned ?? []).map((n, i) => [n, i]));
+  // Classic: the mapping table -> bucket or rule per category; the layout tells which box a bucket line sits in
+  const classicRules = new Map((state.classic?.mapping ?? []).map(([name, bucket]) => [name, SPLIT_BUCKETS[bucket] ? { bucket: null, rule: SPLIT_BUCKETS[bucket]! } : { bucket, rule: "none" as const }]));
+  const layout = state.classic ? layoutFromState(state) : [];
+  const sectionOf = (bucket: string | null): "recurring" | "variable" => (bucket ? layout.find((l) => l.name === bucket || (bucket.endsWith(" Fun Money") && l.name === "Fun Money"))?.section : undefined) ?? "variable";
   const catRows = catIn.map((c, i) => {
     const name = [...m.names.categories].find(([, id]) => id === c.id)![0];
     return {
@@ -66,6 +71,9 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
       openingAvailable: m.input.openingAvailable?.[c.id] ?? 0,
       sortOrder: i,
       favouriteOrder: pinnedIndex.has(name) ? { _: pinnedIndex.get(name)! } : null, // "_" = the shared pin order from the sheet
+      classicBucket: classicRules.get(name)?.bucket ?? null,
+      classicRule: classicRules.get(name)?.rule ?? "none",
+      classicSection: sectionOf(classicRules.get(name)?.bucket ?? null),
       updatedBy: byUserId,
     };
   });
@@ -132,6 +140,28 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
   await put("current_month", monthOf(state.current_month));
   await put("sheet_expected", m.expected);
   await put("import_at", now.toISOString());
+
+  // Classic: layout, Internet keywords, typed income per person per month and the typed line budgets of the exported month
+  if (state.classic) {
+    const c = state.classic;
+    await put("classic_layout", layout);
+    await put("classic_keywords", c.keywords);
+    await put("classic_expected", { month: c.month, layout: c.layout, totals: c.totals ?? {} });
+    await db.delete(t.classicMonth);
+    const rows: typeof t.classicMonth.$inferInsert[] = [];
+    const months = new Set([...Object.keys(c.income), c.month]);
+    for (const month of months) {
+      const inc = c.income[month];
+      for (const owner of ["D", "E", "shared"] as const) {
+        const typed: Record<string, number> = {};
+        if (month === c.month) for (const l of layout) if (l.typed && l.column === owner) typed[`${l.column}:${l.name}`] = l.defaultBudget;
+        const i = owner === "shared" ? null : inc?.[owner];
+        if (!i && !Object.keys(typed).length) continue;
+        rows.push({ id: `cm-${month}-${owner}`, month, owner, income: cents(i?.[0] ?? 0), incomeActual: cents(i?.[1] ?? 0), typedBudgets: typed, updatedBy: byUserId });
+      }
+    }
+    if (rows.length) await db.insert(t.classicMonth).values(rows);
+  }
 
   return {
     accounts: acctRows.length, groups: m.groups.length, categories: catRows.length, transactions: txnRows.length, lines: lineRows.length,

@@ -16,6 +16,18 @@ export interface SheetState {
   recurring?: string[][];
   moves?: string[][];
   pinned?: string[]; // the Ledger tab's "Pinned categories (dropdown order)" list
+  classic?: SheetClassic;
+}
+/** What the Classic tab holds besides formulas: its mapping tables, the typed income table and the line layout with budgets. */
+export interface SheetClassic {
+  month: ISODate; // the month the tab was showing when exported (its typed budgets belong to it)
+  mapping: [category: string, bucket: string][];
+  sides: [account: string, side: string][];
+  keywords: string[];
+  income: Record<ISODate, { D: [budget: number, actual: number]; E: [budget: number, actual: number] }>;
+  layout: { name: string; column: "shared" | "D" | "E"; section: "recurring" | "variable"; budget: number; actual: number }[];
+  /** the tab's own figures (per column), kept for the acceptance check */
+  totals?: Record<string, number>;
 }
 export interface SheetMonth {
   picked: string;

@@ -7,6 +7,7 @@ import { api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
+import { Classic } from "./Classic";
 import { NavIcon } from "./icons";
 
 const screens = [
@@ -79,13 +80,15 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions") && isPhone ? { paddingTop: 0 } : undefined}>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} />
         ) : screen === "budget" || screen === "home" ? (
           <Budget me={me} showBarsDefault={me.showBars ?? true} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         ) : screen === "transactions" && lists ? (
           <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />
+        ) : screen === "classic" ? (
+          <Classic refreshKey={refreshKey} openEntry={isPhone ? undefined : openNew} />
         ) : screen === "settings" || screen === "more" ? (
           <>
             {isPhone && (

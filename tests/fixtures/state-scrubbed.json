@@ -3089,5 +3089,467 @@ false
 "Target/Amazon",
 "Eating Out/Take Out",
 "Wine & Beer"
+],
+"classic": {
+"month": "2026-11-01",
+"mapping": [
+[
+"Mortgage",
+"Mortgage"
+],
+[
+"Phone & Internet",
+"Phone split"
+],
+[
+"Utilities",
+"Utilities split"
+],
+[
+"Car Insurance",
+"Car Insurance"
+],
+[
+"Pest Control",
+"Misc shared"
+],
+[
+"YMCA Membership",
+"YMCA"
+],
+[
+"Netflix",
+"Netflix"
+],
+[
+"Spotify",
+"Spotify"
+],
+[
+"New York Times",
+"New York Times"
+],
+[
+"Google Drive + iCloud",
+"Drive split"
+],
+[
+"Groceries",
+"Groceries"
+],
+[
+"Target/Amazon",
+"Misc shared"
+],
+[
+"Gas",
+"Gas"
+],
+[
+"Cleaners",
+"Misc shared"
+],
+[
+"Cat Expenses",
+"Misc shared"
+],
+[
+"Unexpected",
+"By account"
+],
+[
+"Clothes, Supplies, & Misc",
+"By account"
+],
+[
+"Sports & Lessons",
+"Misc shared"
+],
+[
+"Babysitters + Misc Childcare",
+"Childcare"
+],
+[
+"Summer Camps",
+"Misc shared"
+],
+[
+"Garden/Home Decor",
+"By account"
+],
+[
+"Entertainment",
+"By account"
+],
+[
+"Eating Out/Take Out",
+"By account"
+],
+[
+"Wine & Beer",
+"By account"
+],
+[
+"David Fun Money",
+"David Fun Money"
+],
+[
+"Elizabeth Fun Money",
+"Elizabeth Fun Money"
+],
+[
+"Emergency Fund",
+"By account"
+],
+[
+"Elizabeth SECU Retirement",
+"SECU Retirement"
+],
+[
+"David Fidelity Retirement",
+"Retirement"
+],
+[
+"Bonnie 529",
+"Bonnie 529"
+],
+[
+"June 529",
+"June 529"
+],
+[
+"Estimated Taxes",
+"Estimated taxes"
+],
+[
+"Big Trips",
+"Misc shared"
+],
+[
+"Small Trips",
+"By account"
+],
+[
+"Student Loan",
+"Student loan"
+],
+[
+"Car Loan",
+"Car Payment"
+],
+[
+"Home Maintenance",
+"Misc shared"
+],
+[
+"Car Maintenance",
+"Misc shared"
+],
+[
+"Medical",
+"By account"
+],
+[
+"Life Insurance",
+"Life Insurance"
+],
+[
+"Gifts",
+"By account"
+],
+[
+"Donations",
+"By account"
+],
+[
+"Christmas",
+"By account"
 ]
+],
+"sides": [
+[
+"D Checking",
+"D"
+],
+[
+"D SECU Credit",
+"D"
+],
+[
+"E Checking",
+"E"
+],
+[
+"E SECU Credit",
+"E"
+],
+[
+"CapitalOne",
+"Shared"
+],
+[
+"Money Market",
+"Shared"
+],
+[
+"Money Market 2",
+"Shared"
+]
+],
+"keywords": [
+"Spectrum",
+"Fiber",
+"Internet",
+"Xfinity",
+"Comcast"
+],
+"income": {
+"2026-11-01": {
+"D": [
+9000.0,
+9000.0
+],
+"E": [
+6400.0,
+14665.0
+]
+}
+},
+"layout": [
+{
+"name": "Mortgage",
+"column": "shared",
+"section": "recurring",
+"budget": 2433.88,
+"actual": 2433.88
+},
+{
+"name": "Internet",
+"column": "shared",
+"section": "recurring",
+"budget": 101.5,
+"actual": 0
+},
+{
+"name": "Car Insurance",
+"column": "shared",
+"section": "recurring",
+"budget": 133.89,
+"actual": 0
+},
+{
+"name": "Estimated taxes",
+"column": "shared",
+"section": "recurring",
+"budget": 3151.67,
+"actual": 0
+},
+{
+"name": "Gas",
+"column": "shared",
+"section": "variable",
+"budget": 200.0,
+"actual": 54.71
+},
+{
+"name": "Groceries",
+"column": "shared",
+"section": "variable",
+"budget": 1300.0,
+"actual": 542.5
+},
+{
+"name": "Misc shared",
+"column": "shared",
+"section": "variable",
+"budget": 3533.32,
+"actual": 848.5
+},
+{
+"name": "Childcare",
+"column": "shared",
+"section": "variable",
+"budget": 200.0,
+"actual": 80.19
+},
+{
+"name": "Cell Phone",
+"column": "shared",
+"section": "variable",
+"budget": 158.6,
+"actual": 0
+},
+{
+"name": "YMCA",
+"column": "shared",
+"section": "variable",
+"budget": 70.26,
+"actual": 70.26
+},
+{
+"name": "Student loan",
+"column": "D",
+"section": "recurring",
+"budget": 800.0,
+"actual": 689.82
+},
+{
+"name": "Retirement",
+"column": "D",
+"section": "recurring",
+"budget": 1200.0,
+"actual": 0
+},
+{
+"name": "June 529",
+"column": "D",
+"section": "recurring",
+"budget": 200.0,
+"actual": 200.0
+},
+{
+"name": "Google Drive + iCloud",
+"column": "D",
+"section": "recurring",
+"budget": 3.11,
+"actual": 0.99
+},
+{
+"name": "Power",
+"column": "D",
+"section": "variable",
+"budget": 200.0,
+"actual": 208.24
+},
+{
+"name": "Fun Money",
+"column": "D",
+"section": "variable",
+"budget": 600.0,
+"actual": 929.77
+},
+{
+"name": "Bonnie 529",
+"column": "E",
+"section": "recurring",
+"budget": 200.0,
+"actual": 0
+},
+{
+"name": "Spotify",
+"column": "E",
+"section": "recurring",
+"budget": 20.37,
+"actual": 20.37
+},
+{
+"name": "Life Insurance",
+"column": "E",
+"section": "recurring",
+"budget": 11.6,
+"actual": 0
+},
+{
+"name": "Car Payment",
+"column": "E",
+"section": "recurring",
+"budget": 272.0,
+"actual": 0
+},
+{
+"name": "Netflix",
+"column": "E",
+"section": "recurring",
+"budget": 9.64,
+"actual": 0
+},
+{
+"name": "SECU Retirement",
+"column": "E",
+"section": "recurring",
+"budget": 150.0,
+"actual": 0
+},
+{
+"name": "New York Times",
+"column": "E",
+"section": "recurring",
+"budget": 4.23,
+"actual": 0
+},
+{
+"name": "Google Drive + iCloud",
+"column": "E",
+"section": "recurring",
+"budget": 5.98,
+"actual": 5.98
+},
+{
+"name": "Utilities",
+"column": "E",
+"section": "variable",
+"budget": 65.0,
+"actual": 88.11
+},
+{
+"name": "Fun Money",
+"column": "E",
+"section": "variable",
+"budget": 600.0,
+"actual": 615.55
+}
+],
+"totals": {
+"Total #1 budget": 800.0,
+"Total #1 actual": 1138.01,
+"Total #2 budget": 665.0,
+"Total #2 actual": 703.66,
+"Total variable expenses #1 budget": 3531.09,
+"Total variable expenses #1 actual": 1936.09,
+"Total variable expenses #2 budget": 3396.09,
+"Total variable expenses #2 actual": 1501.74,
+"Total #3 budget": 5820.94,
+"Total #3 actual": 2433.88,
+"Total #4 budget": 5462.18,
+"Total #4 actual": 1596.16,
+"Half #1 budget": 2910.47,
+"Half #1 actual": 1216.94,
+"Half #2 budget": 2731.09,
+"Half #2 actual": 798.08,
+"Total recurring + variable #1 budget": 8644.67,
+"Total recurring + variable #1 actual": 4043.84,
+"Total recurring + variable #2 budget": 6980.38,
+"Total recurring + variable #2 actual": 2745.03,
+"Total #5 budget": 2203.11,
+"Total #5 actual": 890.81,
+"Income #1 budget": 9000.0,
+"Income #1 actual": 9000.0,
+"Total #6 budget": 673.82,
+"Total #6 actual": 26.35,
+"Income #2 budget": 6400.0,
+"Income #2 actual": 14665.0,
+"Total recurring expenses #1 budget": 5113.58,
+"Total recurring expenses #1 actual": 2107.75,
+"Savings so far #1 budget": 355.33,
+"Savings so far #1 actual": 4956.16,
+"Total recurring expenses #2 budget": 3584.29,
+"Total recurring expenses #2 actual": 1243.29,
+"Savings so far #2 budget": -580.38,
+"Savings so far #2 actual": 11919.97,
+"Weekly budget #1 budget": 140.0,
+"Weekly budget #2 budget": 140.0,
+"Total spent #1 budget": 929.77,
+"Total spent #2 budget": 615.55,
+"Total remaining #1 budget": -329.77,
+"Total remaining #2 budget": -15.55,
+"Projected remaining at end of month #1 budget": -1935.74,
+"Projected remaining at end of month #2 budget": -1078.77,
+"Projected Savings (month end) #1 budget": -1035.17,
+"Projected Savings (month end) #2 budget": 7151.08,
+"+ Retirement & 529 contributions #1 budget": 1400.0,
+"+ Retirement & 529 contributions #2 budget": 350.0,
+"Total put away #1 budget": 364.83,
+"Total put away #2 budget": 7501.08
+}
+}
 }

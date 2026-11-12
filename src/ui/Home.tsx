@@ -52,15 +52,18 @@ export function Home({ me, lists, refreshKey, goTransactions }: { me: { name: st
 
       <div className="px-3 flex flex-col gap-3 md:px-0">
         {fun && (
-          <button onClick={() => goTransactions(null)} className={card + " text-left"} style={cs}>
-            <div className="flex justify-between items-baseline"><span className="text-sm font-bold">{catName(fun.categoryId)}</span><span className="text-xl font-bold" style={{ color: fun.available < 0 ? "var(--red-text)" : "var(--green-text)" }}>{formatMoney(fun.available)}</span></div>
-            <div className="h-1.5 rounded-full overflow-hidden flex" style={{ background: "var(--track)" }}>
-              <div className="h-full stripes" style={{ width: `${fun.goal ? Math.min(100, (Math.max(0, -fun.activity) / fun.goal.amount) * 100) : 0}%` }} />
-              <div className="h-full" style={{ width: `${fun.goal ? Math.max(0, Math.min(100, ((fun.available) / fun.goal.amount) * 100)) : 0}%`, background: "var(--green)" }} />
-            </div>
-            <div className="flex justify-between items-center text-xs" style={{ color: "var(--muted)" }}>
-              <span>Spent {formatMoney(-fun.activity)}{fun.goal ? ` of ${formatMoney(fun.goal.amount)}` : ""}</span>
-              {week && <span className="font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--selected)", color: "var(--accent-text)" }}>{formatMoney(week.perWeek)} / week · {week.weeksLeft} wks left</span>}
+          <button onClick={() => goTransactions(null)} className="block w-full text-left rounded-xl" style={{ ...cs, padding: "12px 14px" }}>
+            {/* layout lives in a div: iOS Safari won't lay out a <button> itself as a flex column */}
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              <div className="flex justify-between items-baseline gap-3"><span className="text-sm font-bold truncate">{catName(fun.categoryId)}</span><span className="text-xl font-bold shrink-0" style={{ color: fun.available < 0 ? "var(--red-text)" : "var(--green-text)" }}>{formatMoney(fun.available)}</span></div>
+              <div className="rounded-full overflow-hidden flex w-full" style={{ height: 6, background: "var(--track)" }}>
+                <div className="h-full stripes" style={{ width: `${fun.goal ? Math.min(100, (Math.max(0, -fun.activity) / fun.goal.amount) * 100) : 0}%` }} />
+                <div className="h-full" style={{ width: `${fun.goal ? Math.max(0, Math.min(100, (fun.available / fun.goal.amount) * 100)) : 0}%`, background: fun.available < 0 ? "var(--red)" : "var(--green)" }} />
+              </div>
+              <div className="flex justify-between items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                <span className="truncate">Spent {formatMoney(-fun.activity)}{fun.goal ? ` of ${formatMoney(fun.goal.amount)}` : ""}</span>
+                {week && <span className="font-bold rounded-full shrink-0" style={{ background: "var(--selected)", color: "var(--accent-text)", padding: "3px 9px" }}>{formatMoney(week.perWeek)} / week · {week.weeksLeft} wks left</span>}
+              </div>
             </div>
           </button>
         )}

@@ -95,10 +95,19 @@ export const categories = pgTable(
     favouriteOrder: jsonb("favourite_order").$type<Record<string, number>>(),
     // for card_payment categories: which account they pay
     accountId: text("account_id").references(() => accounts.id),
+    // Available already in the category when the first budget month opened (from the sheet's history)
+    openingAvailable: bigint("opening_available", { mode: "number" }).notNull().default(0),
     ...audit,
   },
   (t) => [uniqueIndex("categories_group_name").on(t.groupId, t.name)],
 );
+
+// ---------- settings (one row per key) ----------
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(), // first_month, sheet_expected, import_at, ...
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // ---------- goals (append-only by month so past months keep their goal) ----------
 export const goals = pgTable(

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Budget } from "./Budget";
+import { Settings } from "./Settings";
 
 const screens = [
   { id: "home", label: "Home", phoneOnly: true },
@@ -11,7 +13,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-export function Shell({ me }: { me: { id: string; email: string; name: string } }) {
+export function Shell({ me }: { me: { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean } }) {
   const [screen, setScreen] = useState<string>(location.hash.slice(1) || "budget");
   useEffect(() => {
     const onHash = () => setScreen(location.hash.slice(1) || "budget");
@@ -46,13 +48,21 @@ export function Shell({ me }: { me: { id: string; email: string; name: string } 
       </nav>
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
-        <h1 className="text-xl font-bold capitalize">{screen}</h1>
-        <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>
-          Phase 0 shell. Signed in as {me.email}. Screens arrive in phases 1–6.
-        </p>
-        <form method="post" action="/api/auth/signout" className="mt-6">
-          <button className="text-sm underline" style={{ color: "var(--accent-text)" }}>Sign out</button>
-        </form>
+        {screen === "budget" || screen === "home" ? (
+          <Budget showBars={me.showBars ?? true} />
+        ) : screen === "settings" || screen === "more" ? (
+          <>
+            <Settings />
+            <form method="post" action="/api/auth/signout" className="mt-6">
+              <button className="text-sm underline" style={{ color: "var(--accent-text)" }}>Sign out ({me.email})</button>
+            </form>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-bold capitalize">{screen}</h1>
+            <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>Coming in a later phase.</p>
+          </>
+        )}
       </main>
 
       {/* Phone bottom bar */}

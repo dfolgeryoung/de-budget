@@ -13,6 +13,7 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dayLabel = (d: string) => { const dt = new Date(d + "T12:00:00"); return `${DAY[dt.getDay()]}, ${MON[dt.getMonth()]} ${dt.getDate()}`; };
 const short = (d: string) => `${MON[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
+const todayMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
 export function Transactions({ me, lists, openEntry, refreshKey, account, setAccount }: {
   me: { id: string; initial?: string; avatarEmoji?: string }; lists: Lists; openEntry: (d: EntryDraft) => void; refreshKey: number; account: string | null; setAccount: (id: string | null) => void;
@@ -29,7 +30,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
   const [moreFilters, setMoreFilters] = useState(false);
-  useEffect(() => { if (isDesktop) return; api<MonthPayload>("/month").then((m) => setBalances(new Map(m.accounts.map((a) => [a.id, a.balance])))).catch(() => {}); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { api<MonthPayload>("/month").then((m) => setBalances(new Map(m.accounts.map((a) => [a.id, a.balance])))).catch(() => {}); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [prefill, setPrefill] = useState<EntryDraft | undefined>(undefined);
   const toast = useToast();
   const catName = useMemo(() => new Map(lists.groups.flatMap((g) => g.categories.map((c) => [c.id, `${c.emoji ? c.emoji + " " : ""}${c.name}`]))), [lists]);
@@ -136,12 +137,19 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-baseline gap-3 flex-wrap">
         <h1 className="text-xl font-bold">{acct ? acct.name : "Transactions"}</h1>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="fld rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
+        <span className="text-sm" style={{ color: "var(--muted)" }}>
+          {acct && balances.has(acct.id) && <>Balance <strong style={{ color: (balances.get(acct.id) ?? 0) < 0 ? "var(--neg)" : "var(--text)" }}>{formatMoney(balances.get(acct.id)!)}</strong> · </>}
+          {(() => { const ym = todayMonth(); const n = (rows ?? []).filter((r) => r.date.startsWith(ym)).length; return `${n} ${n === 1 ? "entry" : "entries"} this month`; })()}
+        </span>
       </div>
-      <div className="no-bar flex items-center gap-2 overflow-x-auto pb-1">
-        <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "14rem" }} />
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="fld flex items-center gap-2 rounded-full px-3.5 shrink-0" style={{ height: 36, width: "20rem", border: "1px solid var(--field)", background: "var(--card)" }}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: "var(--muted)" }}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="flex-1 min-w-0 bg-transparent outline-none text-sm" />
+        </label>
+        <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} prefix={account ? <span className="opacity-80">Account:</span> : undefined} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "16rem" }} />
         <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...categoryOptions(lists, { all: true })]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!month} ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} searchable={false} />
         {lists.tags.length > 0 && <Select pill on={!!tag} ariaLabel="Tag filter" value={tag} onChange={setTag} placeholder="Tags" options={[{ value: "", label: "All tags" }, ...lists.tags.map((t) => ({ value: t.id, label: t.name }))]} />}

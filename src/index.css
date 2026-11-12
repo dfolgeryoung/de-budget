@@ -9,6 +9,7 @@
   --border-soft: #eef0f3;
   --group: #eef1f5;
   --selected: #eaf0f8;
+  --hover: #f1f4f8;
   --text: #1a1d23;
   --text-2: #3c4858;
   --muted: #6b7684;
@@ -45,6 +46,7 @@
   --border-soft: #262c35;
   --group: #232830;
   --selected: #263249;
+  --hover: #222833;
   --text: #e6e9ee;
   --text-2: #c3cad3;
   --muted: #9aa3af;
@@ -68,7 +70,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --bg: #121418; --card: #1b1f26; --card-alt: #1f242c; --border: #2a303a; --border-soft: #262c35; --group: #232830; --selected: #263249;
+    --bg: #121418; --card: #1b1f26; --card-alt: #1f242c; --border: #2a303a; --border-soft: #262c35; --group: #232830; --selected: #263249; --hover: #222833;
     --text: #e6e9ee; --text-2: #c3cad3; --muted: #9aa3af; --faint: #7b8491; --field: #3a4250; --rail: #1a1d23; --navy: #2b3a5e;
     --navy-text: rgba(255, 255, 255, 0.8); --accent-text: #9db4f0; --green-bg: #14402a; --green-text: #7ee2a3; --green-stripe: #7ad99a;
     --yellow-bg: #4a3a0a; --yellow-text: #f3d27a; --yellow-row: #2a2614; --red-bg: #4a1b18; --red-text: #f2a09a; --neg: #f2a09a; --track: #2f3640;
@@ -76,6 +78,8 @@
 }
 
 html, body, #root { height: 100%; }
+/* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
+@media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
 :root[data-theme="dark"] input[type="checkbox"], :root[data-theme="dark"] select, :root[data-theme="dark"] input { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) input[type="checkbox"], :root:not([data-theme="light"]) select, :root:not([data-theme="light"]) input { color-scheme: dark; } }

@@ -105,7 +105,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
                 isDesktop ? (
-                <div key={r.id} className="relative grid items-center px-4 py-2 text-[13px]" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                <div key={r.id} className="row-hover relative grid items-center px-4 py-2 text-[13px]" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>
                   <button onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
                     {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}

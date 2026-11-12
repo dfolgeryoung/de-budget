@@ -198,61 +198,75 @@ function Editable({ value, onSave, muted, placeholder }: { value: number; onSave
   return <input autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setText(null); }} className="w-full text-right rounded px-1 outline-none text-[13px]" style={{ border: "1px solid var(--navy)", background: "var(--card)", height: 24 }} />;
 }
 
-/** The "Variable Projected Workbook" as a panel: one shaded box per step, every operand on its own line, the result highlighted. */
+/** The "Variable Projected Workbook" as a panel: a section per column (Shared, David, Elizabeth) with neutral boxes inside,
+ *  every operand on its own line and the result rows shaded. */
 function Explain({ data }: { data: ClassicPayload }) {
   const list = data.lines.filter((l) => l.section === "variable" && LIST.has(l.name) && l.projection);
-  const colTone = (c: ClassicColumn) => tone(COLS.find((x) => x.id === c)!.tone);
   type R = { k: string; v: number | string; op?: string; result?: boolean; sub?: boolean };
-  const Box = ({ title, t, rows }: { title: string; t: ReturnType<typeof tone>; rows: R[] }) => (
-    <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: `1px solid ${t.box}` }}>
-      <div className="px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: t.box, color: "#1A1D23" }}>{title}</div>
+  const Box = ({ title, rows }: { title: string; rows: R[] }) => (
+    <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: "var(--group)", color: "var(--text-2)" }}>{title}</div>
       {rows.map((r, i) => (
-        <div key={i} className="grid items-center gap-2 text-[13px]" style={{ gridTemplateColumns: "18px minmax(0,1fr) auto", padding: r.result ? "9px 14px" : "6px 14px", borderTop: r.result ? `1px solid ${t.box}` : i ? "1px solid var(--border-soft)" : undefined, fontWeight: r.result ? 700 : undefined, background: r.result ? t.soft : undefined, color: r.result ? "#1A1D23" : undefined }}>
-          <span className="text-center font-semibold" style={{ color: r.result ? "#1A1D23" : "var(--muted)" }}>{r.result ? "=" : r.op ?? ""}</span>
-          <span className={r.sub ? "text-xs" : ""} style={{ color: r.result ? "#1A1D23" : r.sub ? "var(--muted)" : "var(--text-2)" }}>{r.k}</span>
-          <span className="text-right tabular-nums" style={{ color: r.result && typeof r.v === "number" && r.v < 0 ? "#8c1d18" : undefined }}>{typeof r.v === "number" ? formatMoney(r.v) : r.v}</span>
+        <div key={i} className="grid items-center gap-2 text-[13px]" style={{ gridTemplateColumns: "18px minmax(0,1fr) auto", padding: r.result ? "8px 14px" : "6px 14px", borderTop: i ? "1px solid var(--border-soft)" : undefined, fontWeight: r.result ? 700 : undefined, background: r.result ? "var(--selected)" : undefined }}>
+          <span className="text-center font-semibold" style={{ color: "var(--muted)" }}>{r.result ? "=" : r.op ?? ""}</span>
+          <span className={r.sub ? "text-xs" : ""} style={{ color: r.result ? "var(--text)" : r.sub ? "var(--muted)" : "var(--text-2)" }}>{r.k}</span>
+          <span className="text-right tabular-nums" style={{ color: r.result && typeof r.v === "number" && r.v < 0 ? "var(--red-text)" : undefined }}>{typeof r.v === "number" ? formatMoney(r.v) : r.v}</span>
         </div>
       ))}
     </div>
   );
-  const colName = (c: ClassicColumn) => (c === "shared" ? "Shared" : c === "D" ? "David" : "Elizabeth");
-  const person = (p: "D" | "E") => { const s = data.people[p]; const t = colTone(p); return (
-    <Box key={p} title={`${colName(p)} · projected savings`} t={t} rows={[
-      { k: `Income ${s.incomeActualTyped ? "received" : "expected"}`, v: s.incomeActualTyped ? s.incomeActual : s.incomeBudget },
-      { k: "Half of shared projected spend", v: Math.round(data.sharedProjectedSpend / 2), op: "−" },
-      { k: `Own variable, projected (Fun Money${p === "D" ? " + Power" : " + Utilities"})`, v: s.projectedVariable - Math.round(data.sharedProjectedSpend / 2), op: "−" },
-      { k: "Own recurring, budget", v: s.recurringBudget - Math.round(data.columns.shared.recurring.budget / 2), op: "−" },
-      { k: "Half of shared recurring, budget", v: Math.round(data.columns.shared.recurring.budget / 2), op: "−" },
-      { k: "Projected savings at month end", v: s.projectedSavings, result: true },
-      { k: "Retirement + 529 contributions", v: s.contributions, op: "+" },
-      { k: "Total put away", v: s.putAway, result: true },
+  const Section = ({ c, children }: { c: ClassicColumn; children: ReactNode }) => {
+    const meta = COLS.find((x) => x.id === c)!; const t = tone(meta.tone);
+    return (
+      <section className="flex flex-col gap-2.5">
+        <h3 className="m-0 text-[13px] font-bold text-white rounded-lg" style={{ background: t.head, padding: "7px 12px" }}>{meta.label}</h3>
+        {children}
+      </section>
+    );
+  };
+  const lineBox = (l: ClassicLine) => (
+    <Box key={l.key} title={l.name} rows={[
+      { k: "Budget", v: l.budget },
+      { k: "Spent so far", v: l.actual, op: "−" },
+      { k: "Remaining now", v: l.projection!.remaining, result: true },
+      { k: `Spent so far ÷ ${data.daysElapsed} days elapsed`, v: l.projection!.avgDaily, sub: true },
+      { k: `Average daily spend × ${data.daysLeft} days left`, v: Math.round(l.projection!.avgDaily * data.daysLeft), op: "−" },
+      { k: "Projected remaining at month end", v: l.projection!.projectedRemaining, result: true },
     ]} />
+  );
+  const half = Math.round(data.sharedProjectedSpend / 2), halfRec = Math.round(data.columns.shared.recurring.budget / 2);
+  const personBoxes = (p: "D" | "E") => { const s = data.people[p]; return (
+    <>
+      {list.filter((l) => l.column === p).map(lineBox)}
+      <Box title="Projected savings" rows={[
+        { k: `Income ${s.incomeActualTyped ? "received" : "expected"}`, v: s.incomeActualTyped ? s.incomeActual : s.incomeBudget },
+        { k: "Half of shared projected spend", v: half, op: "−" },
+        { k: `Own variable, projected (Fun Money${p === "D" ? " + Power" : " + Utilities"})`, v: s.projectedVariable - half, op: "−" },
+        { k: "Own recurring, budget", v: s.recurringBudget - halfRec, op: "−" },
+        { k: "Half of shared recurring, budget", v: halfRec, op: "−" },
+        { k: "Projected savings at month end", v: s.projectedSavings, result: true },
+        { k: "Retirement + 529 contributions", v: s.contributions, op: "+" },
+        { k: "Total put away", v: s.putAway, result: true },
+      ]} />
+    </>
   ); };
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div>
         <h2 className="font-bold text-base">How the projection works</h2>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-2)" }}>Each list keeps spending at its average daily rate for the days left; every other line counts its budget.</p>
+        <p className="text-[13px] mt-1" style={{ color: "var(--text-2)" }}><strong>{data.daysElapsed}</strong> days elapsed, <strong>{data.daysLeft}</strong> left. Each list keeps spending at its average daily rate for the days left; every other line counts its budget.</p>
       </div>
-      <Box title="This month" t={tone("shared")} rows={[{ k: "Days elapsed", v: String(data.daysElapsed) }, { k: "Days left", v: String(data.daysLeft) }]} />
-      {list.map((l) => (
-        <Box key={l.key} title={`${colName(l.column)} · ${l.name}`} t={colTone(l.column)} rows={[
-          { k: "Budget", v: l.budget },
-          { k: "Spent so far", v: l.actual, op: "−" },
-          { k: "Remaining now", v: l.projection!.remaining, result: true },
-          { k: `Spent so far ÷ ${data.daysElapsed} days elapsed`, v: l.projection!.avgDaily, sub: true },
-          { k: `Average daily spend × ${data.daysLeft} days left`, v: Math.round(l.projection!.avgDaily * data.daysLeft), op: "−" },
-          { k: "Projected remaining at month end", v: l.projection!.projectedRemaining, result: true },
+      <Section c="shared">
+        {list.filter((l) => l.column === "shared").map(lineBox)}
+        <Box title="Projected spend" rows={[
+          { k: "Shared variable budget", v: data.columns.shared.variable.budget },
+          ...list.filter((l) => l.column === "shared").map((l) => ({ k: `${l.name} projected remaining`, v: l.projection!.projectedRemaining, op: "−" })),
+          { k: "Projected spend", v: data.sharedProjectedSpend, result: true },
+          { k: "Each person's half", v: half, result: true },
         ]} />
-      ))}
-      <Box title="Shared variable · projected spend" t={colTone("shared")} rows={[
-        { k: "Shared variable budget", v: data.columns.shared.variable.budget },
-        ...list.filter((l) => l.column === "shared").map((l) => ({ k: `${l.name} projected remaining`, v: l.projection!.projectedRemaining, op: "−" })),
-        { k: "Projected spend", v: data.sharedProjectedSpend, result: true },
-        { k: "Each person's half", v: Math.round(data.sharedProjectedSpend / 2), result: true },
-      ]} />
-      {person("D")}
-      {person("E")}
+      </Section>
+      <Section c="D">{personBoxes("D")}</Section>
+      <Section c="E">{personBoxes("E")}</Section>
     </div>
   );
 }

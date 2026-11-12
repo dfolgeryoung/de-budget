@@ -72,8 +72,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     return (
       <div className="flex flex-col -mx-4">
         <div className="relative px-5 pb-3.5 flex flex-col" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))", gap: 12 }}>
-          <a href="#settings" aria-label="Profile and settings" className="absolute left-4 w-[30px] h-[30px] rounded-lg flex items-center justify-center text-base" style={{ top: "calc(0.75rem + env(safe-area-inset-top))", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</a>
-          <div className="flex items-center justify-between pt-9">
+          <div className="flex items-center justify-between">
             <h1 className="text-[22px] font-bold">{acct ? acct.name : "Transactions"}</h1>
             <button aria-label="More filters" aria-pressed={moreFilters} onClick={() => setMoreFilters((v) => !v)} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: moreFilters || onlyHidden || onlyMismatch ? "#fff" : "rgba(255,255,255,0.12)", color: moreFilters || onlyHidden || onlyMismatch ? "var(--rail)" : "#fff" }}>
               <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" /></svg>

@@ -158,8 +158,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
     return (
       <div className="flex flex-col -mx-4" style={{ gap: 10 }}>
         <div className="relative px-5 pb-4 flex flex-col" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))", gap: 14 }}>
-          <a href="#settings" aria-label="Profile and settings" className="absolute left-4 w-[30px] h-[30px] rounded-lg flex items-center justify-center text-base" style={{ top: "calc(0.75rem + env(safe-area-inset-top))", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</a>
-          <div className="flex items-center justify-between pt-9">
+          <div className="flex items-center justify-between">
             <button aria-label="Previous month" onClick={() => setMonth(addMonths(data.month, -1))} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}><Chevron dir="left" size={16} /></button>
             <div className="text-lg font-semibold tracking-wide">{monthLabel(data.month)}</div>
             <button aria-label="Next month" onClick={() => setMonth(addMonths(data.month, 1))} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}><Chevron dir="right" size={16} /></button>

@@ -88,6 +88,12 @@ function ShellInner({ me }: { me: Me }) {
           <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />
         ) : screen === "settings" || screen === "more" ? (
           <>
+            {isPhone && (
+              <div className="flex items-center gap-3 rounded-xl p-4 mb-4" style={{ background: "var(--rail)", color: "#fff" }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</div>
+                <div className="min-w-0"><div className="font-bold truncate">{me.name}</div><div className="text-xs opacity-75 truncate">{me.email}</div></div>
+              </div>
+            )}
             <Settings />
             <form method="post" action="/api/auth/signout" className="mt-6">
               <button className="text-sm underline" style={{ color: "var(--accent-text)" }}>Sign out ({me.email})</button>

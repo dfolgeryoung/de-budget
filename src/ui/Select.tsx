@@ -76,7 +76,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
   }
 
   const trig = pill
-    ? { height: 32, padding: "0 10px 0 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}` }
+    ? { paddingRight: 10, background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}` }
     : { height: 34, padding: "0 8px 0 10px", borderRadius: 6, fontSize: 13, background: "var(--card)", color: current ? "var(--text)" : "var(--faint)", border: "1px solid var(--field)" };
 
   let lastGroup: string | undefined;
@@ -84,9 +84,9 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
     <>
       <button ref={btn} type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setOpen(true); } }}
-        className={"inline-flex items-center gap-1.5 min-w-0 outline-none focus-visible:ring-2 " + className} style={{ ...trig, ...style }}>
+        className={(pill ? "pill " : "inline-flex items-center gap-1.5 ") + "min-w-0 outline-none focus-visible:ring-2 " + className} style={{ ...trig, ...style }}>
         {prefix}
-        <span className="truncate flex-1 text-left leading-none">{current ? current.label : placeholder}</span>
+        <span className="tb truncate flex-1 text-left leading-none">{current ? current.label : placeholder}</span>
         <Chevron dir="down" size={pill ? 12 : 14} className="shrink-0" style={{ opacity: 0.7, transform: open ? "rotate(180deg)" : undefined }} />
       </button>
       <Popover anchor={btn} open={open} onClose={() => setOpen(false)} width={menuWidth} panelRef={panel}>

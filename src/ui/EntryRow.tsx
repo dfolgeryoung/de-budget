@@ -204,14 +204,13 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
       </div>
 
       {/* options row */}
-      <div className="flex items-center flex-wrap gap-x-3 gap-y-2 px-4 pb-3 pt-1 text-xs" style={{ color: "var(--text-2)" }}>
-        <button type="button" aria-pressed={d.sharedFiftyFifty} title="Half of this is owed by the other checking" onClick={() => set({ sharedFiftyFifty: !d.sharedFiftyFifty })} className={pillCls} style={pill(d.sharedFiftyFifty)}>50/50</button>
-        <button type="button" aria-pressed={d.hidden} title="Keep this entry out of the shared view" onClick={() => set({ hidden: !d.hidden })} className={pillCls} style={pill(d.hidden)}>Hidden</button>
-        <span className="w-px h-5" style={{ background: "var(--border)" }} />
-        <button type="button" aria-pressed={d.split.length > 0} title="Split the amount across categories" onClick={toggleSplit} className={pillCls} style={pill(d.split.length > 0, d.transfer)} disabled={d.transfer}>Split</button>
-        <button type="button" aria-pressed={d.transfer} title="Move money between two accounts" onClick={toggleTransfer} className={pillCls} style={pill(d.transfer, d.split.length > 0)} disabled={d.split.length > 0}>Transfer</button>
+      <div className="flex items-center flex-wrap gap-2 px-4 pb-3 pt-1 text-xs" style={{ color: "var(--text-2)" }}>
+        <button type="button" aria-pressed={d.sharedFiftyFifty} title="Half of this is owed by the other checking" onClick={() => set({ sharedFiftyFifty: !d.sharedFiftyFifty })} className={pillCls} style={pill(d.sharedFiftyFifty)}><span className="tb">50/50</span></button>
+        <button type="button" aria-pressed={d.hidden} title="Keep this entry out of the shared view" onClick={() => set({ hidden: !d.hidden })} className={pillCls} style={pill(d.hidden)}><span className="tb">Hidden</span></button>
+        <button type="button" aria-pressed={d.split.length > 0} title="Split the amount across categories" onClick={toggleSplit} className={pillCls} style={pill(d.split.length > 0, d.transfer)} disabled={d.transfer}><span className="tb">Split</span></button>
+        <button type="button" aria-pressed={d.transfer} title="Move money between two accounts" onClick={toggleTransfer} className={pillCls} style={pill(d.transfer, d.split.length > 0)} disabled={d.split.length > 0}><span className="tb">Transfer</span></button>
         {trackedOptions.length > 0 && <Select ariaLabel="Track against" pill on={!!d.trackedAmountId} value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Not tracked" }, ...trackedOptions]} placeholder="Track against…" />}
-        {d.sharedFiftyFifty && cents > 0 && <span style={{ color: "var(--muted)" }}>Other checking owes {formatMoney(Math.round(cents / 2))}</span>}
+        {d.sharedFiftyFifty && cents > 0 && <span className="ml-2" style={{ color: "var(--muted)" }}>Other checking owes {formatMoney(Math.round(cents / 2))}</span>}
         {dup && <span style={{ color: "var(--yellow-text)" }}>⚠ Possible duplicate: {dup.payee} {formatMoney(Math.abs(dup.amount))} on {pretty(dup.date)}</span>}
         {err && <span className="font-semibold" style={{ color: "var(--red-text)" }}>{err}</span>}
         {onDelete && <button onClick={onDelete} className="ml-auto font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}

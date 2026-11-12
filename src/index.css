@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow/700.css";
 
 /* Theme tokens. Light by default; dark via the Appearance setting (data-theme) or the device (system). */
 :root {
@@ -78,6 +82,14 @@
 }
 
 html, body, #root { height: 100%; }
+/* Pills (filters, options) share one size so rows of them line up; the text is trimmed to cap height so it sits
+   dead-centre whatever the font's ascent/descent (Barlow's are lopsided). Older browsers get a 1px nudge instead. */
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; flex-shrink: 0; }
+.tb { text-box: trim-both cap alphabetic; }
+/* a trimmed label that also truncates must not clip its descenders */
+.tb.truncate { overflow: clip; overflow-clip-margin: 4px; }
+@supports not (text-box: trim-both cap alphabetic) { .tb { padding-top: 1px; } }
+
 /* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
 @media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }

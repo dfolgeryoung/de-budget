@@ -14,8 +14,8 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 const pretty = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
 const fs = { border: "1px solid var(--field)", backgroundColor: "var(--card)", color: "var(--text)", height: 34 } as const;
 const field = "fld rounded-md px-2.5 text-[13px] outline-none w-full min-w-0";
-const pillCls = "inline-flex items-center rounded-full text-[12px] font-semibold leading-none select-none";
-const pill = (on: boolean, disabled = false) => ({ height: 32, padding: "0 14px", background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}`, opacity: disabled ? 0.5 : 1 });
+const pillCls = "pill select-none";
+const pill = (on: boolean, disabled = false) => ({ background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}`, opacity: disabled ? 0.5 : 1 });
 
 /**
  * The desktop entry form, laid out as one ledger row: used pinned above the ledger for new entries and
@@ -171,7 +171,7 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
         <TagPicker lists={lists} value={d.tagIds} onChange={(tagIds) => set({ tagIds })} />
         <input aria-label="Outflow" value={out} onChange={(e) => { setOut(e.target.value); if (e.target.value) setInn(""); }} onKeyDown={enterSaves} inputMode="decimal" placeholder="0.00" className={field + " text-right"} style={fs} />
         <input aria-label="Inflow" value={inn} onChange={(e) => { setInn(e.target.value); if (e.target.value) { setOut(""); if (!d.categoryId && !d.transfer) set({ categoryId: "rta" }); } }} onKeyDown={enterSaves} inputMode="decimal" placeholder="0.00" className={field + " text-right"} style={{ ...fs, color: "var(--green-text)" }} />
-        <button aria-label={isNew ? "Save entry" : "Save changes"} title={isNew ? "Save (Enter)" : "Save changes (Enter)"} onClick={save} disabled={busy} className="rounded-md inline-flex items-center justify-center text-white disabled:opacity-60 justify-self-end" style={{ height: 34, width: 48, padding: 0, lineHeight: 0, background: dup ? "var(--yellow)" : "var(--green-solid)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)", transition: "filter 100ms" }} onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")} onMouseLeave={(e) => (e.currentTarget.style.filter = "")}><Check size={18} /></button>
+        <button aria-label={isNew ? "Save entry" : "Save changes"} title={isNew ? "Save (Enter)" : "Save changes (Enter)"} onClick={save} disabled={busy} className="rounded-md inline-flex items-center justify-center text-white disabled:opacity-60 justify-self-end" style={{ height: 34, width: 60, padding: 0, lineHeight: 0, background: dup ? "var(--yellow)" : "var(--green-solid)", border: `1px solid ${dup ? "var(--yellow-text)" : "var(--green-text)"}`, boxShadow: "0 1px 2px rgba(0,0,0,0.12)", transition: "filter 100ms" }} onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")} onMouseLeave={(e) => (e.currentTarget.style.filter = "")}><Check size={18} /></button>
         {onCancel ? <button aria-label="Cancel" title="Cancel (Esc)" onClick={onCancel} className="h-[34px] inline-flex items-center justify-center text-lg" style={{ color: "var(--muted)" }}>✕</button> : <span />}
       </div>
 

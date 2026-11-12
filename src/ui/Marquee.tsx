@@ -17,7 +17,7 @@ export function Marquee({ children, className = "", style }: { children: ReactNo
     return () => ro.disconnect();
   }, [children]);
   return (
-    <span ref={outer} className={"marquee min-w-0 overflow-hidden text-ellipsis " + className} style={{ ...style, ["--marquee" as string]: `${overflow}px` }}>
+    <span ref={outer} className={"marquee min-w-0 overflow-hidden text-ellipsis " + className} style={{ ...style, ["--marquee" as string]: `${overflow}px`, ["--marquee-dur" as string]: `${Math.round(overflow * 16 + 150)}ms` }}>
       <span ref={inner} className="inline-block whitespace-nowrap">{children}</span>
     </span>
   );

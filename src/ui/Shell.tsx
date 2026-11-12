@@ -5,6 +5,7 @@ import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
 import type { EntryDraft } from "./EntryForm";
 import { api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
+import { RailAccounts } from "./RailAccounts";
 
 const screens = [
   { id: "home", label: "Home", phoneOnly: true },
@@ -17,7 +18,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean };
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string };
 
 export function Shell({ me }: { me: Me }) {
   return (
@@ -56,7 +57,7 @@ function ShellInner({ me }: { me: Me }) {
         style={{ background: "var(--rail)", color: "var(--rail-text)" }}
       >
         <div className="flex items-center gap-2 px-2 pb-4 pt-1">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: "rgba(255,255,255,0.14)" }}>🙂</div>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</div>
           <div className="min-w-0">
             <div className="font-bold text-white truncate">{me.name}</div>
             <div className="text-xs opacity-70">D&amp;E Budget</div>
@@ -73,6 +74,7 @@ function ShellInner({ me }: { me: Me }) {
             {s.label}
           </a>
         ))}
+        <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">

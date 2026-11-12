@@ -38,7 +38,7 @@ app.get("/me", async (c) => {
   const initial = order.indexOf(u.email.toLowerCase()) === 1 ? "E" : "D";
   await db.insert(t.users).values({ id: u.id, email: u.email, displayName: u.name, initial }).onConflictDoNothing();
   const row = (await db.select().from(t.users).where(eq(t.users.id, u.id)))[0];
-  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true });
+  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂" });
 });
 
 // ---- phase 1: import from the spreadsheet export, read-only month view ----

@@ -3,12 +3,12 @@
  * Re-running replaces everything that came from the sheet (source = migration) so the
  * import is repeatable until cut-over; it never touches rows made in the app.
  */
-import { eq, inArray } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { parseExport } from "../budget/parseExport.js";
 import { mapState, slug, cents, tabToMonth, type SheetState } from "../budget/fromState.js";
 import { monthOf } from "../budget/dates.js";
+import { defaultEmoji } from "../budget/emoji.js";
 
 export interface ImportSummary {
   accounts: number; groups: number; categories: number; transactions: number; lines: number;
@@ -24,9 +24,11 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
   const m = mapState(state);
   const now = new Date();
 
-  // wipe what the sheet owns (app-made rows carry source != migration and survive)
-  const old = await db.select({ id: t.transactions.id }).from(t.transactions).where(eq(t.transactions.source, "migration"));
-  if (old.length) await db.delete(t.transactions).where(inArray(t.transactions.id, old.map((r) => r.id)));
+  // Until cut-over a re-import resets the budget to the sheet: everything the sheet owns plus any test
+  // entries made in the app (they would otherwise pin categories and accounts that are being replaced).
+  await db.delete(t.transactions);
+  await db.delete(t.payees);
+  await db.delete(t.trackedAmounts);
   await db.delete(t.assignments);
   await db.delete(t.goals);
   await db.delete(t.recurring);
@@ -57,6 +59,7 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
       id: c.id,
       groupId: c.groupId,
       name,
+      emoji: defaultEmoji(name),
       kind: c.kind,
       accountId: c.accountId ?? null,
       openingAvailable: m.input.openingAvailable?.[c.id] ?? 0,

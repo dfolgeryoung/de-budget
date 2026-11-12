@@ -54,11 +54,11 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <select value={account ?? ""} onChange={(e) => setAccount(e.target.value || null)} className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: account ? "var(--navy)" : "var(--card)", color: account ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+        <select value={account ?? ""} onChange={(e) => setAccount(e.target.value || null)} className="rounded-full px-3 py-1.5 text-xs font-semibold w-auto shrink-0" style={{ maxWidth: "14rem", background: account ? "var(--navy)" : "var(--card)", color: account ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
           <option value="">All accounts</option>
           {lists.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || null)} className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: category ? "var(--navy)" : "var(--card)", color: category ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+        <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || null)} className="rounded-full px-3 py-1.5 text-xs font-semibold w-auto shrink-0" style={{ maxWidth: "14rem", background: category ? "var(--navy)" : "var(--card)", color: category ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
           <option value="">Category</option>
           {lists.groups.map((g) => <optgroup key={g.id} label={g.name}>{g.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
         </select>

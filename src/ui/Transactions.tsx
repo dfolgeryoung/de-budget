@@ -63,20 +63,20 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <select value={account ?? ""} onChange={(e) => setAccount(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (account ? " on" : "")} style={{ maxWidth: "14rem", background: account ? "var(--navy)" : "var(--card)", color: account ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+        <select value={account ?? ""} onChange={(e) => setAccount(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (account ? " on" : "")} style={{ maxWidth: "14rem", backgroundColor: account ? "var(--navy)" : "var(--card)", color: account ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
           <option value="">All accounts</option>
           {lists.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (category ? " on" : "")} style={{ maxWidth: "14rem", background: category ? "var(--navy)" : "var(--card)", color: category ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+        <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (category ? " on" : "")} style={{ maxWidth: "14rem", backgroundColor: category ? "var(--navy)" : "var(--card)", color: category ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
           <option value="">Category</option>
           {lists.groups.map((g) => <optgroup key={g.id} label={g.name}>{g.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
         </select>
-        <select value={month} onChange={(e) => setMonth(e.target.value)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (month ? " on" : "")} style={{ background: month ? "var(--navy)" : "var(--card)", color: month ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+        <select value={month} onChange={(e) => setMonth(e.target.value)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (month ? " on" : "")} style={{ backgroundColor: month ? "var(--navy)" : "var(--card)", color: month ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
           <option value="">All months</option>
           {monthOptions.map((m) => <option key={m} value={m}>{MON[Number(m.slice(5, 7)) - 1]} {m.slice(0, 4)}</option>)}
         </select>
         {lists.tags.length > 0 && (
-          <select value={tag ?? ""} onChange={(e) => setTag(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (tag ? " on" : "")} style={{ background: tag ? "var(--navy)" : "var(--card)", color: tag ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
+          <select value={tag ?? ""} onChange={(e) => setTag(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (tag ? " on" : "")} style={{ backgroundColor: tag ? "var(--navy)" : "var(--card)", color: tag ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
             <option value="">Tags</option>
             {lists.tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -89,8 +89,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
 
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         {isDesktop && (
-          <div className="grid px-4 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: "64px minmax(140px,1.3fr) minmax(140px,1.1fr) minmax(80px,1fr) 110px 92px 92px 96px 28px", gap: 10, color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-            <span>Date</span><span>Payee</span><span>Category</span><span>Memo</span><span>Tags</span><span className="text-right">Outflow</span><span className="text-right">Inflow</span><span className="text-right">Balance</span><span />
+          <div className="grid px-4 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+            <span>Date</span><span>Payee</span><span>Account</span><span>Category</span><span>Memo</span><span>Tags</span><span className="text-right">Outflow</span><span className="text-right">Inflow</span><span className="text-right">Balance</span><span />
           </div>
         )}
         {rows === null && <div className="p-4 text-sm" style={{ color: "var(--muted)" }}>Loading…</div>}
@@ -105,7 +105,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
                 isDesktop ? (
-                <div key={r.id} className="relative grid items-center px-4 py-2 text-[13px]" style={{ gridTemplateColumns: "64px minmax(140px,1.3fr) minmax(140px,1.1fr) minmax(80px,1fr) 110px 92px 92px 96px 28px", gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                <div key={r.id} className="relative grid items-center px-4 py-2 text-[13px]" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>
                   <button onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
                     {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}
@@ -114,7 +114,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
                     {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
                   </button>
-                  <span className="truncate">{!account && <span style={{ color: "var(--muted)" }}>{acctName.get(r.accountId)} · </span>}{cats}</span>
+                  <span className="truncate" style={{ color: "var(--text-2)" }}>{acctName.get(r.accountId)}</span>
+                  <span className="truncate">{cats}</span>
                   <span className="truncate" style={{ color: "var(--muted)" }}>{r.memo ?? ""}</span>
                   <span className="flex gap-1 flex-wrap">{r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <button key={tg!.id} onClick={() => setTag(tg!.id)} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</button>)}</span>
                   <span className="text-right">{shownAmount !== null && shownAmount < 0 ? formatMoney(-shownAmount) : shownAmount === null ? "—" : ""}</span>

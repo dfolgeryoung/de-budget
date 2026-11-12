@@ -1,0 +1,44 @@
+# Deploying D&E Budget
+
+One repo on GitHub → Vercel builds and hosts it on every push → Neon holds the database.
+Nothing runs on cPanel except one DNS record.
+
+## One-time setup (phase 0)
+
+1. **GitHub**: this repo (`dfolgeryoung/de-budget`), private.
+2. **Vercel**: *Add New Project* → import `de-budget`. Framework is detected as Vite; leave the defaults.
+   Settings → Environment Variables (Production + Preview):
+   | name | value |
+   |---|---|
+   | `DATABASE_URL` | Neon *pooled* connection string |
+   | `AUTH_SECRET` | output of `openssl rand -base64 32` |
+   | `AUTH_URL` | `https://budget.davidfolgeryoung.com` |
+   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | from Google Cloud (below) |
+   | `ALLOWED_EMAILS` | the two Google addresses, comma separated |
+   | `CRON_SECRET` | any long random string (Vercel sends it with cron calls) |
+3. **Neon**: project `de-budget`, region US East. Copy the pooled connection string into Vercel.
+   Run the migrations once from your machine: `DATABASE_URL=... npm run db:migrate`.
+4. **Google Cloud**: project *DE Budget* → OAuth consent screen (External; add both of you as test users) →
+   Credentials → OAuth client ID (Web application):
+   - Authorised JavaScript origin: `https://budget.davidfolgeryoung.com`
+   - Authorised redirect URI: `https://budget.davidfolgeryoung.com/api/auth/callback/google`
+   (For Vercel preview deployments add the `*.vercel.app` URL the same way.)
+5. **cPanel** → DNS Zone Editor → add `CNAME  budget  →  cname.vercel-dns.com`.
+   Vercel → Project → Settings → Domains → add `budget.davidfolgeryoung.com`.
+6. Open the site, sign in with Google on phone and desktop. On the iPhone: Share → *Add to Home Screen*.
+
+## Every day after that
+
+- Push to `main` → Vercel deploys in about a minute. Pull requests get a preview URL.
+- Schema change → `npm run db:generate` (writes `drizzle/*.sql`), commit, then `npm run db:migrate` against Neon.
+- The daily job is `/api/cron/daily`, scheduled in `vercel.json` (Hobby plan: once a day, within an hour of 07:00 UTC).
+
+## Local work
+
+```
+cp .env.example .env     # fill in a Neon branch URL, Google creds, AUTH_URL=http://localhost:5173
+npm install
+npx vercel dev           # API on :3000 (needs `npm i -g vercel` once)
+npm run dev              # Vite on :5173, proxies /api to :3000
+npm test                 # budget engine tests
+```

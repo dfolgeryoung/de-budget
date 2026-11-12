@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Theme tokens. Light by default; dark via the Appearance setting (data-theme) or the device (system). */
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --card-alt: #fafbfc;
+  --border: #e3e6eb;
+  --border-soft: #eef0f3;
+  --group: #eef1f5;
+  --selected: #eaf0f8;
+  --text: #1a1d23;
+  --text-2: #3c4858;
+  --muted: #6b7684;
+  --faint: #9aa3af;
+  --field: #d5d9e0;
+  --rail: #3a4f7d;
+  --rail-text: rgba(255, 255, 255, 0.8);
+  --navy: #3a4f7d;
+  --navy-text: #ffffff;
+  --accent-text: #3a4f7d;
+  --green: #22b35a;
+  --green-bg: #cdf3d8;
+  --green-text: #0b7a34;
+  --green-stripe: #6fd394;
+  --green-solid: #2fbf62;
+  --yellow: #e0a526;
+  --yellow-bg: #ffe8a3;
+  --yellow-text: #6b4a00;
+  --yellow-row: #fff8e1;
+  --red: #c9372c;
+  --red-bg: #fbe4e2;
+  --red-text: #8c1d18;
+  --neg: #b3261e;
+  --track: #e6e9ee;
+  --classic-shared: #3d85c6; --classic-shared-2: #6fa8dc; --classic-shared-3: #9fc5e8; --classic-shared-4: #cfe2f3; --classic-shared-dark: #1c4587;
+  --classic-david: #6aa84f; --classic-david-2: #93c47d; --classic-david-3: #b6d7a8; --classic-david-4: #d9ead3; --classic-david-dark: #38761d;
+  --classic-eliz: #e06666; --classic-eliz-2: #ea9999; --classic-eliz-3: #f4cccc; --classic-eliz-4: #fbe5e5; --classic-eliz-dark: #990000;
+}
+:root[data-theme="dark"], :root:not([data-theme="light"])[data-theme="system"].dark {
+  --bg: #121418;
+  --card: #1b1f26;
+  --card-alt: #1f242c;
+  --border: #2a303a;
+  --border-soft: #262c35;
+  --group: #232830;
+  --selected: #263249;
+  --text: #e6e9ee;
+  --text-2: #c3cad3;
+  --muted: #9aa3af;
+  --faint: #7b8491;
+  --field: #3a4250;
+  --rail: #1a1d23;
+  --rail-text: rgba(255, 255, 255, 0.8);
+  --navy: #2b3a5e;
+  --navy-text: rgba(255, 255, 255, 0.8);
+  --accent-text: #9db4f0;
+  --green-bg: #14402a;
+  --green-text: #7ee2a3;
+  --green-stripe: #3e8f5e;
+  --yellow-bg: #4a3a0a;
+  --yellow-text: #f3d27a;
+  --yellow-row: #2a2614;
+  --red-bg: #4a1b18;
+  --red-text: #f2a09a;
+  --neg: #f2a09a;
+  --track: #2f3640;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #121418; --card: #1b1f26; --card-alt: #1f242c; --border: #2a303a; --border-soft: #262c35; --group: #232830; --selected: #263249;
+    --text: #e6e9ee; --text-2: #c3cad3; --muted: #9aa3af; --faint: #7b8491; --field: #3a4250; --rail: #1a1d23; --navy: #2b3a5e;
+    --navy-text: rgba(255, 255, 255, 0.8); --accent-text: #9db4f0; --green-bg: #14402a; --green-text: #7ee2a3; --green-stripe: #3e8f5e;
+    --yellow-bg: #4a3a0a; --yellow-text: #f3d27a; --yellow-row: #2a2614; --red-bg: #4a1b18; --red-text: #f2a09a; --neg: #f2a09a; --track: #2f3640;
+  }
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Barlow, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+.stripes { background: repeating-linear-gradient(135deg, var(--green) 0 5px, var(--green-stripe) 5px 10px); }

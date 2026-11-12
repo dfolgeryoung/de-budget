@@ -6,6 +6,7 @@ import type { LedgerRow } from "../server/transactions";
 import { EntryForm, draftFromRow, emptyDraft, type EntryDraft } from "./EntryForm";
 import { Sheet } from "./Sheet";
 import { EntryRow, LEDGER_COLS } from "./EntryRow";
+import type { MonthPayload } from "../server/month";
 import { Select } from "./Select";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -14,7 +15,7 @@ const dayLabel = (d: string) => { const dt = new Date(d + "T12:00:00"); return `
 const short = (d: string) => `${MON[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
 
 export function Transactions({ me, lists, openEntry, refreshKey, account, setAccount }: {
-  me: { id: string; initial?: string }; lists: Lists; openEntry: (d: EntryDraft) => void; refreshKey: number; account: string | null; setAccount: (id: string | null) => void;
+  me: { id: string; initial?: string; avatarEmoji?: string }; lists: Lists; openEntry: (d: EntryDraft) => void; refreshKey: number; account: string | null; setAccount: (id: string | null) => void;
 }) {
   const [rows, setRows] = useState<LedgerRow[] | null>(null);
   const [q, setQ] = useState("");
@@ -26,6 +27,9 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const isDesktop = typeof matchMedia !== "undefined" && matchMedia("(min-width: 768px)").matches;
   const [menu, setMenu] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [balances, setBalances] = useState<Map<string, number>>(new Map());
+  const [moreFilters, setMoreFilters] = useState(false);
+  useEffect(() => { if (isDesktop) return; api<MonthPayload>("/month").then((m) => setBalances(new Map(m.accounts.map((a) => [a.id, a.balance])))).catch(() => {}); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [prefill, setPrefill] = useState<EntryDraft | undefined>(undefined);
   const toast = useToast();
   const catName = useMemo(() => new Map(lists.groups.flatMap((g) => g.categories.map((c) => [c.id, `${c.emoji ? c.emoji + " " : ""}${c.name}`]))), [lists]);
@@ -58,6 +62,78 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     if (g && g.day === r.date) g.rows.push(r); else groups.push({ day: r.date, rows: [r] });
   }
   const acct = account ? lists.accounts.find((a) => a.id === account) : null;
+
+  if (!isDesktop) {
+    const hp = { height: 32, padding: "0 11px", fontSize: 12 } as const;
+    const hpOff = { ...hp, background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.35)", fontWeight: 500 };
+    const hpOn = { ...hp, background: "#fff", color: "var(--rail)", border: "1px solid #fff", fontWeight: 600 };
+    const catOpts = [{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))];
+    const cols = account ? "minmax(0,1fr) 88px 80px" : "minmax(0,1fr) 100px";
+    return (
+      <div className="flex flex-col -mx-4">
+        <div className="relative px-5 pb-3.5 flex flex-col" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))", gap: 12 }}>
+          <a href="#settings" aria-label="Profile and settings" className="absolute left-4 w-[30px] h-[30px] rounded-lg flex items-center justify-center text-base" style={{ top: "calc(0.75rem + env(safe-area-inset-top))", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</a>
+          <div className="flex items-center justify-between pt-9">
+            <h1 className="text-[22px] font-bold">{acct ? acct.name : "Transactions"}</h1>
+            <button aria-label="More filters" aria-pressed={moreFilters} onClick={() => setMoreFilters((v) => !v)} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: moreFilters || onlyHidden || onlyMismatch ? "#fff" : "rgba(255,255,255,0.12)", color: moreFilters || onlyHidden || onlyMismatch ? "var(--rail)" : "#fff" }}>
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" /></svg>
+            </button>
+          </div>
+          <label className="flex items-center gap-2 rounded-[10px]" style={{ background: "rgba(255,255,255,0.12)", padding: "10px 12px" }}>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.85 }}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-white placeholder:text-white/60" />
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
+            <Select pill ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: balances.has(a.id) ? `${a.name} · ${formatMoney(balances.get(a.id)!)}` : a.name }))]} style={account ? hpOn : hpOff} />
+            <Select pill ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={catOpts} style={category ? hpOn : hpOff} />
+            <Select pill ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} placeholder="Month" searchable={false} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} style={month ? hpOn : hpOff} />
+            {lists.tags.length > 0 && <Select pill ariaLabel="Tag filter" value={tag} onChange={setTag} placeholder="Tags" options={[{ value: "", label: "All tags" }, ...lists.tags.map((t) => ({ value: t.id, label: t.name }))]} style={tag ? hpOn : hpOff} />}
+            {(moreFilters || onlyHidden) && <button onClick={() => setOnlyHidden((v) => !v)} className="pill" style={onlyHidden ? hpOn : hpOff}><span className="tb">Hidden only</span></button>}
+            {(moreFilters || onlyMismatch) && <button onClick={() => setOnlyMismatch((v) => !v)} className="pill" style={onlyMismatch ? hpOn : hpOff}><span className="tb">Bank mismatches</span></button>}
+          </div>
+        </div>
+
+        <div className="grid px-4 pt-2 pb-1 text-[11px] font-semibold uppercase" style={{ gridTemplateColumns: cols, color: "var(--muted)", letterSpacing: "0.06em" }}>
+          <span>Entry</span><span className="text-right">Amount</span>{account && <span className="text-right">Balance</span>}
+        </div>
+        {rows === null && <div className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>Loading…</div>}
+        {rows?.length === 0 && <div className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>No entries match.</div>}
+        {groups.map((g) => (
+          <div key={g.day}>
+            <div className="px-4 pt-2.5 pb-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>{dayLabel(g.day)}</div>
+            <div style={{ background: "var(--card)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+              {g.rows.map((r, i) => {
+                const masked = r.amount === null;
+                const isTransfer = !!r.transferToAccountId;
+                const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
+                const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
+                return (
+                  <button key={r.id} onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="w-full grid items-center text-left" style={{ gridTemplateColumns: cols, padding: "11px 16px", borderTop: i ? "1px solid var(--border-soft)" : undefined, background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                    <span className="flex flex-col min-w-0" style={{ gap: 2 }}>
+                      <span className="text-[15px] font-medium flex items-center gap-1.5 truncate" style={{ color: masked ? "var(--muted)" : undefined }}>
+                        {masked && <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
+                        <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? "Transfer" : "—")}</span>
+                        {r.hidden && r.mine && <span title="Hidden from the other person" className="text-xs">🔒</span>}
+                        {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} className="text-xs" style={{ color: "var(--neg)" }}>⚠</span>}
+                      </span>
+                      <span className="text-xs flex items-center gap-1.5 min-w-0" style={{ color: "var(--muted)" }}>
+                        <span className="truncate">{!account && !masked ? `${acctName.get(r.accountId)} · ` : ""}{cats}{r.memo ? ` · ${r.memo}` : ""}</span>
+                        {r.source === "recurring" && <span aria-label="Recurring" className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center shrink-0" style={{ border: "1.5px solid var(--muted)" }}>R</span>}
+                        {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
+                        {r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <span key={tg!.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</span>)}
+                      </span>
+                    </span>
+                    <span className="text-right text-[15px] font-semibold" style={{ color: shownAmount === null ? "var(--faint)" : shownAmount < 0 ? "var(--neg)" : "var(--green-text)" }}>{shownAmount === null ? "—" : (shownAmount > 0 ? "+" : "") + formatMoney(shownAmount)}</span>
+                    {account && <span className="text-right text-[13px]" style={{ color: "var(--muted)" }}>{r.balance !== null ? formatMoney(r.balance) : ""}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -160,11 +236,17 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
 }
 
 /** Entry sheet/panel wrapper used by the shell. */
-export function EntrySheet({ lists, me, draft, onClose, onSaved }: { lists: Lists; me: { id: string; initial?: string }; draft: EntryDraft | null; onClose: () => void; onSaved: (id: string, summary: string) => void }) {
+export function EntrySheet({ lists, me, draft, onClose, onSaved, onDeleted }: { lists: Lists; me: { id: string; initial?: string }; draft: EntryDraft | null; onClose: () => void; onSaved: (id: string, summary: string) => void; onDeleted?: () => void }) {
+  const toast = useToast();
   if (!draft) return null;
+  async function del(id: string) {
+    await api(`/transactions/${id}`, { method: "DELETE" });
+    onClose(); onDeleted?.();
+    toast(`Deleted: ${draft!.payee || "entry"} ${draft!.amountText ? "$" + draft!.amountText : ""}`.trim(), async () => { await api(`/transactions/${id}?undo=1`, { method: "DELETE" }); onDeleted?.(); });
+  }
   return (
     <Sheet onClose={onClose}>
-      <EntryForm lists={lists} me={me} initial={draft} onClose={onClose} onSaved={onSaved} />
+      <EntryForm lists={lists} me={me} initial={draft} onClose={onClose} onSaved={onSaved} onDelete={del} />
     </Sheet>
   );
 }

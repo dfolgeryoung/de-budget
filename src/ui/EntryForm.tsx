@@ -52,7 +52,7 @@ const chip = (on: boolean) => ({
   border: on ? "2px solid var(--navy)" : "1px solid var(--field)", background: on ? "var(--selected)" : "var(--card)", color: on ? "var(--accent-text)" : "var(--text-2)",
 });
 
-export function EntryForm({ lists, me, initial, onSaved, onClose }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void }) {
+export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void; onDelete?: (id: string) => void }) {
   const [d, setD] = useState<EntryDraft>(initial);
   // Start with the extra section open when anything in it is already set, or a quick-entry chip asked for it.
   const [moreOpen] = useState(() => !!(initial.more || initial.split.length || initial.transfer || initial.sharedFiftyFifty || initial.hidden || initial.tagIds.length || initial.trackedAmountId || initial.memo));
@@ -248,6 +248,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose }: { lists: Lis
       <button onClick={save} disabled={busy} className="rounded-xl py-3.5 text-[15px] font-semibold disabled:opacity-60" style={{ background: dup ? "var(--yellow)" : "var(--navy)", color: dup ? "#1A1D23" : "var(--navy-text)" }}>
         {busy ? "Saving…" : dup ? "Save anyway" : d.id ? "Save changes" : "Save"}
       </button>
+      {d.id && onDelete && <button onClick={() => onDelete(d.id!)} className="py-2 text-[14px] font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}
     </div>
   );
 }

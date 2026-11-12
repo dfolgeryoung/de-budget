@@ -79,7 +79,7 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget") && isPhone ? { paddingTop: 0 } : undefined}>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} />
         ) : screen === "budget" || screen === "home" ? (
@@ -103,7 +103,7 @@ function ShellInner({ me }: { me: Me }) {
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
-      {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} />}
+      {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} onDeleted={() => setRefreshKey((k) => k + 1)} />}
 
       {/* Phone bottom bar */}
       <nav

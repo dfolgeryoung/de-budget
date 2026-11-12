@@ -3,6 +3,7 @@ import { api, todayISO, type Lists } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
+import { Select } from "./Select";
 import type { LedgerRow } from "../server/transactions";
 
 export interface EntryDraft {
@@ -66,7 +67,10 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   const cents = parseMoney(d.amountText) ?? 0;
   const signed = d.outflow ? -Math.abs(cents) : Math.abs(cents);
   const allCats = useMemo(() => lists.groups.flatMap((g) => g.categories.map((c) => ({ ...c, group: g.name, system: g.system }))), [lists]);
-  const pickable = allCats.filter((c) => c.kind !== "card_payment");
+  const catOptions = useMemo(() => [
+    { value: "rta", label: "Ready to Assign (income)", group: "Income" },
+    ...lists.groups.filter((g) => !g.system || g.name === "One Month Ahead").flatMap((g) => g.categories.filter((c) => c.kind !== "card_payment").map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name }))),
+  ], [lists]);
   const cat = (id: string | null) => allCats.find((c) => c.id === id);
   const payeeMatches = d.payee.length >= 1 ? lists.payees.filter((p) => p.name.toLowerCase().includes(d.payee.toLowerCase())).slice(0, 6) : [];
   const splitTotal = d.split.reduce((s, l) => s + (parseMoney(l.amountText) ?? 0), 0);
@@ -175,10 +179,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Split across categories · {remainder === 0 ? "all placed" : `${formatMoney(remainder)} left`}</span>
           {d.split.map((l, i) => (
             <div key={i} className="flex gap-2">
-              <select value={l.categoryId ?? ""} onChange={(e) => set({ split: d.split.map((x, j) => (j === i ? { ...x, categoryId: e.target.value || null } : x)) })} className={field} style={fieldStyle}>
-                <option value="">Category…</option>
-                {pickable.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ` : ""}{c.name}</option>)}
-              </select>
+              <Select ariaLabel={`Split line ${i + 1} category`} value={l.categoryId} onChange={(v) => set({ split: d.split.map((x, j) => (j === i ? { ...x, categoryId: v } : x)) })} options={catOptions} placeholder="Category…" className="flex-1" style={{ height: 42, borderRadius: 10, fontSize: 15 }} menuWidth={300} />
               <input inputMode="decimal" value={l.amountText} onChange={(e) => set({ split: d.split.map((x, j) => (j === i ? { ...x, amountText: e.target.value } : x)) })} className={field + " w-28 shrink-0 text-right"} style={fieldStyle} placeholder="0.00" />
             </div>
           ))}
@@ -188,18 +189,10 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
           </div>
         </div>
       ) : (
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Category</span>
-          <select value={d.categoryId ?? ""} onChange={(e) => set({ categoryId: e.target.value || null })} className={field} style={fieldStyle}>
-            <option value="">Pick a category…</option>
-            <option value="rta">Ready to Assign (income)</option>
-            {lists.groups.filter((g) => !g.system || g.name === "One Month Ahead").map((g) => (
-              <optgroup key={g.id} label={g.name}>
-                {g.categories.filter((c) => c.kind !== "card_payment").map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ` : ""}{c.name}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </label>
+          <Select ariaLabel="Category" value={d.categoryId} onChange={(v) => set({ categoryId: v })} options={catOptions} placeholder="Pick a category…" className="w-full" style={{ height: 42, borderRadius: 10, fontSize: 15 }} menuWidth={300} />
+        </div>
       )}
 
       <div className="flex items-center gap-2">
@@ -230,10 +223,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
             </div>
           )}
           {lists.tracked.length > 0 && (
-            <select value={d.trackedAmountId ?? ""} onChange={(e) => set({ trackedAmountId: e.target.value || null })} className={field} style={fieldStyle}>
-              <option value="">Track against… (none)</option>
-              {lists.tracked.map((x) => <option key={x.id} value={x.id}>{x.emoji ? `${x.emoji} ` : ""}{x.name}</option>)}
-            </select>
+            <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: 15 }} />
           )}
         </div>
       </details>

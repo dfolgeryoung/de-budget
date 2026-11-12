@@ -95,7 +95,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
             {canSearch && (
               <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type to filter…" className="m-2 mb-1 px-2.5 text-[13px] rounded-md outline-none" style={{ height: 32, border: "1px solid var(--field)", background: "var(--card-alt)", color: "var(--text)" }} />
             )}
-            <div className="overflow-y-auto py-1" style={{ maxHeight: maxH - (canSearch ? 44 : 0) }}>
+            <div className="overflow-y-auto py-1" style={{ maxHeight: maxH - 10 - (canSearch ? 44 : 0) }}>
               {filtered.length === 0 && <div className="px-3 py-2 text-xs" style={{ color: "var(--muted)" }}>No matches</div>}
               {filtered.map((o, i) => {
                 const header = o.group && o.group !== lastGroup ? o.group : null; lastGroup = o.group;

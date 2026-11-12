@@ -68,6 +68,41 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const setDragId = (id: string | null) => { dragRef.current.id = id; setDragIdState(id); };
   const setDropAt = (at: { groupId: string; index: number } | null) => { dragRef.current.at = at; setDropAtState(at); };
   const dragArmed = useRef(false); // only a drag started on the grip handle may move a row
+  // phone: press-and-hold lifts a row; the finger moves it; the native touchmove listener below (non-passive) stops the page scrolling meanwhile
+  const [touchDrag, setTouchDrag] = useState<{ id: string; dy: number } | null>(null);
+  const touchRef = useRef<{ id: string | null; timer: number | null; startX: number; startY: number; lastY: number; moved: boolean }>({ id: null, timer: null, startX: 0, startY: 0, lastY: 0, moved: false });
+  useEffect(() => {
+    // on the document (the list mounts after loading); it only intervenes while a row is lifted
+    const onMove = (e: TouchEvent) => {
+      const t = touchRef.current, touch = e.touches[0]; if (!touch) return;
+      if (!t.id) { if (Math.hypot(touch.clientX - t.startX, touch.clientY - t.startY) > 8) { t.moved = true; if (t.timer) { clearTimeout(t.timer); t.timer = null; } } return; }
+      e.preventDefault();
+      t.lastY = touch.clientY;
+      setTouchDrag({ id: t.id, dy: touch.clientY - t.startY });
+      // where would it land: the row or group header under the finger
+      const under = document.elementsFromPoint(touch.clientX, touch.clientY).find((x) => ((x as HTMLElement).dataset?.cat && (x as HTMLElement).dataset.cat !== t.id) || (x as HTMLElement).dataset?.grouphead) as HTMLElement | undefined;
+      if (under?.dataset.cat) {
+        const r = under.getBoundingClientRect();
+        setDropAt({ groupId: under.dataset.group!, index: Number(under.dataset.index) + (touch.clientY > r.top + r.height / 2 ? 1 : 0) });
+      } else if (under?.dataset.grouphead) setDropAt({ groupId: under.dataset.grouphead, index: 0 });
+      // auto-scroll near the edges
+      const vh = window.innerHeight;
+      if (touch.clientY < 110) window.scrollBy(0, -10); else if (touch.clientY > vh - 130) window.scrollBy(0, 10);
+    };
+    document.addEventListener("touchmove", onMove, { passive: false });
+    return () => document.removeEventListener("touchmove", onMove);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const touchStart = (id: string) => (e: React.TouchEvent) => {
+    const t = touchRef.current, touch = e.touches[0]!;
+    t.startX = touch.clientX; t.startY = touch.clientY; t.lastY = touch.clientY; t.moved = false; t.id = null;
+    if (t.timer) clearTimeout(t.timer);
+    t.timer = window.setTimeout(() => { if (t.moved) return; t.id = id; t.moved = true; setDragId(id); setTouchDrag({ id, dy: 0 }); if (navigator.vibrate) navigator.vibrate(15); }, 450);
+  };
+  const touchEnd = () => {
+    const t = touchRef.current;
+    if (t.timer) { clearTimeout(t.timer); t.timer = null; }
+    if (t.id) { t.id = null; setTouchDrag(null); dropCategory(); }
+  };
   const [recent, setRecent] = useState<{ id: string; at: string; fromCategoryId: string | null; toCategoryId: string | null; amount: number; how: string; undone: boolean }[] | null>(null);
   const undoStack = useRef<string[][]>([]);
   const redoStack = useRef<{ month: string; from: string | null; to: string | null; amount: number }[][]>([]);
@@ -218,17 +253,23 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             const total = rows.reduce((s, c) => s + c.available, 0);
             return (
               <div key={g.id} className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                <button onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })} className="w-full flex items-center justify-between text-[13px] font-semibold" style={{ padding: "10px 14px", background: "var(--group)", color: "var(--text-2)" }}>
+                <button data-grouphead={g.id} onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })} className="w-full flex items-center justify-between text-[13px] font-semibold" style={{ padding: "10px 14px", background: "var(--group)", color: "var(--text-2)", boxShadow: touchDrag && dropAt?.groupId === g.id && dropAt.index === 0 ? "inset 0 -2px 0 var(--navy)" : undefined }}>
                   <span className="flex items-center gap-2 min-w-0 whitespace-nowrap"><Chevron dir={isOpen ? "down" : "right"} size={11} /><span className="truncate">{g.name}</span></span>
                   <span className="shrink-0 pl-3">{formatMoney(total)}</span>
                 </button>
-                {isOpen && rows.map((c) => {
+                {isOpen && rows.map((c, ri) => {
                   const meta = data.categories[c.categoryId]!;
                   const chip = chipStyle[c.status] ?? chipStyle.none!;
                   const st = statusText(c);
                   const icon = statusIcon(c);
+                  const lifted = touchDrag?.id === c.categoryId;
+                  const lineAbove = touchDrag && dropAt?.groupId === g.id && dropAt.index === ri;
+                  const lineBelow = touchDrag && dropAt?.groupId === g.id && dropAt.index === ri + 1 && ri === rows.length - 1;
                   return (
-                    <button key={c.categoryId} onClick={() => setOpen(c.categoryId)} className="w-full flex items-center gap-3 text-left" style={{ padding: "11px 14px", borderTop: "1px solid var(--border-soft)", background: c.status === "underfunded" ? "var(--yellow-row)" : undefined }}>
+                    <button key={c.categoryId} data-cat={c.categoryId} data-group={g.id} data-index={ri} onClick={() => { if (!touchRef.current.moved) setOpen(c.categoryId); }}
+                      onTouchStart={touchStart(c.categoryId)} onTouchEnd={touchEnd} onTouchCancel={touchEnd} onContextMenu={(e) => e.preventDefault()}
+                      className="w-full flex items-center gap-3 text-left" style={{ padding: "11px 14px", borderTop: lineAbove ? "2px solid var(--navy)" : "1px solid var(--border-soft)", borderBottom: lineBelow ? "2px solid var(--navy)" : undefined, background: lifted ? "var(--card)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined,
+                        transform: lifted ? `translateY(${touchDrag!.dy}px) scale(1.02)` : undefined, boxShadow: lifted ? "0 8px 24px rgba(0,0,0,0.22)" : undefined, position: lifted ? "relative" : undefined, zIndex: lifted ? 20 : undefined, opacity: lifted ? 0.95 : 1, transition: lifted ? "none" : "transform 150ms", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}>
                       <span className="text-lg w-6 text-center shrink-0">{meta.emoji ?? "·"}</span>
                       <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 6 }}>
                         <span className="flex justify-between items-center gap-2">

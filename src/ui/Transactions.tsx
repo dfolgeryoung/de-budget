@@ -5,7 +5,8 @@ import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
 import { EntryForm, draftFromRow, emptyDraft, type EntryDraft } from "./EntryForm";
 import { Sheet } from "./Sheet";
-import { QuickEntry } from "./QuickEntry";
+import { EntryRow, LEDGER_COLS } from "./EntryRow";
+import { Select } from "./Select";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -24,6 +25,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [onlyMismatch, setOnlyMismatch] = useState(false);
   const isDesktop = typeof matchMedia !== "undefined" && matchMedia("(min-width: 768px)").matches;
   const [menu, setMenu] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<EntryDraft | undefined>(undefined);
   const toast = useToast();
   const catName = useMemo(() => new Map(lists.groups.flatMap((g) => g.categories.map((c) => [c.id, `${c.emoji ? c.emoji + " " : ""}${c.name}`]))), [lists]);
   const acctName = useMemo(() => new Map(lists.accounts.map((a) => [a.id, a.name])), [lists]);
@@ -62,34 +65,20 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         <h1 className="text-xl font-bold">{acct ? acct.name : "Transactions"}</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <select value={account ?? ""} onChange={(e) => setAccount(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (account ? " on" : "")} style={{ maxWidth: "14rem", backgroundColor: account ? "var(--navy)" : "var(--card)", color: account ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
-          <option value="">All accounts</option>
-          {lists.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-        <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (category ? " on" : "")} style={{ maxWidth: "14rem", backgroundColor: category ? "var(--navy)" : "var(--card)", color: category ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
-          <option value="">Category</option>
-          {lists.groups.map((g) => <optgroup key={g.id} label={g.name}>{g.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
-        </select>
-        <select value={month} onChange={(e) => setMonth(e.target.value)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (month ? " on" : "")} style={{ backgroundColor: month ? "var(--navy)" : "var(--card)", color: month ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
-          <option value="">All months</option>
-          {monthOptions.map((m) => <option key={m} value={m}>{MON[Number(m.slice(5, 7)) - 1]} {m.slice(0, 4)}</option>)}
-        </select>
-        {lists.tags.length > 0 && (
-          <select value={tag ?? ""} onChange={(e) => setTag(e.target.value || null)} className={"sel rounded-full pl-3 py-1.5 text-xs font-semibold w-auto shrink-0" + (tag ? " on" : "")} style={{ backgroundColor: tag ? "var(--navy)" : "var(--card)", color: tag ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>
-            <option value="">Tags</option>
-            {lists.tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        )}
-        <button onClick={() => setOnlyHidden((v) => !v)} className="rounded-full px-3 py-1.5 text-xs font-semibold shrink-0" style={{ background: onlyHidden ? "var(--navy)" : "var(--card)", color: onlyHidden ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>Hidden only</button>
-        <button onClick={() => setOnlyMismatch((v) => !v)} className="rounded-full px-3 py-1.5 text-xs font-semibold shrink-0" style={{ background: onlyMismatch ? "var(--navy)" : "var(--card)", color: onlyMismatch ? "var(--navy-text)" : "var(--text-2)", border: "1px solid var(--field)" }}>Bank mismatches</button>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "14rem" }} />
+        <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))]} style={{ maxWidth: "14rem" }} />
+        <Select pill on={!!month} ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} searchable={false} />
+        {lists.tags.length > 0 && <Select pill on={!!tag} ariaLabel="Tag filter" value={tag} onChange={setTag} placeholder="Tags" options={[{ value: "", label: "All tags" }, ...lists.tags.map((t) => ({ value: t.id, label: t.name }))]} />}
+        <button onClick={() => setOnlyHidden((v) => !v)} className="inline-flex items-center rounded-full px-3.5 text-xs font-semibold shrink-0 leading-none" style={{ height: 32, background: onlyHidden ? "var(--navy)" : "var(--card)", color: onlyHidden ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyHidden ? "var(--navy)" : "var(--field)"}` }}>Hidden only</button>
+        <button onClick={() => setOnlyMismatch((v) => !v)} className="inline-flex items-center rounded-full px-3.5 text-xs font-semibold shrink-0 leading-none" style={{ height: 32, background: onlyMismatch ? "var(--navy)" : "var(--card)", color: onlyMismatch ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyMismatch ? "var(--navy)" : "var(--field)"}` }}>Bank mismatches</button>
       </div>
 
-      {isDesktop && <QuickEntry lists={lists} me={me} account={account} onSaved={() => { load(); }} openFull={openEntry} />}
+      {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); load(); }} />}
 
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         {isDesktop && (
-          <div className="grid px-4 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+          <div className="grid px-4 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
             <span>Date</span><span>Payee</span><span>Account</span><span>Category</span><span>Memo</span><span>Tags</span><span className="text-right">Outflow</span><span className="text-right">Inflow</span><span className="text-right">Balance</span><span />
           </div>
         )}
@@ -104,16 +93,18 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
-                isDesktop ? (
-                <div key={r.id} className="row-hover relative grid items-center px-4 py-2 text-[13px]" style={{ gridTemplateColumns: "64px minmax(130px,1.2fr) 120px minmax(140px,1fr) minmax(80px,0.9fr) 100px 90px 90px 96px 28px", gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                isDesktop && editing === r.id ? (
+                <EntryRow key={r.id} mode="edit" lists={lists} me={me} account={account} initial={draftFromRow(r, lists)} onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} onDelete={() => { setEditing(null); del(r); }} />
+                ) : isDesktop ? (
+                <div key={r.id} onClick={(e) => { if (!masked && !(e.target as HTMLElement).closest("button")) setEditing(r.id); }} className={"row-hover relative grid items-center px-4 py-2 text-[13px]" + (masked ? "" : " cursor-pointer")} title={masked ? undefined : "Click to edit"} style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>
-                  <button onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
+                  <span className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
                     {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
                     {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
-                  </button>
+                  </span>
                   <span className="truncate" style={{ color: "var(--text-2)" }}>{acctName.get(r.accountId)}</span>
                   <span className="truncate">{cats}</span>
                   <span className="truncate" style={{ color: "var(--muted)" }}>{r.memo ?? ""}</span>
@@ -124,8 +115,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <button aria-label="Row menu" onClick={() => setMenu(menu === r.id ? null : r.id)} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>
                   {menu === r.id && (
                     <div className="absolute right-4 top-9 z-10 rounded-lg shadow-lg text-sm flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); openEntry(draftFromRow(r, lists)); }}>Edit</button>
-                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); const d = draftFromRow(r, lists); delete d.id; openEntry(d); }}>Duplicate</button>
+                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); setEditing(r.id); }}>Edit</button>
+                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); const d = draftFromRow(r, lists); delete d.id; setPrefill({ ...d, more: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Duplicate</button>
                       <button className="px-4 py-2 text-left" style={{ color: "var(--red-text)" }} onClick={() => del(r)}>Delete</button>
                     </div>
                   )}

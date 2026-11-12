@@ -5,6 +5,7 @@ import type { LedgerRow } from "../server/transactions";
 import { api } from "./api";
 import { Bar, statusText } from "./Budget";
 import { Chevron } from "./icons";
+import { Select } from "./Select";
 
 type Tab = "summary" | "goal" | "transactions" | "history";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -148,14 +149,10 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
       <div className="px-4 py-3 flex flex-col gap-2">
         <div className="flex gap-2 items-center">
           {!rtaMode && (
-            <select value={dir} onChange={(e) => setDir(e.target.value as "to" | "from")} className="sel rounded-lg pl-2 py-2 text-[13px]" style={{ border: "1px solid var(--field)", backgroundColor: "var(--card)", width: 72 }}>
-              <option value="to">To</option><option value="from">From</option>
-            </select>
+            <Select ariaLabel="Direction" value={dir} onChange={(v) => setDir((v as "to" | "from") ?? "to")} options={[{ value: "to", label: "To" }, { value: "from", label: "From" }]} style={{ width: 84, height: 36, borderRadius: 8 }} />
           )}
-          <select value={other} onChange={(e) => setOther(e.target.value)} className="sel rounded-lg pl-2 py-2 text-[13px] flex-1 min-w-0" style={{ border: "1px solid var(--field)", backgroundColor: "var(--card)" }}>
-            {rtaMode ? <option value="">Pick a category…</option> : <option value="rta">Ready to Assign · {formatMoney(data.view.readyToAssign)}</option>}
-            {cats.filter((x) => x.id !== categoryId).map((x) => <option key={x.id} value={x.id}>{x.name} · {formatMoney(x.available)}</option>)}
-          </select>
+          <Select ariaLabel={rtaMode ? "Category" : "Other category"} value={other} onChange={(v) => setOther(v ?? "")} placeholder="Pick a category…" className="flex-1" style={{ height: 36, borderRadius: 8 }} menuWidth={300}
+            options={[...(rtaMode ? [] : [{ value: "rta", label: "Ready to Assign", hint: formatMoney(data.view.readyToAssign) }]), ...cats.filter((x) => x.id !== categoryId).map((x) => ({ value: x.id, label: x.name, hint: formatMoney(x.available) }))]} />
         </div>
         <div className="flex gap-2 items-center">
           <span className="flex items-center rounded-lg px-2.5" style={{ border: "1px solid var(--field)", background: "var(--card)", width: 120 }}><span className="text-[13px]" style={{ color: "var(--muted)" }}>$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" className="w-full py-2 text-[13px] bg-transparent outline-none" placeholder="0.00" /></span>

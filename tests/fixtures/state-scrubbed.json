@@ -1,0 +1,3106 @@
+{
+"accounts": [
+[
+"D Checking",
+"Checking",
+"Yes",
+6028.66
+],
+[
+"E Checking",
+"Checking",
+"Yes",
+771.18
+],
+[
+"Money Market",
+"Savings",
+"Yes",
+67908.9
+],
+[
+"Money Market 2",
+"Savings",
+"Yes",
+1208.73
+],
+[
+"CapitalOne",
+"Credit Card",
+"Yes",
+-1168.43
+],
+[
+"D SECU Credit",
+"Credit Card",
+"Yes",
+0
+],
+[
+"E SECU Credit",
+"Credit Card",
+"Yes",
+0
+]
+],
+"first_month": "2026-11-01",
+"current_month": "2026-11-01",
+"ledger": [
+[
+"2026-11-11",
+"D Checking",
+"Payee 1",
+"David Fun Money",
+"",
+63.28,
+null,
+false
+],
+[
+"2026-11-11",
+"CapitalOne",
+"",
+"Eating Out/Take Out",
+"",
+59.75,
+null,
+false
+],
+[
+"2026-11-11",
+"CapitalOne",
+"Payee 2",
+"Clothes, Supplies, & Misc",
+"",
+62.5,
+null,
+false
+],
+[
+"2026-11-11",
+"E Checking (split)",
+"Payee 3",
+"Babysitters + Misc Childcare",
+"",
+70.0,
+null,
+false
+],
+[
+"2026-11-11",
+"E Checking",
+"Payee 4",
+"Elizabeth Fun Money",
+"",
+23.73,
+null,
+false
+],
+[
+"2026-11-11",
+"D Checking",
+"Payee 5",
+"Unexpected",
+"",
+599.93,
+null,
+false
+],
+[
+"2026-11-11",
+"CapitalOne",
+"Payee 6",
+"Sports & Lessons",
+"",
+160.0,
+null,
+false
+],
+[
+"2026-11-10",
+"D Checking (split)",
+"Payee 7",
+"Sports & Lessons",
+"",
+40.0,
+null,
+false
+],
+[
+"2026-11-10",
+"D Checking",
+"Payee 8",
+"David Fun Money",
+"",
+57.91,
+null,
+false
+],
+[
+"2026-11-10",
+"E SECU Credit",
+"Payee 9",
+"Utilities",
+"",
+88.11,
+null,
+false
+],
+[
+"2026-11-10",
+"CapitalOne",
+"Payee 10",
+"Medical",
+"",
+20.0,
+null,
+false
+],
+[
+"2026-11-10",
+"D Checking",
+"Payee 11",
+"David Fun Money",
+"",
+7.5,
+null,
+false
+],
+[
+"2026-11-09",
+"E Checking",
+"Payee 12",
+"Elizabeth Fun Money",
+"",
+20.0,
+null,
+false
+],
+[
+"2026-11-09",
+"E Checking",
+"Payee 13",
+"Google Drive + iCloud",
+"",
+2.99,
+null,
+false
+],
+[
+"2026-11-09",
+"E Checking (split)",
+"Payee 14",
+"Cleaners",
+"",
+120.0,
+null,
+false
+],
+[
+"2026-11-09",
+"E Checking",
+"Payee 15",
+"Elizabeth Fun Money",
+"",
+49.34,
+null,
+false
+],
+[
+"2026-11-09",
+"CapitalOne",
+"Payee 16",
+"YMCA Membership",
+"",
+70.26,
+null,
+false
+],
+[
+"2026-11-09",
+"CapitalOne",
+"Payee 17",
+"Babysitters + Misc Childcare",
+"",
+10.19,
+null,
+false
+],
+[
+"2026-11-08",
+"D Checking (split)",
+"Payee 18",
+"Garden/Home Decor",
+"",
+125.0,
+null,
+false
+],
+[
+"2026-11-08",
+"CapitalOne",
+"Payee 19",
+"Groceries",
+"",
+75.15,
+null,
+false
+],
+[
+"2026-11-08",
+"CapitalOne",
+"Payee 20",
+"Groceries",
+"",
+176.14,
+null,
+false
+],
+[
+"2026-11-08",
+"E SECU Credit",
+"Payee 21",
+"Elizabeth Fun Money",
+"",
+186.41,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 3",
+"David Fun Money",
+"",
+60.0,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 22",
+"David Fun Money",
+"",
+32.5,
+null,
+false
+],
+[
+"2026-11-06",
+"E Checking",
+"Payee 23",
+"Elizabeth Fun Money",
+"",
+15.38,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 24",
+"David Fun Money",
+"",
+8.58,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 25",
+"Utilities",
+"",
+208.24,
+null,
+false
+],
+[
+"2026-11-06",
+"CapitalOne",
+"Payee 16",
+"Donations",
+"",
+20.0,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 26",
+"Google Drive + iCloud",
+"",
+0.99,
+null,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 27",
+"Ready to Assign",
+"",
+null,
+2500.0,
+false
+],
+[
+"2026-11-06",
+"D Checking",
+"Payee 28",
+"June 529",
+"",
+200.0,
+null,
+false
+],
+[
+"2026-11-05",
+"CapitalOne",
+"Payee 29",
+"Gas",
+"",
+54.71,
+null,
+false
+],
+[
+"2026-11-05",
+"D Checking",
+"Payee 30",
+"David Fun Money",
+"",
+14.06,
+null,
+false
+],
+[
+"2026-11-05",
+"CapitalOne",
+"Payee 31",
+"Groceries",
+"",
+12.99,
+null,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 32",
+"Elizabeth Fun Money",
+"",
+20.31,
+null,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 33",
+"Spotify",
+"",
+20.37,
+null,
+false
+],
+[
+"2026-11-05",
+"CapitalOne",
+"Payee 34",
+"Eating Out/Take Out",
+"",
+21.75,
+null,
+false
+],
+[
+"2026-11-05",
+"Money Market 2",
+"Payee 35",
+"Ready to Assign",
+"",
+null,
+2.11,
+false
+],
+[
+"2026-11-05",
+"Money Market 2",
+"Payee 36",
+"Ready to Assign",
+"",
+null,
+174.11,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 37",
+"Ready to Assign",
+"",
+null,
+4.93,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 38",
+"Elizabeth Fun Money",
+"",
+25.0,
+null,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 39",
+"Elizabeth Fun Money",
+"",
+37.94,
+null,
+false
+],
+[
+"2026-11-05",
+"Money Market",
+"Payee 35",
+"Ready to Assign",
+"",
+null,
+111.29,
+false
+],
+[
+"2026-11-05",
+"D Checking",
+"Payee 40",
+"Ready to Assign",
+"",
+null,
+2950.0,
+false
+],
+[
+"2026-11-05",
+"D Checking",
+"Payee 35",
+"Ready to Assign",
+"",
+null,
+0.34,
+false
+],
+[
+"2026-11-05",
+"D Checking",
+"Payee 41",
+"Unexpected",
+"",
+1.0,
+null,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"",
+"Transfer: Money Market",
+"",
+3315.0,
+null,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 42",
+"Ready to Assign",
+"",
+null,
+3315.0,
+false
+],
+[
+"2026-11-05",
+"E Checking",
+"Payee 43",
+"Ready to Assign",
+"",
+null,
+2991.71,
+false
+],
+[
+"2026-11-04",
+"E Checking",
+"Payee 44",
+"Elizabeth Fun Money",
+"",
+22.19,
+null,
+false
+],
+[
+"2026-11-04",
+"CapitalOne",
+"Payee 45",
+"Pest Control",
+"",
+90.67,
+null,
+false
+],
+[
+"2026-11-04",
+"E Checking",
+"Payee 46",
+"Elizabeth Fun Money",
+"",
+40.45,
+null,
+false
+],
+[
+"2026-11-04",
+"CapitalOne",
+"Payee 47",
+"Groceries",
+"",
+40.82,
+null,
+false
+],
+[
+"2026-11-03",
+"E Checking",
+"Payee 48",
+"Elizabeth Fun Money",
+"",
+16.28,
+null,
+false
+],
+[
+"2026-11-03",
+"E Checking",
+"Payee 26",
+"Google Drive + iCloud",
+"",
+2.99,
+null,
+false
+],
+[
+"2026-11-03",
+"D Checking",
+"Payee 49",
+"Student Loan",
+"",
+689.82,
+null,
+false
+],
+[
+"2026-11-03",
+"D Checking",
+"",
+"Transfer: CapitalOne",
+"",
+653.14,
+null,
+false
+],
+[
+"2026-11-03",
+"CapitalOne",
+"Payee 50",
+"Clothes, Supplies, & Misc",
+"",
+45.01,
+null,
+false
+],
+[
+"2026-11-03",
+"E Checking",
+"Payee 51",
+"Elizabeth Fun Money",
+"",
+4.35,
+null,
+false
+],
+[
+"2026-11-02",
+"D Checking",
+"Payee 52",
+"David Fun Money",
+"",
+22.51,
+null,
+false
+],
+[
+"2026-11-02",
+"E Checking",
+"Payee 53",
+"Elizabeth Fun Money",
+"",
+1.85,
+null,
+false
+],
+[
+"2026-11-02",
+"E Checking",
+"Payee 54",
+"Elizabeth Fun Money",
+"",
+85.8,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 55",
+"Groceries",
+"",
+13.62,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 15",
+"Target/Amazon",
+"",
+49.34,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 56",
+"Target/Amazon",
+"",
+16.08,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 57",
+"Eating Out/Take Out",
+"",
+55.49,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 58",
+"Eating Out/Take Out",
+"",
+21.25,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 56",
+"Target/Amazon",
+"",
+34.48,
+null,
+false
+],
+[
+"2026-11-02",
+"CapitalOne",
+"Payee 59",
+"Wine & Beer",
+"",
+32.18,
+null,
+false
+],
+[
+"2026-11-01",
+"E Checking",
+"Payee 60",
+"Elizabeth Fun Money",
+"",
+4.02,
+null,
+false
+],
+[
+"2026-11-01",
+"CapitalOne",
+"Payee 20",
+"Groceries",
+"",
+159.14,
+null,
+false
+],
+[
+"2026-11-01",
+"CapitalOne",
+"Payee 19",
+"Groceries",
+"",
+64.64,
+null,
+false
+],
+[
+"2026-11-01",
+"D Checking",
+"Payee 61",
+"Mortgage",
+"",
+2433.88,
+null,
+false
+]
+],
+"months": {
+"Dec 2026": {
+"picked": "",
+"cats": {
+"Next Month's Money": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 3385.06,
+"group": "One Month Ahead"
+},
+"CapitalOne": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 1881.45,
+"group": "Credit Card Payments"
+},
+"D SECU Credit": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Credit Card Payments"
+},
+"E SECU Credit": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 304.82,
+"group": "Credit Card Payments"
+},
+"Mortgage": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 2433.88,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Bills"
+},
+"Phone & Internet": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 250.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 250.0,
+"group": "Bills"
+},
+"Utilities": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 300.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 3.65,
+"group": "Bills"
+},
+"Car Insurance": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 133.89,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 133.89,
+"group": "Bills"
+},
+"Pest Control": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 88.89,
+"freq": 2.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Bills"
+},
+"YMCA Membership": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 70.26,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": -0.0,
+"group": "Bills"
+},
+"Netflix": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 9.64,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 9.64,
+"group": "Bills"
+},
+"Spotify": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 20.37,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Bills"
+},
+"New York Times": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 4.23,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 4.23,
+"group": "Bills"
+},
+"Google Drive + iCloud": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 6.1,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 2.12,
+"group": "Bills"
+},
+"Groceries": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 1300.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 757.5,
+"group": "Monthly Living Expenses"
+},
+"Target/Amazon": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 400.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 300.1,
+"group": "Monthly Living Expenses"
+},
+"Gas": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 145.29,
+"group": "Monthly Living Expenses"
+},
+"Cleaners": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 240.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 120.0,
+"group": "Monthly Living Expenses"
+},
+"Cat Expenses": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 75.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 75.0,
+"group": "Monthly Living Expenses"
+},
+"Unexpected": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Monthly Living Expenses"
+},
+"Clothes, Supplies, & Misc": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": -7.51,
+"group": "Kids"
+},
+"Sports & Lessons": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Kids"
+},
+"Babysitters + Misc Childcare": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 119.81,
+"group": "Kids"
+},
+"Summer Camps": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 350.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 1095.99,
+"group": "Kids"
+},
+"Garden/Home Decor": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Fun Spending"
+},
+"Entertainment": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Fun Spending"
+},
+"Eating Out/Take Out": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 500.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 341.76,
+"group": "Fun Spending"
+},
+"Wine & Beer": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 67.82,
+"group": "Fun Spending"
+},
+"David Fun Money": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 600.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 333.66,
+"group": "Fun Spending"
+},
+"Elizabeth Fun Money": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 600.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 46.95,
+"group": "Fun Spending"
+},
+"Emergency Fund": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 400.0,
+"group": "Savings"
+},
+"Elizabeth SECU Retirement": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 150.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 125.0,
+"group": "Savings"
+},
+"David Fidelity Retirement": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 1200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 1200.0,
+"group": "Savings"
+},
+"Bonnie 529": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Savings"
+},
+"June 529": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Savings"
+},
+"Estimated Taxes": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 3151.67,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 4885.01,
+"group": "Short-Term Savings"
+},
+"Big Trips": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 350.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 350.0,
+"group": "Short-Term Savings"
+},
+"Small Trips": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 391.0,
+"group": "Short-Term Savings"
+},
+"Money Market Savings": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 62685.63,
+"group": "Long-Term Savings"
+},
+"Student Loan": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 689.82,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 110.18,
+"group": "Debt"
+},
+"Car Loan": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 272.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 272.0,
+"group": "Debt"
+},
+"Home Maintenance": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 359.14,
+"group": "Irregular & Annual Expenses"
+},
+"Car Maintenance": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 244.84,
+"group": "Irregular & Annual Expenses"
+},
+"Medical": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 80.0,
+"group": "Irregular & Annual Expenses"
+},
+"Life Insurance": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 11.6,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 11.6,
+"group": "Irregular & Annual Expenses"
+},
+"Gifts": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Irregular & Annual Expenses"
+},
+"Donations": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 80.0,
+"group": "Irregular & Annual Expenses"
+},
+"Christmas": {
+"assigned": null,
+"goal_type": "Set aside another",
+"goal_amount": 200.0,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 1000.0,
+"group": "Irregular & Annual Expenses"
+},
+"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists.": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": null,
+"available": null,
+"group": ""
+}
+},
+"rta": 0.0,
+"accounts": {
+"D Checking": 6248.16,
+"E Checking": 3197.33,
+"Money Market": 71335.19,
+"Money Market 2": 1384.95,
+"CapitalOne": -1881.45,
+"E SECU Credit": -274.52,
+"Cash on budget": 82165.63,
+"Owed on credit cards": 2155.97,
+"Set aside for cards": 2186.27,
+"Uncovered card debt": -30.3,
+"Check (should be $0)": -0.0
+},
+"groups": [
+[
+"One Month Ahead",
+[
+"Next Month's Money"
+]
+],
+[
+"Credit Card Payments",
+[
+"CapitalOne",
+"D SECU Credit",
+"E SECU Credit"
+]
+],
+[
+"Bills",
+[
+"Mortgage",
+"Phone & Internet",
+"Utilities",
+"Car Insurance",
+"Pest Control",
+"YMCA Membership",
+"Netflix",
+"Spotify",
+"New York Times",
+"Google Drive + iCloud"
+]
+],
+[
+"Monthly Living Expenses",
+[
+"Groceries",
+"Target/Amazon",
+"Gas",
+"Cleaners",
+"Cat Expenses",
+"Unexpected"
+]
+],
+[
+"Kids",
+[
+"Clothes, Supplies, & Misc",
+"Sports & Lessons",
+"Babysitters + Misc Childcare",
+"Summer Camps"
+]
+],
+[
+"Fun Spending",
+[
+"Garden/Home Decor",
+"Entertainment",
+"Eating Out/Take Out",
+"Wine & Beer",
+"David Fun Money",
+"Elizabeth Fun Money"
+]
+],
+[
+"Savings",
+[
+"Emergency Fund",
+"Elizabeth SECU Retirement",
+"David Fidelity Retirement",
+"Bonnie 529",
+"June 529"
+]
+],
+[
+"Short-Term Savings",
+[
+"Estimated Taxes",
+"Big Trips",
+"Small Trips"
+]
+],
+[
+"Long-Term Savings",
+[
+"Money Market Savings"
+]
+],
+[
+"Debt",
+[
+"Student Loan",
+"Car Loan"
+]
+],
+[
+"Irregular & Annual Expenses",
+[
+"Home Maintenance",
+"Car Maintenance",
+"Medical",
+"Life Insurance",
+"Gifts",
+"Donations",
+"Christmas",
+"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists."
+]
+]
+]
+},
+"Nov 2026": {
+"picked": "Eating Out/Take Out",
+"cats": {
+"Next Month's Money": {
+"assigned": -2303.59,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 3385.06,
+"group": "One Month Ahead"
+},
+"CapitalOne": {
+"assigned": 508.85,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 713.02,
+"available": 1881.45,
+"group": "Credit Card Payments"
+},
+"D SECU Credit": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 0.0,
+"group": "Credit Card Payments"
+},
+"E SECU Credit": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 274.52,
+"available": 304.82,
+"group": "Credit Card Payments"
+},
+"Mortgage": {
+"assigned": 2433.88,
+"goal_type": "Refill up to",
+"goal_amount": 2433.88,
+"freq": 1.0,
+"goal_date": null,
+"activity": -2433.88,
+"available": 0.0,
+"group": "Bills"
+},
+"Phone & Internet": {
+"assigned": 249.45,
+"goal_type": "Refill up to",
+"goal_amount": 250.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 250.0,
+"group": "Bills"
+},
+"Utilities": {
+"assigned": 300.0,
+"goal_type": "Refill up to",
+"goal_amount": 300.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -296.35,
+"available": 3.65,
+"group": "Bills"
+},
+"Car Insurance": {
+"assigned": 118.46,
+"goal_type": "Refill up to",
+"goal_amount": 133.89,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 133.89,
+"group": "Bills"
+},
+"Pest Control": {
+"assigned": 90.67,
+"goal_type": "Refill up to",
+"goal_amount": 88.89,
+"freq": 2.0,
+"goal_date": null,
+"activity": -90.67,
+"available": 0.0,
+"group": "Bills"
+},
+"YMCA Membership": {
+"assigned": 52.44,
+"goal_type": "Refill up to",
+"goal_amount": 70.26,
+"freq": 1.0,
+"goal_date": null,
+"activity": -70.26,
+"available": -0.0,
+"group": "Bills"
+},
+"Netflix": {
+"assigned": 9.64,
+"goal_type": "Refill up to",
+"goal_amount": 9.64,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 9.64,
+"group": "Bills"
+},
+"Spotify": {
+"assigned": 20.37,
+"goal_type": "Refill up to",
+"goal_amount": 20.37,
+"freq": 1.0,
+"goal_date": null,
+"activity": -20.37,
+"available": 0.0,
+"group": "Bills"
+},
+"New York Times": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 4.23,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 4.23,
+"group": "Bills"
+},
+"Google Drive + iCloud": {
+"assigned": 8.22,
+"goal_type": "Refill up to",
+"goal_amount": 9.09,
+"freq": 1.0,
+"goal_date": null,
+"activity": -6.97,
+"available": 2.12,
+"group": "Bills"
+},
+"Groceries": {
+"assigned": 995.35,
+"goal_type": "Refill up to",
+"goal_amount": 1300.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -542.5,
+"available": 757.5,
+"group": "Monthly Living Expenses"
+},
+"Target/Amazon": {
+"assigned": 400.0,
+"goal_type": "Refill up to",
+"goal_amount": 400.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -99.9,
+"available": 300.1,
+"group": "Monthly Living Expenses"
+},
+"Gas": {
+"assigned": 245.14,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -54.71,
+"available": 145.29,
+"group": "Monthly Living Expenses"
+},
+"Cleaners": {
+"assigned": 180.0,
+"goal_type": "Refill up to",
+"goal_amount": 240.0,
+"freq": null,
+"goal_date": null,
+"activity": -120.0,
+"available": 120.0,
+"group": "Monthly Living Expenses"
+},
+"Cat Expenses": {
+"assigned": 75.0,
+"goal_type": "Refill up to",
+"goal_amount": 75.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 75.0,
+"group": "Monthly Living Expenses"
+},
+"Unexpected": {
+"assigned": 231.28,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -600.93,
+"available": 0.0,
+"group": "Monthly Living Expenses"
+},
+"Clothes, Supplies, & Misc": {
+"assigned": 100.0,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -107.51,
+"available": -7.51,
+"group": "Kids"
+},
+"Sports & Lessons": {
+"assigned": 100.0,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -200.0,
+"available": 0.0,
+"group": "Kids"
+},
+"Babysitters + Misc Childcare": {
+"assigned": 70.0,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -80.19,
+"available": 119.81,
+"group": "Kids"
+},
+"Summer Camps": {
+"assigned": 343.43,
+"goal_type": "Set aside another",
+"goal_amount": 3500.0,
+"freq": null,
+"goal_date": "2027-06-01",
+"activity": 0.0,
+"available": 1095.99,
+"group": "Kids"
+},
+"Garden/Home Decor": {
+"assigned": 3.25,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -125.0,
+"available": 0.0,
+"group": "Fun Spending"
+},
+"Entertainment": {
+"assigned": 184.53,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Fun Spending"
+},
+"Eating Out/Take Out": {
+"assigned": 500.0,
+"goal_type": "Refill up to",
+"goal_amount": 500.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -158.24,
+"available": 341.76,
+"group": "Fun Spending"
+},
+"Wine & Beer": {
+"assigned": 100.0,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -32.18,
+"available": 67.82,
+"group": "Fun Spending"
+},
+"David Fun Money": {
+"assigned": 335.09,
+"goal_type": "Refill up to",
+"goal_amount": 600.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -266.34,
+"available": 333.66,
+"group": "Fun Spending"
+},
+"Elizabeth Fun Money": {
+"assigned": 330.63,
+"goal_type": "Refill up to",
+"goal_amount": 600.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -553.05,
+"available": 46.95,
+"group": "Fun Spending"
+},
+"Emergency Fund": {
+"assigned": 100.0,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 400.0,
+"group": "Savings"
+},
+"Elizabeth SECU Retirement": {
+"assigned": 150.0,
+"goal_type": "Set aside another",
+"goal_amount": 150.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 125.0,
+"group": "Savings"
+},
+"David Fidelity Retirement": {
+"assigned": null,
+"goal_type": "Refill up to",
+"goal_amount": 1200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 1200.0,
+"group": "Savings"
+},
+"Bonnie 529": {
+"assigned": 200.0,
+"goal_type": "Set aside another",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Savings"
+},
+"June 529": {
+"assigned": 200.0,
+"goal_type": "Set aside another",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -200.0,
+"available": 0.0,
+"group": "Savings"
+},
+"Estimated Taxes": {
+"assigned": 3151.67,
+"goal_type": "Set aside another",
+"goal_amount": 3151.67,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 4885.01,
+"group": "Short-Term Savings"
+},
+"Big Trips": {
+"assigned": 350.0,
+"goal_type": "Set aside another",
+"goal_amount": 350.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 350.0,
+"group": "Short-Term Savings"
+},
+"Small Trips": {
+"assigned": 100.0,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 391.0,
+"group": "Short-Term Savings"
+},
+"Money Market Savings": {
+"assigned": 176.22,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": 0.0,
+"available": 62685.63,
+"group": "Long-Term Savings"
+},
+"Student Loan": {
+"assigned": 800.0,
+"goal_type": "Refill up to",
+"goal_amount": 800.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -689.82,
+"available": 110.18,
+"group": "Debt"
+},
+"Car Loan": {
+"assigned": 272.0,
+"goal_type": "Refill up to",
+"goal_amount": 272.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 272.0,
+"group": "Debt"
+},
+"Home Maintenance": {
+"assigned": 100.0,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 359.14,
+"group": "Irregular & Annual Expenses"
+},
+"Car Maintenance": {
+"assigned": 100.0,
+"goal_type": "Set aside another",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 244.84,
+"group": "Irregular & Annual Expenses"
+},
+"Medical": {
+"assigned": 101.7,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -20.0,
+"available": 80.0,
+"group": "Irregular & Annual Expenses"
+},
+"Life Insurance": {
+"assigned": 11.6,
+"goal_type": "Refill up to",
+"goal_amount": 11.6,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 11.6,
+"group": "Irregular & Annual Expenses"
+},
+"Gifts": {
+"assigned": 158.21,
+"goal_type": "Refill up to",
+"goal_amount": 200.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": 0.0,
+"available": 200.0,
+"group": "Irregular & Annual Expenses"
+},
+"Donations": {
+"assigned": 95.0,
+"goal_type": "Refill up to",
+"goal_amount": 100.0,
+"freq": 1.0,
+"goal_date": null,
+"activity": -20.0,
+"available": 80.0,
+"group": "Irregular & Annual Expenses"
+},
+"Christmas": {
+"assigned": 301.0,
+"goal_type": "Set aside another",
+"goal_amount": 1000.0,
+"freq": 1.0,
+"goal_date": "2026-11-30",
+"activity": 0.0,
+"available": 1000.0,
+"group": "Irregular & Annual Expenses"
+},
+"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists.": {
+"assigned": null,
+"goal_type": "",
+"goal_amount": null,
+"freq": null,
+"goal_date": null,
+"activity": null,
+"available": null,
+"group": ""
+}
+},
+"rta": 0.0,
+"accounts": {
+"D Checking": 6248.16,
+"E Checking": 3197.33,
+"Money Market": 71335.19,
+"Money Market 2": 1384.95,
+"CapitalOne": -1881.45,
+"E SECU Credit": -274.52,
+"Cash on budget": 82165.63,
+"Owed on credit cards": 2155.97,
+"Set aside for cards": 2186.27,
+"Uncovered card debt": -30.3,
+"Check (should be $0)": -0.0
+},
+"groups": [
+[
+"One Month Ahead",
+[
+"Next Month's Money"
+]
+],
+[
+"Credit Card Payments",
+[
+"CapitalOne",
+"D SECU Credit",
+"E SECU Credit"
+]
+],
+[
+"Bills",
+[
+"Mortgage",
+"Phone & Internet",
+"Utilities",
+"Car Insurance",
+"Pest Control",
+"YMCA Membership",
+"Netflix",
+"Spotify",
+"New York Times",
+"Google Drive + iCloud"
+]
+],
+[
+"Monthly Living Expenses",
+[
+"Groceries",
+"Target/Amazon",
+"Gas",
+"Cleaners",
+"Cat Expenses",
+"Unexpected"
+]
+],
+[
+"Kids",
+[
+"Clothes, Supplies, & Misc",
+"Sports & Lessons",
+"Babysitters + Misc Childcare",
+"Summer Camps"
+]
+],
+[
+"Fun Spending",
+[
+"Garden/Home Decor",
+"Entertainment",
+"Eating Out/Take Out",
+"Wine & Beer",
+"David Fun Money",
+"Elizabeth Fun Money"
+]
+],
+[
+"Savings",
+[
+"Emergency Fund",
+"Elizabeth SECU Retirement",
+"David Fidelity Retirement",
+"Bonnie 529",
+"June 529"
+]
+],
+[
+"Short-Term Savings",
+[
+"Estimated Taxes",
+"Big Trips",
+"Small Trips"
+]
+],
+[
+"Long-Term Savings",
+[
+"Money Market Savings"
+]
+],
+[
+"Debt",
+[
+"Student Loan",
+"Car Loan"
+]
+],
+[
+"Irregular & Annual Expenses",
+[
+"Home Maintenance",
+"Car Maintenance",
+"Medical",
+"Life Insurance",
+"Gifts",
+"Donations",
+"Christmas",
+"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists."
+]
+]
+]
+}
+},
+"history": {
+"Oct 2026": {
+"picked": "",
+"cats": {
+"Next Month's Money": {
+"assigned": 2448.58,
+"activity": 0.0,
+"available": 5688.65
+},
+"CapitalOne": {
+"assigned": 0.0,
+"activity": -752.27,
+"available": 659.58
+},
+"D SECU Credit": {
+"assigned": 0.0,
+"activity": -254.49,
+"available": 0.0
+},
+"E SECU Credit": {
+"assigned": 0.0,
+"activity": -93.79,
+"available": 30.3
+},
+"Mortgage": {
+"assigned": 2433.88,
+"activity": -2433.88,
+"available": 0.0
+},
+"Phone & Internet": {
+"assigned": 190.0,
+"activity": -263.6,
+"available": 0.55
+},
+"Utilities": {
+"assigned": 362.9,
+"activity": -362.9,
+"available": 0.0
+},
+"Car Insurance": {
+"assigned": 133.86,
+"activity": -126.13,
+"available": 15.43
+},
+"Pest Control": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"YMCA Membership": {
+"assigned": 88.08,
+"activity": -70.26,
+"available": 17.82
+},
+"Netflix": {
+"assigned": 9.64,
+"activity": -9.64,
+"available": 0.0
+},
+"Spotify": {
+"assigned": 20.37,
+"activity": -20.37,
+"available": 0.0
+},
+"New York Times": {
+"assigned": 4.23,
+"activity": 0.0,
+"available": 4.23
+},
+"Google Drive + iCloud": {
+"assigned": 6.97,
+"activity": -9.09,
+"available": 0.87
+},
+"Groceries": {
+"assigned": 1300.0,
+"activity": -1181.46,
+"available": 304.65
+},
+"Target/Amazon": {
+"assigned": 401.61,
+"activity": -401.61,
+"available": 0.0
+},
+"Gas": {
+"assigned": 189.2,
+"activity": -234.34,
+"available": -45.14
+},
+"Cleaners": {
+"assigned": 240.0,
+"activity": -240.0,
+"available": 60.0
+},
+"Cat Expenses": {
+"assigned": 39.22,
+"activity": -64.22,
+"available": 0.0
+},
+"Unexpected": {
+"assigned": 1288.66,
+"activity": -1005.62,
+"available": 369.65
+},
+"Clothes, Supplies, & Misc": {
+"assigned": 170.64,
+"activity": -177.13,
+"available": 0.0
+},
+"Sports & Lessons": {
+"assigned": 250.0,
+"activity": -190.0,
+"available": 100.0
+},
+"Babysitters + Misc Childcare": {
+"assigned": 290.0,
+"activity": -160.0,
+"available": 130.0
+},
+"Summer Camps": {
+"assigned": 376.28,
+"activity": 0.0,
+"available": 752.56
+},
+"Garden/Home Decor": {
+"assigned": 61.75,
+"activity": 0.0,
+"available": 121.75
+},
+"Entertainment": {
+"assigned": 50.0,
+"activity": -34.53,
+"available": 15.47
+},
+"Eating Out/Take Out": {
+"assigned": 520.05,
+"activity": -520.05,
+"available": 0.0
+},
+"Wine & Beer": {
+"assigned": 77.74,
+"activity": -99.27,
+"available": 0.0
+},
+"David Fun Money": {
+"assigned": 500.0,
+"activity": -235.09,
+"available": 264.91
+},
+"Elizabeth Fun Money": {
+"assigned": 500.0,
+"activity": -724.39,
+"available": 269.37
+},
+"Emergency Fund": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 300.0
+},
+"Elizabeth SECU Retirement": {
+"assigned": 125.0,
+"activity": -150.0,
+"available": -25.0
+},
+"David Fidelity Retirement": {
+"assigned": 1200.0,
+"activity": 0.0,
+"available": 1200.0
+},
+"Bonnie 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"June 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"Estimated Taxes": {
+"assigned": 1733.34,
+"activity": 0.0,
+"available": 1733.34
+},
+"Big Trips": {
+"assigned": 814.45,
+"activity": -1387.24,
+"available": 0.0
+},
+"Small Trips": {
+"assigned": 100.0,
+"activity": -9.0,
+"available": 291.0
+},
+"Money Market Savings": {
+"assigned": 8308.15,
+"activity": 0.0,
+"available": 62509.41
+},
+"Student Loan": {
+"assigned": 689.82,
+"activity": -689.82,
+"available": 0.0
+},
+"Car Loan": {
+"assigned": 272.0,
+"activity": -272.0,
+"available": 0.0
+},
+"Home Maintenance": {
+"assigned": 1107.0,
+"activity": -987.86,
+"available": 259.14
+},
+"Car Maintenance": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 144.84
+},
+"Medical": {
+"assigned": 282.53,
+"activity": -427.25,
+"available": -1.7
+},
+"Life Insurance": {
+"assigned": 11.6,
+"activity": -11.6,
+"available": 0.0
+},
+"Gifts": {
+"assigned": 50.0,
+"activity": -32.52,
+"available": 41.79
+},
+"Donations": {
+"assigned": 20.0,
+"activity": -15.0,
+"available": 5.0
+},
+"Christmas": {
+"assigned": 200.0,
+"activity": -101.0,
+"available": 699.0
+}
+}
+},
+"Sep 2026": {
+"picked": "",
+"cats": {
+"Next Month's Money": {
+"assigned": 3294.34,
+"activity": 0.0,
+"available": 3294.34
+},
+"CapitalOne": {
+"assigned": -44.66,
+"activity": 1106.88,
+"available": 1411.85
+},
+"D SECU Credit": {
+"assigned": 222.77,
+"activity": 31.72,
+"available": 254.49
+},
+"E SECU Credit": {
+"assigned": 0.0,
+"activity": 124.09,
+"available": 124.09
+},
+"Mortgage": {
+"assigned": 2433.88,
+"activity": -2433.88,
+"available": 0.0
+},
+"Phone & Internet": {
+"assigned": 260.08,
+"activity": -185.93,
+"available": 74.15
+},
+"Utilities": {
+"assigned": 358.26,
+"activity": -358.26,
+"available": 0.0
+},
+"Car Insurance": {
+"assigned": 133.86,
+"activity": -126.16,
+"available": 7.7
+},
+"Pest Control": {
+"assigned": 90.67,
+"activity": -90.67,
+"available": 0.0
+},
+"YMCA Membership": {
+"assigned": 88.08,
+"activity": -88.08,
+"available": 0.0
+},
+"Netflix": {
+"assigned": 9.64,
+"activity": -9.64,
+"available": 0.0
+},
+"Spotify": {
+"assigned": 20.37,
+"activity": -20.37,
+"available": 0.0
+},
+"New York Times": {
+"assigned": 8.46,
+"activity": -8.46,
+"available": 0.0
+},
+"Google Drive + iCloud": {
+"assigned": 9.09,
+"activity": -6.1,
+"available": 2.99
+},
+"Groceries": {
+"assigned": 1300.0,
+"activity": -1113.89,
+"available": 186.11
+},
+"Target/Amazon": {
+"assigned": 236.24,
+"activity": -236.24,
+"available": 0.0
+},
+"Gas": {
+"assigned": 122.49,
+"activity": -122.49,
+"available": 0.0
+},
+"Cleaners": {
+"assigned": 420.0,
+"activity": -360.0,
+"available": 60.0
+},
+"Cat Expenses": {
+"assigned": 25.0,
+"activity": 0.0,
+"available": 25.0
+},
+"Unexpected": {
+"assigned": 100.0,
+"activity": -13.39,
+"available": 86.61
+},
+"Clothes, Supplies, & Misc": {
+"assigned": 50.0,
+"activity": -43.51,
+"available": 6.49
+},
+"Sports & Lessons": {
+"assigned": 379.0,
+"activity": -339.0,
+"available": 40.0
+},
+"Babysitters + Misc Childcare": {
+"assigned": 115.0,
+"activity": -115.0,
+"available": 0.0
+},
+"Summer Camps": {
+"assigned": 376.28,
+"activity": 0.0,
+"available": 376.28
+},
+"Garden/Home Decor": {
+"assigned": 169.66,
+"activity": -193.0,
+"available": 60.0
+},
+"Entertainment": {
+"assigned": 109.04,
+"activity": -109.04,
+"available": 0.0
+},
+"Eating Out/Take Out": {
+"assigned": 532.46,
+"activity": -532.46,
+"available": 0.0
+},
+"Wine & Beer": {
+"assigned": 129.54,
+"activity": -108.01,
+"available": 21.53
+},
+"David Fun Money": {
+"assigned": 556.65,
+"activity": -556.65,
+"available": 0.0
+},
+"Elizabeth Fun Money": {
+"assigned": 0.0,
+"activity": -1318.96,
+"available": 493.76
+},
+"Emergency Fund": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 200.0
+},
+"Elizabeth SECU Retirement": {
+"assigned": 150.0,
+"activity": -150.0,
+"available": 0.0
+},
+"David Fidelity Retirement": {
+"assigned": 1200.0,
+"activity": -1200.0,
+"available": 0.0
+},
+"Bonnie 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"June 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"Estimated Taxes": {
+"assigned": 7577.33,
+"activity": -11044.0,
+"available": 0.0
+},
+"Big Trips": {
+"assigned": 350.0,
+"activity": 0.0,
+"available": 572.79
+},
+"Small Trips": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 200.0
+},
+"Money Market Savings": {
+"assigned": 1093.87,
+"activity": 0.0,
+"available": 54201.26
+},
+"Student Loan": {
+"assigned": 689.82,
+"activity": -689.82,
+"available": 0.0
+},
+"Car Loan": {
+"assigned": 272.0,
+"activity": -272.0,
+"available": 0.0
+},
+"Home Maintenance": {
+"assigned": 100.0,
+"activity": -60.0,
+"available": 140.0
+},
+"Car Maintenance": {
+"assigned": 100.0,
+"activity": -55.16,
+"available": 44.84
+},
+"Medical": {
+"assigned": 100.0,
+"activity": -34.29,
+"available": 143.02
+},
+"Life Insurance": {
+"assigned": 11.6,
+"activity": -11.6,
+"available": 0.0
+},
+"Gifts": {
+"assigned": 217.13,
+"activity": -192.82,
+"available": 24.31
+},
+"Donations": {
+"assigned": 102.53,
+"activity": -102.53,
+"available": 0.0
+},
+"Christmas": {
+"assigned": 200.0,
+"activity": 0.0,
+"available": 600.0
+}
+}
+},
+"Aug 2026": {
+"picked": "",
+"cats": {
+"Next Month's Money": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"CapitalOne": {
+"assigned": 495.94,
+"activity": -1619.63,
+"available": 349.63
+},
+"D SECU Credit": {
+"assigned": -222.77,
+"activity": 222.77,
+"available": 0.0
+},
+"E SECU Credit": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Mortgage": {
+"assigned": 2433.88,
+"activity": -2433.88,
+"available": 0.0
+},
+"Phone & Internet": {
+"assigned": 178.26,
+"activity": -178.26,
+"available": 0.0
+},
+"Utilities": {
+"assigned": 367.6,
+"activity": -367.6,
+"available": 0.0
+},
+"Car Insurance": {
+"assigned": 133.86,
+"activity": -133.86,
+"available": 0.0
+},
+"Pest Control": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"YMCA Membership": {
+"assigned": 88.08,
+"activity": -88.08,
+"available": 0.0
+},
+"Netflix": {
+"assigned": 9.64,
+"activity": -9.64,
+"available": 0.0
+},
+"Spotify": {
+"assigned": 20.37,
+"activity": -20.37,
+"available": 0.0
+},
+"New York Times": {
+"assigned": 4.23,
+"activity": -4.23,
+"available": 0.0
+},
+"Google Drive + iCloud": {
+"assigned": 9.09,
+"activity": -9.09,
+"available": 0.0
+},
+"Groceries": {
+"assigned": 1584.76,
+"activity": -1584.76,
+"available": 0.0
+},
+"Target/Amazon": {
+"assigned": 206.6,
+"activity": -206.6,
+"available": 0.0
+},
+"Gas": {
+"assigned": 162.02,
+"activity": -162.02,
+"available": 0.0
+},
+"Cleaners": {
+"assigned": 240.0,
+"activity": -240.0,
+"available": 0.0
+},
+"Cat Expenses": {
+"assigned": 76.74,
+"activity": -76.74,
+"available": 0.0
+},
+"Unexpected": {
+"assigned": 226.07,
+"activity": -226.07,
+"available": 0.0
+},
+"Clothes, Supplies, & Misc": {
+"assigned": 42.23,
+"activity": -42.23,
+"available": 0.0
+},
+"Sports & Lessons": {
+"assigned": 275.53,
+"activity": -275.53,
+"available": 0.0
+},
+"Babysitters + Misc Childcare": {
+"assigned": 88.0,
+"activity": -88.0,
+"available": 0.0
+},
+"Summer Camps": {
+"assigned": 511.45,
+"activity": -742.33,
+"available": 0.0
+},
+"Garden/Home Decor": {
+"assigned": 83.34,
+"activity": 0.0,
+"available": 83.34
+},
+"Entertainment": {
+"assigned": 98.19,
+"activity": -98.19,
+"available": 0.0
+},
+"Eating Out/Take Out": {
+"assigned": 589.03,
+"activity": -589.03,
+"available": 0.0
+},
+"Wine & Beer": {
+"assigned": 223.84,
+"activity": -223.84,
+"available": 0.0
+},
+"David Fun Money": {
+"assigned": 656.2,
+"activity": -656.2,
+"available": 0.0
+},
+"Elizabeth Fun Money": {
+"assigned": 2910.35,
+"activity": -1097.63,
+"available": 1812.72
+},
+"Emergency Fund": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 100.0
+},
+"Elizabeth SECU Retirement": {
+"assigned": 125.0,
+"activity": -125.0,
+"available": 0.0
+},
+"David Fidelity Retirement": {
+"assigned": 1200.0,
+"activity": -1200.0,
+"available": 0.0
+},
+"Bonnie 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"June 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"Estimated Taxes": {
+"assigned": 1733.33,
+"activity": 0.0,
+"available": 3466.67
+},
+"Big Trips": {
+"assigned": 350.0,
+"activity": -127.21,
+"available": 222.79
+},
+"Small Trips": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 100.0
+},
+"Money Market Savings": {
+"assigned": 1608.67,
+"activity": 0.0,
+"available": 53107.39
+},
+"Student Loan": {
+"assigned": 689.82,
+"activity": -689.82,
+"available": 0.0
+},
+"Car Loan": {
+"assigned": 272.0,
+"activity": -272.0,
+"available": 0.0
+},
+"Home Maintenance": {
+"assigned": 100.0,
+"activity": 0.0,
+"available": 100.0
+},
+"Car Maintenance": {
+"assigned": 524.95,
+"activity": -524.95,
+"available": 0.0
+},
+"Medical": {
+"assigned": 100.0,
+"activity": -22.69,
+"available": 77.31
+},
+"Life Insurance": {
+"assigned": 11.6,
+"activity": -11.6,
+"available": 0.0
+},
+"Gifts": {
+"assigned": 248.23,
+"activity": -248.23,
+"available": 0.0
+},
+"Donations": {
+"assigned": 57.19,
+"activity": -57.19,
+"available": 0.0
+},
+"Christmas": {
+"assigned": 200.0,
+"activity": 0.0,
+"available": 400.0
+}
+}
+},
+"Jul 2026": {
+"picked": "",
+"cats": {
+"Next Month's Money": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"CapitalOne": {
+"assigned": 1278.18,
+"activity": 195.14,
+"available": 1473.32
+},
+"D SECU Credit": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"E SECU Credit": {
+"assigned": 367.77,
+"activity": -367.77,
+"available": 0.0
+},
+"Mortgage": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Phone & Internet": {
+"assigned": 198.26,
+"activity": -198.26,
+"available": 0.0
+},
+"Utilities": {
+"assigned": 207.73,
+"activity": -207.73,
+"available": 0.0
+},
+"Car Insurance": {
+"assigned": 133.89,
+"activity": -133.89,
+"available": 0.0
+},
+"Pest Control": {
+"assigned": 88.89,
+"activity": -88.89,
+"available": 0.0
+},
+"YMCA Membership": {
+"assigned": 88.08,
+"activity": -88.08,
+"available": 0.0
+},
+"Netflix": {
+"assigned": 9.64,
+"activity": -9.64,
+"available": 0.0
+},
+"Spotify": {
+"assigned": 20.37,
+"activity": -20.37,
+"available": 0.0
+},
+"New York Times": {
+"assigned": 4.23,
+"activity": -4.23,
+"available": 0.0
+},
+"Google Drive + iCloud": {
+"assigned": 9.09,
+"activity": -9.09,
+"available": 0.0
+},
+"Groceries": {
+"assigned": 823.0,
+"activity": -823.0,
+"available": 0.0
+},
+"Target/Amazon": {
+"assigned": 298.78,
+"activity": -298.78,
+"available": 0.0
+},
+"Gas": {
+"assigned": 166.47,
+"activity": -166.47,
+"available": 0.0
+},
+"Cleaners": {
+"assigned": 180.0,
+"activity": -180.0,
+"available": 0.0
+},
+"Cat Expenses": {
+"assigned": 95.0,
+"activity": -95.0,
+"available": 0.0
+},
+"Unexpected": {
+"assigned": 40.14,
+"activity": -40.14,
+"available": 0.0
+},
+"Clothes, Supplies, & Misc": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Sports & Lessons": {
+"assigned": 155.0,
+"activity": -155.0,
+"available": 0.0
+},
+"Babysitters + Misc Childcare": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Summer Camps": {
+"assigned": 230.88,
+"activity": 0.0,
+"available": 230.88
+},
+"Garden/Home Decor": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Entertainment": {
+"assigned": 142.41,
+"activity": -142.41,
+"available": 0.0
+},
+"Eating Out/Take Out": {
+"assigned": 952.65,
+"activity": -952.65,
+"available": 0.0
+},
+"Wine & Beer": {
+"assigned": 260.65,
+"activity": -260.65,
+"available": 0.0
+},
+"David Fun Money": {
+"assigned": 494.21,
+"activity": -494.21,
+"available": 0.0
+},
+"Elizabeth Fun Money": {
+"assigned": 1499.7,
+"activity": -1499.7,
+"available": 0.0
+},
+"Emergency Fund": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Elizabeth SECU Retirement": {
+"assigned": 125.0,
+"activity": -125.0,
+"available": 0.0
+},
+"David Fidelity Retirement": {
+"assigned": 1200.0,
+"activity": -1200.0,
+"available": 0.0
+},
+"Bonnie 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"June 529": {
+"assigned": 200.0,
+"activity": -200.0,
+"available": 0.0
+},
+"Estimated Taxes": {
+"assigned": 1733.34,
+"activity": 0.0,
+"available": 1733.34
+},
+"Big Trips": {
+"assigned": 524.5,
+"activity": -524.5,
+"available": 0.0
+},
+"Small Trips": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Money Market Savings": {
+"assigned": 51498.72,
+"activity": 0.0,
+"available": 51498.72
+},
+"Student Loan": {
+"assigned": 689.82,
+"activity": -689.82,
+"available": 0.0
+},
+"Car Loan": {
+"assigned": 272.0,
+"activity": -272.0,
+"available": 0.0
+},
+"Home Maintenance": {
+"assigned": 97.07,
+"activity": -97.07,
+"available": 0.0
+},
+"Car Maintenance": {
+"assigned": 44.87,
+"activity": -44.87,
+"available": 0.0
+},
+"Medical": {
+"assigned": 149.71,
+"activity": -149.71,
+"available": 0.0
+},
+"Life Insurance": {
+"assigned": 11.6,
+"activity": -11.6,
+"available": 0.0
+},
+"Gifts": {
+"assigned": 173.9,
+"activity": -173.9,
+"available": 0.0
+},
+"Donations": {
+"assigned": 0.0,
+"activity": 0.0,
+"available": 0.0
+},
+"Christmas": {
+"assigned": 200.0,
+"activity": 0.0,
+"available": 200.0
+}
+}
+}
+},
+"recurring": [
+[
+"Payee 61",
+"D Checking",
+"Mortgage",
+"",
+"$2,433.88",
+"2",
+"Yes",
+""
+],
+[
+"Payee 49",
+"D Checking",
+"Student Loan",
+"",
+"$800.00",
+"3",
+"Yes",
+""
+],
+[
+"Payee 62",
+"D Checking",
+"David Fidelity Retirement",
+"",
+"$1,200.00",
+"28",
+"Yes",
+""
+],
+[
+"Payee 28",
+"D Checking",
+"June 529",
+"",
+"$200.00",
+"6",
+"Yes",
+""
+],
+[
+"Payee 63",
+"E Checking",
+"New York Times",
+"",
+"$4.23",
+"",
+"Yes",
+""
+],
+[
+"Payee 64",
+"E Checking",
+"Elizabeth SECU Retirement",
+"",
+"$150.00",
+"",
+"Yes",
+""
+],
+[
+"Payee 65",
+"E Checking",
+"Netflix",
+"",
+"$9.64",
+"",
+"Yes",
+""
+],
+[
+"Payee 66",
+"E Checking",
+"Life Insurance",
+"",
+"$11.60",
+"",
+"Yes",
+""
+],
+[
+"Payee 33",
+"E Checking",
+"Spotify",
+"",
+"$20.37",
+"5",
+"Yes",
+""
+],
+[
+"Payee 67",
+"E Checking",
+"Bonnie 529",
+"",
+"$200.00",
+"",
+"Yes",
+""
+],
+[
+"Payee 68",
+"E Checking",
+"Car Loan",
+"",
+"$272.00",
+"",
+"Yes",
+""
+]
+]
+}

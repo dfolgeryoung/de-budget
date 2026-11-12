@@ -6,4 +6,4 @@ dist
 .vercel
 *.local
 
-tests/fixtures/state-*.json
+tests/fixtures/state-2026-*.json

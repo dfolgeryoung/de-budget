@@ -9,8 +9,11 @@ import { computeMonth, accountBalance } from "../src/budget/engine";
 import { formatMoney } from "../src/budget/money";
 import { daysInMonth } from "../src/budget/dates";
 
-// The fixture is a real export of the budget, so it is not committed; the test runs wherever the file is present.
-const fixture = new URL("./fixtures/state-2026-11-11.json", import.meta.url);
+// state-scrubbed.json is the 2026-11-11 export with payees and memos replaced (amounts, categories and
+// balances intact), so the maths is proven on every build without the real names travelling with the repo.
+// A real export (state-2026-*.json, git-ignored) is used instead when present.
+const real = new URL("./fixtures/state-2026-11-11.json", import.meta.url);
+const fixture = existsSync(real) ? real : new URL("./fixtures/state-scrubbed.json", import.meta.url);
 const state = existsSync(fixture) ? (JSON.parse(readFileSync(fixture, "utf8")) as SheetState) : null;
 const mapped = state ? mapState(state) : null;
 describe.skipIf(!mapped)("acceptance fixture present", () => { it("is mapped", () => expect(mapped).not.toBeNull()); });

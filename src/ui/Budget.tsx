@@ -307,9 +307,10 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
                     <div key={c.categoryId} className={"grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")} style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
                       <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
                       <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col pr-3">
-                        <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">
-                          <span className="font-medium shrink-0" style={{ fontWeight: isSel ? 600 : 500 }}>{meta.emoji ? `${meta.emoji} ` : ""}{meta.name}</span>
-                          <span className="text-xs overflow-hidden text-ellipsis" style={{ color: st.color }}>{st.text}</span>
+                        {/* the status sits beside the name when there is room and wraps under it when there isn't */}
+                        <div className="flex items-baseline gap-x-2 flex-wrap min-w-0">
+                          <span className="font-medium whitespace-nowrap" style={{ fontWeight: isSel ? 600 : 500 }}>{meta.emoji ? `${meta.emoji} ` : ""}{meta.name}</span>
+                          <span className="text-xs whitespace-nowrap" style={{ color: st.color }}>{st.text}</span>
                         </div>
                         {/* the bar slides open/closed when progress bars are toggled */}
                         {(c.goal || c.activity !== 0 || c.available !== 0) && (

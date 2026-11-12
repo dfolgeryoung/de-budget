@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, todayISO, categoryOptions, type Lists } from "./api";
+import { api, todayISO, categoryOptions, createTag, type Lists } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
@@ -235,9 +235,14 @@ function SplitBranch({ first, last }: { first: boolean; last: boolean }) {
 /** Multi-select of tags, shown as coloured chips in the Tags column. */
 function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; onChange: (ids: string[]) => void }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
   const btn = useRef<HTMLButtonElement>(null);
-  if (lists.tags.length === 0) return <span />;
   const chosen = lists.tags.filter((t) => value.includes(t.id));
+  async function add() {
+    const name = draft.trim(); if (!name) return;
+    const tag = await createTag(name); setDraft("");
+    if (!value.includes(tag.id)) onChange([...value, tag.id]);
+  }
   return (
     <>
       <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="fld flex items-center gap-1 rounded-md px-2 min-w-0 overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
@@ -247,6 +252,7 @@ function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; 
       <Popover anchor={btn} open={open} onClose={() => setOpen(false)} width={200}>
         {() => (
           <div className="py-1">
+            {lists.tags.length === 0 && <div className="px-3 py-1.5 text-xs" style={{ color: "var(--muted)" }}>No tags yet — make one below.</div>}
             {lists.tags.map((t) => {
               const on = value.includes(t.id);
               return (
@@ -257,6 +263,10 @@ function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; 
                 </label>
               );
             })}
+            <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-1" style={{ borderTop: "1px solid var(--border-soft)" }}>
+              <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder="New tag…" className="fld flex-1 min-w-0 rounded-md px-2 text-[13px] outline-none" style={{ height: 30, border: "1px solid var(--field)", background: "var(--card)" }} />
+              <button type="button" onClick={add} disabled={!draft.trim()} className="rounded-md px-2.5 text-xs font-semibold disabled:opacity-50" style={{ height: 30, background: "var(--navy)", color: "var(--navy-text)" }}>Add</button>
+            </div>
           </div>
         )}
       </Popover>

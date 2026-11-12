@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, todayISO, categoryOptions, type Lists } from "./api";
+import { api, todayISO, categoryOptions, createTag, type Lists } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
@@ -61,6 +61,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   const [dateText, setDateText] = useState(initial.date);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState<string | null>(null);
   const toast = useToast();
   const set = (p: Partial<EntryDraft>) => setD((x) => ({ ...x, ...p }));
   // Focus the amount once the sheet has finished sliding in, without letting the browser scroll anything.
@@ -218,13 +219,19 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
           {d.sharedFiftyFifty && cents > 0 && (
             <p className="text-xs" style={{ color: "var(--muted)" }}>The other checking will owe {formatMoney(Math.round(cents / 2))} to {lists.accounts.find((a) => a.id === d.accountId)?.name}.</p>
           )}
-          {lists.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {lists.tags.map((tg) => (
-                <button key={tg.id} onClick={() => set({ tagIds: d.tagIds.includes(tg.id) ? d.tagIds.filter((x) => x !== tg.id) : [...d.tagIds, tg.id] })} className="px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: tg.color, opacity: d.tagIds.includes(tg.id) ? 1 : 0.5 }}>{tg.name}</button>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium mr-1" style={{ color: "var(--muted)" }}>Tags</span>
+            {lists.tags.map((tg) => (
+              <button key={tg.id} onClick={() => set({ tagIds: d.tagIds.includes(tg.id) ? d.tagIds.filter((x) => x !== tg.id) : [...d.tagIds, tg.id] })} className="px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: tg.color, color: "#1A1D23", opacity: d.tagIds.includes(tg.id) ? 1 : 0.5 }}>{tg.name}</button>
+            ))}
+            {newTag === null ? (
+              <button onClick={() => setNewTag("")} className="px-2.5 py-1 rounded-full text-xs font-semibold" style={{ border: "1px dashed var(--field)", color: "var(--accent-text)" }}>+ New tag</button>
+            ) : (
+              <input autoFocus value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder="Tag name" onBlur={() => !newTag.trim() && setNewTag(null)}
+                onKeyDown={async (e) => { if (e.key === "Enter" && newTag.trim()) { const tag = await createTag(newTag.trim()); setNewTag(null); set({ tagIds: d.tagIds.includes(tag.id) ? d.tagIds : [...d.tagIds, tag.id] }); } if (e.key === "Escape") setNewTag(null); }}
+                className="rounded-full px-3 text-xs outline-none" style={{ height: 26, width: 140, border: "1px solid var(--navy)", background: "var(--card)" }} />
+            )}
+          </div>
           {lists.tracked.length > 0 && (
             <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: 15 }} />
           )}

@@ -43,8 +43,9 @@ function ShellInner({ me }: { me: Me }) {
   useEffect(() => {
     const onHash = () => setScreen(location.hash.slice(1) || "budget");
     addEventListener("hashchange", onHash);
+    addEventListener("lists-changed", loadLists);
     loadLists();
-    return () => removeEventListener("hashchange", onHash);
+    return () => { removeEventListener("hashchange", onHash); removeEventListener("lists-changed", loadLists); };
   }, []);
   useEffect(() => {
     const root = document.documentElement;

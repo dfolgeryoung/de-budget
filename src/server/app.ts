@@ -119,6 +119,20 @@ app.post("/auto-assign", async (c) => {
 });
 app.get("/category/:id/history/:month", async (c) => c.json(await categoryHistory(db, c.req.param("id"), c.req.param("month"))));
 
+// ---------- tags ----------
+const TAG_PALETTE = ["#FFE8A3", "#CDF3D8", "#E7F1FB", "#FBE4E2", "#EADCF8", "#FFD9C2", "#D9F2F2", "#E6E9EE"];
+app.post("/tags", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(40), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Tag needs a name" }, 400);
+  const existing = await db.select().from(t.tags);
+  const dup = existing.find((x) => x.name.toLowerCase() === p.data.name.toLowerCase());
+  if (dup) return c.json({ tag: { id: dup.id, name: dup.name, color: dup.color } });
+  const me = c.get("user").id;
+  const tag = { id: `tag-${Date.now().toString(36)}`, name: p.data.name, color: p.data.color ?? TAG_PALETTE[existing.length % TAG_PALETTE.length]!, sortOrder: existing.length, updatedBy: me };
+  await db.insert(t.tags).values(tag);
+  return c.json({ tag: { id: tag.id, name: tag.name, color: tag.color } });
+});
+
 // ---------- classic ----------
 const validMonth = (s: string | undefined) => (s && /^\d{4}-\d{2}-01$/.test(s) ? s : null);
 app.get("/classic/:month", async (c) => {

@@ -35,3 +35,10 @@ export function categoryOptions(lists: Lists, opts: { income?: boolean; all?: bo
     ...pickable.filter((c) => !pinnedIds.has(c.id)).map((c) => ({ value: c.id, label: label(c), group: c.groupName })),
   ];
 }
+
+/** Create a tag (or get the existing one with that name) and tell the shell to reload its lists. */
+export async function createTag(name: string): Promise<{ id: string; name: string; color: string }> {
+  const r = await api<{ tag: { id: string; name: string; color: string } }>("/tags", { method: "POST", json: { name } });
+  dispatchEvent(new Event("lists-changed"));
+  return r.tag;
+}

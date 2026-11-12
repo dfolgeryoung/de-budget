@@ -96,6 +96,16 @@ html, body, #root { height: 100%; }
 .tb.truncate { overflow: clip; overflow-clip-margin: 4px; }
 @supports not (text-box: trim-both cap alphabetic) { .tb { padding-top: 1px; } }
 
+/* Scrollbars follow the theme: thin, with a thumb in the muted tone (menus, panels, the page itself). */
+:root { --scroll-thumb: #c3c9d2; }
+:root[data-theme="dark"] { --scroll-thumb: #3a4250; color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --scroll-thumb: #3a4250; color-scheme: dark; } }
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--muted); background-clip: padding-box; }
+
 /* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
 @media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }

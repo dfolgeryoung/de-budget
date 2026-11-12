@@ -1,6 +1,7 @@
-import { handle } from "hono/vercel";
+import { getRequestListener } from "@hono/node-server";
 import { app } from "../src/server/app.js";
 
-export const config = { runtime: "nodejs" };
+// Vercel's Node runtime calls (req, res); getRequestListener bridges that to Hono's fetch handler.
+export const config = { api: { bodyParser: false } };
 
-export default handle(app);
+export default getRequestListener(app.fetch);

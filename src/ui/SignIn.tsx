@@ -1,5 +1,15 @@
+import { useEffect, useState } from "react";
+
 export function SignIn() {
   const error = new URLSearchParams(location.search).get("error");
+  const [csrf, setCsrf] = useState<string | null>(null);
+  useEffect(() => {
+    // Auth.js needs its CSRF token (and the cookie that comes with it) on every sign-in POST.
+    fetch("/api/auth/csrf")
+      .then((r) => r.json())
+      .then((d: { csrfToken?: string }) => setCsrf(d.csrfToken ?? null))
+      .catch(() => setCsrf(null));
+  }, []);
   return (
     <main className="min-h-full flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl p-8 flex flex-col gap-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -17,10 +27,12 @@ export function SignIn() {
           </div>
         )}
         <form method="post" action="/api/auth/signin/google">
+          <input type="hidden" name="csrfToken" value={csrf ?? ""} />
           <input type="hidden" name="callbackUrl" value="/" />
           <button
             type="submit"
-            className="w-full rounded-lg py-3 font-semibold"
+            disabled={!csrf}
+            className="w-full rounded-lg py-3 font-semibold disabled:opacity-60"
             style={{ background: "var(--navy)", color: "var(--navy-text)" }}
           >
             Continue with Google

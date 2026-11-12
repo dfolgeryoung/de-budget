@@ -7,6 +7,8 @@ import * as t from "../db/schema.js";
 import { importSheetExport } from "./importer.js";
 import { monthPayload } from "./month.js";
 import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
+import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
+import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
 
@@ -86,6 +88,35 @@ app.delete("/transactions/:id", async (c) => {
   await deleteTransaction(db, c.get("user").id, c.req.param("id"), c.req.query("undo") === "1");
   return c.json({ ok: true });
 });
+
+// ---- phase 2: assigning money ----
+const monthKey = z.string().regex(/^\d{4}-\d{2}-01$/);
+app.post("/assign", async (c) => {
+  const p = z.object({ month: monthKey, categoryId: z.string(), amount: z.number().int() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad request" }, 400);
+  const id = await typeAssigned(db, c.get("user").id, p.data.month, p.data.categoryId, p.data.amount);
+  return c.json({ moveId: id });
+});
+app.post("/move", async (c) => {
+  const p = z.object({ month: monthKey, from: z.string().nullable(), to: z.string().nullable(), amount: z.number().int().positive() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad request" }, 400);
+  const id = await move(db, c.get("user").id, p.data.month, p.data.from, p.data.to, p.data.amount);
+  return c.json({ moveId: id });
+});
+app.post("/move/undo", async (c) => {
+  const p = z.object({ moveIds: z.array(z.string()) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad request" }, 400);
+  for (const id of p.data.moveIds) await undoMove(db, c.get("user").id, id);
+  return c.json({ ok: true });
+});
+app.get("/moves/:month", async (c) => c.json(await recentMoves(db, c.req.param("month"))));
+app.post("/auto-assign", async (c) => {
+  const p = z.object({ month: monthKey, option: z.enum(["underfunded", "assigned_last_month", "spent_last_month", "average_assigned", "average_spent", "reduce_overfunding", "reset_available", "reset_assigned"]), only: z.array(z.string()).optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad request" }, 400);
+  const ids = await autoAssign(db, c.get("user").id, p.data.month, p.data.option, p.data.only);
+  return c.json({ moveIds: ids });
+});
+app.get("/category/:id/history/:month", async (c) => c.json(await categoryHistory(db, c.req.param("id"), c.req.param("month"))));
 
 // Daily job (Vercel cron): recurring entries, pushes, sheet mirror, backups, Monday summary.
 app.get("/cron/daily", async (c) => {

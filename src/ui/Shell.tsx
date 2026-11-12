@@ -79,7 +79,7 @@ function ShellInner({ me }: { me: Me }) {
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
         {screen === "budget" || screen === "home" ? (
-          <Budget showBars={me.showBars ?? true} key={refreshKey} />
+          <Budget me={me} showBarsDefault={me.showBars ?? true} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         ) : screen === "transactions" && lists ? (
           <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />
         ) : screen === "settings" || screen === "more" ? (

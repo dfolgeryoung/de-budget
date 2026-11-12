@@ -9,7 +9,11 @@ export function SignIn() {
         </div>
         {error && (
           <div className="text-sm rounded-lg p-3" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>
-            That Google account isn't on the list. Use the one you gave David.
+            {error === "AccessDenied"
+              ? "That Google account isn't on the list. Use the one you gave David."
+              : error === "Configuration"
+                ? "The app's sign-in settings are incomplete (AUTH_SECRET or the Google client)."
+                : `Google sign-in failed (${error}).`}
           </div>
         )}
         <form method="post" action="/api/auth/signin/google">

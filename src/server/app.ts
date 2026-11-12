@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { SessionUser } from "./auth";
-import { handleAuth, getSessionUser } from "./auth";
+import type { SessionUser } from "./auth.js";
+import { handleAuth, getSessionUser } from "./auth.js";
 
 type Env = { Variables: { user: SessionUser } };
 

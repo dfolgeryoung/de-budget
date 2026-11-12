@@ -3,8 +3,8 @@
  * No database, no dates as Date objects, money as integer cents. Everything here is
  * covered by tests/engine.test.ts against fixtures exported from the spreadsheet.
  */
-import { addMonths, daysInMonth, dayOf, monthOf, monthsBetween, type ISODate, type MonthKey } from "./dates";
-import type { Cents } from "./money";
+import { addMonths, daysInMonth, dayOf, monthOf, monthsBetween, type ISODate, type MonthKey } from "./dates.js";
+import type { Cents } from "./money.js";
 
 // ---------- input shapes (a subset of the DB rows) ----------
 export interface AccountIn {

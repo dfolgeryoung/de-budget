@@ -61,6 +61,13 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const [bars, setBars] = useState(showBarsDefault);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
+  // drag-to-reorder (desktop): the id being dragged and where it would land
+  const [dragId, setDragIdState] = useState<string | null>(null);
+  const [dropAt, setDropAtState] = useState<{ groupId: string; index: number } | null>(null);
+  const dragRef = useRef<{ id: string | null; at: { groupId: string; index: number } | null }>({ id: null, at: null }); // drop can arrive before React re-renders
+  const setDragId = (id: string | null) => { dragRef.current.id = id; setDragIdState(id); };
+  const setDropAt = (at: { groupId: string; index: number } | null) => { dragRef.current.at = at; setDropAtState(at); };
+  const dragArmed = useRef(false); // only a drag started on the grip handle may move a row
   const [recent, setRecent] = useState<{ id: string; at: string; fromCategoryId: string | null; toCategoryId: string | null; amount: number; how: string; undone: boolean }[] | null>(null);
   const undoStack = useRef<string[][]>([]);
   const redoStack = useRef<{ month: string; from: string | null; to: string | null; amount: number }[][]>([]);
@@ -113,6 +120,25 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
     const r = await api<{ moveIds: string[] }>("/auto-assign", { method: "POST", json: { month: data!.month, option, only: only.length ? only : undefined } });
     afterMoves(r.moveIds, r.moveIds.length ? `Auto-assign: ${AUTO.find(([k]) => k === option)?.[1]} (${r.moveIds.length} ${r.moveIds.length === 1 ? "category" : "categories"})` : "Nothing to assign");
   }
+  async function dropCategory() {
+    const dragId = dragRef.current.id, dropAt = dragRef.current.at;
+    if (!data || !dragId || !dropAt) { setDragId(null); setDropAt(null); return; }
+    const from = data.groups.find((g) => g.categories.includes(dragId))!;
+    const groups = data.groups.map((g) => ({ ...g, categories: g.categories.filter((id) => id !== dragId) }));
+    const target = groups.find((g) => g.id === dropAt.groupId)!;
+    let index = dropAt.index;
+    if (from.id === target.id && index > from.categories.indexOf(dragId)) index -= 1; // removing it shifted the slots
+    target.categories.splice(Math.max(0, Math.min(index, target.categories.length)), 0, dragId);
+    const changed = groups.filter((g) => g.id === from.id || g.id === target.id);
+    setData({ ...data, groups });
+    setDragId(null); setDropAt(null);
+    try { await api("/categories/reorder", { method: "PUT", json: { groups: changed.map((g) => ({ groupId: g.id, ids: g.categories })) } }); }
+    catch (e) { toast(`Couldn't save the order: ${(e as Error).message}`); load(); }
+  }
+  const rowDragProps = (groupId: string, index: number) => ({
+    onDragOver: (e: React.DragEvent) => { if (!dragRef.current.id) return; e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); setDropAt({ groupId, index: index + (e.clientY > r.top + r.height / 2 ? 1 : 0) }); },
+    onDrop: (e: React.DragEvent) => { e.preventDefault(); dropCategory(); },
+  });
   async function doMove(from: string | null, to: string | null, amount: number) {
     const r = await api<{ moveId: string | null }>("/move", { method: "POST", json: { month: data!.month, from, to, amount } });
     afterMoves([r.moveId], `Moved ${formatMoney(amount)} from ${catName(from)} to ${catName(to)}`, [{ from, to, amount }]);
@@ -292,21 +318,32 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             const gSel = rows.length > 0 && rows.every((r) => selected.has(r.categoryId));
             return (
               <div key={g.id}>
-                <div className="grid items-center text-[13px] font-semibold px-4 py-2" style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", background: "var(--group)", color: "var(--text-2)", borderTop: "1px solid var(--border)" }}>
+                <div className="grid items-center text-[13px] font-semibold px-4 py-2" style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", background: "var(--group)", color: "var(--text-2)", borderTop: "1px solid var(--border)", boxShadow: dragId && dropAt?.groupId === g.id && dropAt.index === 0 && (isOpen ? false : true) ? "inset 0 -2px 0 var(--navy)" : undefined }}
+                  onDragOver={(e) => { if (!dragRef.current.id) return; e.preventDefault(); setDropAt({ groupId: g.id, index: 0 }); }} onDrop={(e) => { e.preventDefault(); dropCategory(); }}>
                   <input type="checkbox" aria-label={`Select ${g.name}`} checked={gSel} onChange={(e) => setSelected((s) => { const n = new Set(s); rows.forEach((r) => (e.target.checked ? n.add(r.categoryId) : n.delete(r.categoryId))); return n; })} className="m-0" />
                   <button onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })} className="text-left inline-flex items-center gap-1.5"><Chevron dir={isOpen ? "down" : "right"} size={12} /> {g.name}</button>
                   <span className="text-right hidden md:block">{formatMoney(tot("assigned"))}</span>
                   <span className="text-right hidden md:block">{formatMoney(tot("activity"))}</span>
                   <span className="text-right">{formatMoney(tot("available"))}</span>
                 </div>
-                {isOpen && rows.map((c) => {
+                {isOpen && rows.map((c, ri) => {
                   const meta = data.categories[c.categoryId]!;
                   const chip = chipStyle[c.status] ?? chipStyle.none!;
                   const st = statusText(c);
                   const isSel = open === c.categoryId;
+                  const lineAbove = dragId && dropAt?.groupId === g.id && dropAt.index === ri;
+                  const lineBelow = dragId && dropAt?.groupId === g.id && dropAt.index === ri + 1 && ri === rows.length - 1;
                   return (
-                    <div key={c.categoryId} className={"grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")} style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
-                      <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
+                    <div key={c.categoryId} className={"drag-row grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")}
+                      draggable onDragStart={(e) => { if (!dragArmed.current) { e.preventDefault(); return; } e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", c.categoryId); setDragId(c.categoryId); }}
+                      onDragEnd={() => { dragArmed.current = false; setDragId(null); setDropAt(null); }} {...rowDragProps(g.id, ri)}
+                      style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", borderTop: lineAbove ? "2px solid var(--navy)" : "1px solid var(--border-soft)", borderBottom: lineBelow ? "2px solid var(--navy)" : undefined, background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined, opacity: dragId === c.categoryId ? 0.4 : 1 }}>
+                      <span className="flex items-center gap-1">
+                        <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
+                        <span aria-label="Drag to reorder" title="Drag to reorder" className="grip inline-flex w-3.5 h-5 items-center justify-center shrink-0 -mr-2" style={{ color: "var(--faint)", cursor: "grab" }} onMouseDown={() => { dragArmed.current = true; }} onMouseUp={() => { dragArmed.current = false; }}>
+                          <svg aria-hidden="true" width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.3" /><circle cx="6" cy="2" r="1.3" /><circle cx="2" cy="7" r="1.3" /><circle cx="6" cy="7" r="1.3" /><circle cx="2" cy="12" r="1.3" /><circle cx="6" cy="12" r="1.3" /></svg>
+                        </span>
+                      </span>
                       <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col pr-2">
                         <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">
                           <span className="font-medium shrink-0" style={{ fontWeight: isSel ? 600 : 500 }}>{meta.emoji ? `${meta.emoji} ` : ""}{meta.name}</span>

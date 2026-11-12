@@ -119,6 +119,17 @@ app.post("/auto-assign", async (c) => {
 });
 app.get("/category/:id/history/:month", async (c) => c.json(await categoryHistory(db, c.req.param("id"), c.req.param("month"))));
 
+// ---------- category order (drag and drop on the Budget screen) ----------
+app.put("/categories/reorder", async (c) => {
+  const p = z.object({ groups: z.array(z.object({ groupId: z.string(), ids: z.array(z.string()) })) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  const me = c.get("user").id;
+  for (const g of p.data.groups) for (let i = 0; i < g.ids.length; i++) {
+    await db.update(t.categories).set({ groupId: g.groupId, sortOrder: i, updatedBy: me, updatedAt: new Date() }).where(eq(t.categories.id, g.ids[i]!));
+  }
+  return c.json({ ok: true });
+});
+
 // ---------- tags ----------
 const TAG_PALETTE = ["#FFE8A3", "#CDF3D8", "#E7F1FB", "#FBE4E2", "#EADCF8", "#FFD9C2", "#D9F2F2", "#E6E9EE"];
 app.post("/tags", async (c) => {

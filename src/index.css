@@ -132,6 +132,10 @@ button:disabled { cursor: not-allowed; }
   .row-hover:hover .marquee > span { transform: translateX(calc(-1 * var(--marquee))); transition: transform var(--marquee-dur) linear 350ms; }
 }
 
+/* Budget rows: the drag grip shows on hover */
+.drag-row .grip { opacity: 0; transition: opacity 100ms; }
+.drag-row:hover .grip { opacity: 1; }
+
 /* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
 @media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }

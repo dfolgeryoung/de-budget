@@ -93,7 +93,7 @@ html, body, #root { height: 100%; }
 .fld:focus, .fld:focus-within { border-color: var(--accent-text) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-text) 22%, transparent); outline: none; }
 .tb { text-box: trim-both cap alphabetic; }
 /* a trimmed label that also truncates must not clip its descenders */
-.tb.truncate { overflow: clip; overflow-clip-margin: 4px; }
+.tb.truncate { overflow: hidden; min-width: 0; padding-bottom: 4px; margin-bottom: -4px; }
 @supports not (text-box: trim-both cap alphabetic) { .tb { padding-top: 1px; } }
 
 /* Scrollbars follow the theme: thin, with a thumb in the muted tone (menus, panels, the page itself). */

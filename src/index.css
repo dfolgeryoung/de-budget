@@ -76,6 +76,9 @@
 }
 
 html, body, #root { height: 100%; }
+input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
+:root[data-theme="dark"] input[type="checkbox"], :root[data-theme="dark"] select, :root[data-theme="dark"] input { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) input[type="checkbox"], :root:not([data-theme="light"]) select, :root:not([data-theme="light"]) input { color-scheme: dark; } }
 body {
   margin: 0;
   background: var(--bg);

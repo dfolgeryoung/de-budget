@@ -49,6 +49,7 @@ export interface MonthPayload {
   categories: Record<string, { name: string; emoji: string | null; kind: string; hidden: boolean }>;
   accounts: { id: string; name: string; type: string; onBudget: boolean; balance: number }[];
   daysOfBuffer: number;
+  billsToCome: { id: string; payee: string; amount: number; day: number | null; categoryId: string | null }[];
   check: { ok: boolean; diffs: string[]; source: string | null } | null;
 }
 
@@ -60,6 +61,12 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
   const end = addMonths(today.slice(0, 7) + "-01", 1);
   for (let m = input.firstMonth; m <= end; m = addMonths(m, 1)) months.push(m);
   if (!months.includes(month)) months.push(month);
+
+  // bills still to come: active recurring bills whose payee has no entry this month
+  const recurring = await db.select().from(t.recurring).where(eq(t.recurring.active, true));
+  const txnsThisMonth = input.transactions.filter((x) => x.date.slice(0, 7) === month.slice(0, 7));
+  const payeesThisMonth = new Set((await db.select({ id: t.transactions.id, payee: t.transactions.payee }).from(t.transactions)).filter((r) => txnsThisMonth.some((x) => x.id === r.id)).map((r) => (r.payee ?? "").toLowerCase()));
+  const billsToCome = recurring.filter((r) => !payeesThisMonth.has(r.payee.toLowerCase())).map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.dayOfMonth, categoryId: r.categoryId }));
 
   // acceptance check against the sheet's own figures, when an import recorded them
   const expRow = await db.select().from(t.settings).where(eq(t.settings.key, "sheet_expected"));
@@ -94,6 +101,7 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
     categories: Object.fromEntries(cats.map((c) => [c.id, { name: c.name, emoji: c.emoji, kind: c.kind, hidden: c.hiddenInBudget }])),
     accounts: accts.sort((a, b) => a.sortOrder - b.sortOrder).map((a) => ({ id: a.id, name: a.name, type: a.type, onBudget: a.onBudget, balance: accountBalance(input, a.id, today) })),
     daysOfBuffer: daysOfBuffer(input, today),
+    billsToCome,
     check,
   };
 }

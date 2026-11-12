@@ -8,6 +8,7 @@ import { api } from "./api";
 import { useToast } from "./Toast";
 import { CategoryPanel } from "./CategoryPanel";
 import { Sheet } from "./Sheet";
+import { MonthPanel } from "./MonthPanel";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
@@ -195,7 +196,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
               {recent.slice(0, 12).map((m) => <span key={m.id} style={{ textDecoration: m.undone ? "line-through" : undefined }}>{m.at.slice(5, 16).replace("T", " ")} · {formatMoney(m.amount)} {catName(m.fromCategoryId)} → {catName(m.toCategoryId)} <em style={{ color: "var(--muted)" }}>({m.how})</em></span>)}
             </div>
           )}
-          <div className="grid items-center text-[11px] font-semibold uppercase tracking-wider px-4 py-2" style={{ gridTemplateColumns: "24px minmax(0,1fr) 110px 110px 130px", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+          <div className="grid items-center text-[11px] font-semibold uppercase tracking-wider px-4 py-2" style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
             <input type="checkbox" aria-label="Select all" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(visibleIds) : new Set())} className="m-0" />
             <span>Category</span><span className="text-right hidden md:block">Assigned</span><span className="text-right hidden md:block">Activity</span><span className="text-right">Available</span>
           </div>
@@ -206,7 +207,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             const gSel = rows.length > 0 && rows.every((r) => selected.has(r.categoryId));
             return (
               <div key={g.id}>
-                <div className="grid items-center text-[13px] font-semibold px-4 py-2" style={{ gridTemplateColumns: "24px minmax(0,1fr) 110px 110px 130px", background: "var(--group)", color: "var(--text-2)", borderTop: "1px solid var(--border)" }}>
+                <div className="grid items-center text-[13px] font-semibold px-4 py-2" style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", background: "var(--group)", color: "var(--text-2)", borderTop: "1px solid var(--border)" }}>
                   <input type="checkbox" aria-label={`Select ${g.name}`} checked={gSel} onChange={(e) => setSelected((s) => { const n = new Set(s); rows.forEach((r) => (e.target.checked ? n.add(r.categoryId) : n.delete(r.categoryId))); return n; })} className="m-0" />
                   <button onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })} className="text-left inline-flex items-center gap-1.5"><Chevron dir={isOpen ? "down" : "right"} size={12} /> {g.name}</button>
                   <span className="text-right hidden md:block">{formatMoney(tot("assigned"))}</span>
@@ -219,7 +220,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
                   const st = statusText(c);
                   const isSel = open === c.categoryId;
                   return (
-                    <div key={c.categoryId} className="grid items-center px-4 py-2 text-sm" style={{ gridTemplateColumns: "24px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
+                    <div key={c.categoryId} className="grid items-center px-4 py-2 text-sm" style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
                       <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
                       <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col gap-1.5 pr-3">
                         <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">
@@ -251,7 +252,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           })}
         </div>
 
-        {panel && !isPhone && <aside className="w-[340px] shrink-0 sticky top-4">{panel}</aside>}
+        {!isPhone && <aside className="w-[340px] shrink-0 sticky top-4">{panel ?? <MonthPanel data={data} onPick={(id) => setOpen(id)} />}</aside>}
       </div>
       {panel && isPhone && <Sheet onClose={() => setOpen(null)}>{panel}</Sheet>}
 

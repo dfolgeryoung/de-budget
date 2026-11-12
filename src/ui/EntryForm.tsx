@@ -21,6 +21,7 @@ export interface EntryDraft {
   hidden: boolean;
   trackedAmountId: string | null;
   tagIds: string[];
+  more?: boolean; // open the "More" section straight away (set when arriving from a quick-entry chip)
 }
 
 export function draftFromRow(r: LedgerRow, lists: Lists): EntryDraft {
@@ -53,6 +54,8 @@ const chip = (on: boolean) => ({
 
 export function EntryForm({ lists, me, initial, onSaved, onClose }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void }) {
   const [d, setD] = useState<EntryDraft>(initial);
+  // Start with the extra section open when anything in it is already set, or a quick-entry chip asked for it.
+  const [moreOpen] = useState(() => !!(initial.more || initial.split.length || initial.transfer || initial.sharedFiftyFifty || initial.hidden || initial.tagIds.length || initial.trackedAmountId || initial.memo));
   const [dup, setDup] = useState<{ date: string; payee: string | null; amount: number } | null>(null);
   const [dateText, setDateText] = useState(initial.date);
   const [busy, setBusy] = useState(false);
@@ -206,7 +209,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose }: { lists: Lis
         <input value={dateText} onChange={(e) => setDateText(e.target.value)} onBlur={commitDate} onKeyDown={(e) => e.key === "Enter" && commitDate()} className={field + " w-32"} style={fieldStyle} placeholder="11/11 or Nov 11" />
       </div>
 
-      <details className="flex flex-col gap-2">
+      <details className="flex flex-col gap-2" open={moreOpen}>
         <summary className="text-xs font-semibold cursor-pointer" style={{ color: "var(--accent-text)" }}>More: memo, 50/50, hidden, split, transfer, tags, track against</summary>
         <div className="flex flex-col gap-3 pt-3">
           <input value={d.memo} onChange={(e) => set({ memo: e.target.value })} className={field} style={fieldStyle} placeholder="Memo" />

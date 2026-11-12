@@ -32,15 +32,17 @@ export function QuickEntry({ lists, me, account, onSaved, openFull }: { lists: L
     if (!d.categoryId) return toast("Pick a category");
     setBusy(true);
     try {
-      await api("/transactions", { method: "POST", json: { date: d.date, accountId: d.accountId, payee: d.payee, memo: d.memo, amount, categoryId: d.categoryId === "rta" ? null : d.categoryId, lines: [], transferToAccountId: null, sharedFiftyFifty: false, hidden: false, trackedAmountId: null, tagIds: [] } });
-      toast(`Saved: ${d.payee || "entry"} ${formatMoney(Math.abs(amount))}`);
+      await api("/transactions", { method: "POST", json: { date: d.date, accountId: d.accountId, payee: d.payee, memo: d.memo, amount, categoryId: d.categoryId === "rta" ? null : d.categoryId, lines: [], transferToAccountId: null, sharedFiftyFifty: d.sharedFiftyFifty, hidden: d.hidden, trackedAmountId: null, tagIds: [] } });
+      toast(`Saved: ${d.payee || "entry"} ${formatMoney(Math.abs(amount))}${d.sharedFiftyFifty ? " · 50/50" : ""}${d.hidden ? " · hidden" : ""}`);
       if (navigator.vibrate) navigator.vibrate(10);
-      setD((x) => ({ ...x, payee: "", memo: "", categoryId: null })); setOut(""); setInn(""); setDup(null);
+      setD((x) => ({ ...x, payee: "", memo: "", categoryId: null, sharedFiftyFifty: false, hidden: false })); setOut(""); setInn(""); setDup(null);
       onSaved();
       (document.getElementById("qe-payee") as HTMLInputElement | null)?.focus();
     } catch (e) { toast(`Not saved: ${(e as Error).message}`); } finally { setBusy(false); }
   }
-  const toFull = () => openFull({ ...d, amountText: Math.abs(amount) ? (Math.abs(amount) / 100).toFixed(2) : "", outflow: amount <= 0 });
+  const toFull = (extra: Partial<EntryDraft> = {}) => openFull({ ...d, amountText: Math.abs(amount) ? (Math.abs(amount) / 100).toFixed(2) : "", outflow: amount <= 0, more: true, ...extra });
+  const chip = (on: boolean) => ({ background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}` });
+  const chipCls = "px-2.5 py-1 rounded-full text-[11px] font-semibold leading-none";
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: "var(--selected)", border: "1px solid var(--navy)", boxShadow: "0 2px 8px rgba(58,79,125,0.10)" }}>
       <div className="grid items-center px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: "128px minmax(130px,1.2fr) minmax(130px,1fr) minmax(90px,0.9fr) 130px 88px 88px 44px", gap: 10, color: "var(--accent-text)" }}>
@@ -76,9 +78,19 @@ export function QuickEntry({ lists, me, account, onSaved, openFull }: { lists: L
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12.5 10 17.5 19 7" /></svg>
         </button>
       </div>
-      <div className="flex items-center gap-4 px-4 pb-3 text-xs" style={{ color: "var(--text-2)" }}>
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-2 px-4 pb-3 text-xs" style={{ color: "var(--text-2)" }}>
+        <div className="flex items-center gap-1.5">
+          <button type="button" aria-pressed={d.sharedFiftyFifty} title="Half of this is owed by the other checking" onClick={() => setD((x) => ({ ...x, sharedFiftyFifty: !x.sharedFiftyFifty }))} className={chipCls} style={chip(d.sharedFiftyFifty)}>50/50</button>
+          <button type="button" aria-pressed={d.hidden} title="Keep this entry out of the shared view" onClick={() => setD((x) => ({ ...x, hidden: !x.hidden }))} className={chipCls} style={chip(d.hidden)}>Hidden</button>
+          <span className="w-px h-4 mx-1" style={{ background: "var(--border)" }} />
+          <button type="button" onClick={() => toFull({ split: [{ categoryId: d.categoryId, amountText: "" }, { categoryId: null, amountText: "" }], transfer: false })} className={chipCls} style={chip(false)}>Split…</button>
+          <button type="button" onClick={() => toFull({ transfer: true, split: [] })} className={chipCls} style={chip(false)}>Transfer…</button>
+          {lists.tags.length > 0 && <button type="button" onClick={() => toFull()} className={chipCls} style={chip(false)}>Tags…</button>}
+          {lists.tracked.length > 0 && <button type="button" onClick={() => toFull()} className={chipCls} style={chip(false)}>Track against…</button>}
+        </div>
+        {d.sharedFiftyFifty && Math.abs(amount) > 0 && <span style={{ color: "var(--muted)" }}>Other checking owes {formatMoney(Math.round(Math.abs(amount) / 2))}</span>}
         {dup && <span style={{ color: "var(--yellow-text)" }}>⚠ Possible duplicate: {dup.payee} {formatMoney(Math.abs(dup.amount))} on {dup.date.slice(5).replace("-", "/")}</span>}
-        <button onClick={toFull} className="font-semibold" style={{ color: "var(--accent-text)" }}>More… (50/50, hidden, split, transfer, tags, track against)</button>
+        <button onClick={() => toFull()} className="ml-auto font-semibold" style={{ color: "var(--accent-text)" }}>Full form…</button>
       </div>
     </div>
   );

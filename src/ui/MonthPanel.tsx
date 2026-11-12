@@ -17,17 +17,21 @@ export function MonthPanel({ data, onPick }: { data: MonthPayload; onPick: (id: 
     <div className="flex justify-between text-[13px]" style={strong ? { fontWeight: 700 } : undefined}><span style={{ color: strong ? undefined : "var(--muted)" }}>{l}</span><span style={{ color }}>{val}</span></div>
   );
   const Box = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <section className="rounded-xl flex flex-col gap-2 p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--muted)" }}>{title}</h2>
-      {children}
+    <section className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2" style={{ color: "var(--text-2)", background: "var(--group)", borderBottom: "1px solid var(--border)" }}>{title}</h2>
+      <div className="flex flex-col gap-2 p-4">{children}</div>
     </section>
   );
   const ord = (d: number) => `${d}${["th", "st", "nd", "rd"][d % 10 > 3 || Math.floor((d % 100) / 10) === 1 ? 0 : d % 10]}`;
   const list = (items: typeof cats, val: (c: typeof cats[number]) => number, bg: string, fg: string, label: string) => (
-    <div className="rounded-lg p-3 flex flex-col gap-1.5" style={{ background: bg, color: fg }}>
-      <span className="flex items-baseline gap-1.5"><span className="text-xl font-bold">{items.length}</span><span className="text-xs font-bold">{label}</span></span>
-      {items.slice(0, 4).map((c) => <button key={c.categoryId} onClick={() => onPick(c.categoryId)} className="flex justify-between text-xs text-left"><span className="truncate">{name(c.categoryId)}</span><span className="font-semibold ml-2">{formatMoney(val(c))}</span></button>)}
-      {items.length > 4 && <span className="text-xs">+ {items.length - 4} more</span>}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2 text-[13px] font-semibold">
+        <span>{label}</span>
+        <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold" style={{ background: bg, color: fg }}>{items.length}</span>
+      </div>
+      {items.length === 0 && <span className="text-xs" style={{ color: "var(--muted)" }}>None</span>}
+      {items.slice(0, 4).map((c) => <button key={c.categoryId} onClick={() => onPick(c.categoryId)} className="flex justify-between text-[13px] text-left pl-2"><span className="truncate" style={{ color: "var(--text-2)" }}>{name(c.categoryId)}</span><span className="font-semibold ml-2" style={{ color: fg }}>{formatMoney(val(c))}</span></button>)}
+      {items.length > 4 && <span className="text-xs pl-2" style={{ color: "var(--muted)" }}>+ {items.length - 4} more</span>}
     </div>
   );
   return (
@@ -40,10 +44,12 @@ export function MonthPanel({ data, onPick }: { data: MonthPayload; onPick: (id: 
         {row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign === 0 ? "var(--green-text)" : v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
       </Box>
       <Box title="Budget check">
-        {list(overspent, (c) => c.available, "var(--red-bg)", "var(--red-text)", "overspent")}
-        {list(under, (c) => c.short, "var(--yellow-bg)", "var(--yellow-text)", "underfunded")}
-        {row("Funded", `${funded} ✓`)}
-        {row("Total underfunded", formatMoney(under.reduce((s, c) => s + c.short, 0)))}
+        {list(overspent, (c) => c.available, "var(--red-bg)", "var(--red-text)", "Overspent")}
+        {list(under, (c) => c.short, "var(--yellow-bg)", "var(--yellow-text)", "Underfunded")}
+        <div className="pt-2 flex flex-col gap-1" style={{ borderTop: "1px solid var(--border-soft)" }}>
+          {row("Funded", `${funded} ✓`)}
+          {row("Total underfunded", formatMoney(under.reduce((s, c) => s + c.short, 0)))}
+        </div>
       </Box>
       <Box title="Bills still to come">
         {bills.length === 0 && <span className="text-[13px]" style={{ color: "var(--muted)" }}>All recurring bills are in.</span>}

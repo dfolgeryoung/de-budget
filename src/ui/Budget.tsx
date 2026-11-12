@@ -220,7 +220,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
                   const st = statusText(c);
                   const isSel = open === c.categoryId;
                   return (
-                    <div key={c.categoryId} className="grid items-center px-4 py-2 text-sm" style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
+                    <div key={c.categoryId} className={"grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")} style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
                       <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
                       <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col gap-1.5 pr-3">
                         <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">

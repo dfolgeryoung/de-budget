@@ -154,7 +154,10 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
           </Popover>
         </span>
 
-        <Select ariaLabel={d.transfer ? "From account" : "Account"} value={d.accountId} onChange={(v) => set({ accountId: v ?? d.accountId, transferToAccountId: d.transferToAccountId === v ? null : d.transferToAccountId })} options={acctOptions} className="w-full" />
+        <span className="relative min-w-0 flex">
+          <Select ariaLabel={d.transfer ? "From account" : "Account"} value={d.accountId} onChange={(v) => set({ accountId: v ?? d.accountId, transferToAccountId: d.transferToAccountId === v ? null : d.transferToAccountId })} options={acctOptions} className="w-full" />
+          {d.split.length > 0 && <span aria-hidden="true" className="absolute left-[11px] top-full w-[1.5px] h-4 pointer-events-none" style={{ background: "var(--accent-text)" }} />}
+        </span>
 
         {d.transfer ? (
           <span className="flex items-center gap-2 min-w-0">
@@ -181,7 +184,8 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
           <div className="flex flex-col gap-1.5 px-4 pb-2">
             {d.split.map((l, i) => (
               <div key={i} className="grid items-center" style={{ gridTemplateColumns: LEDGER_COLS, gap: 10 }}>
-                <span /><span className="text-[11px] font-semibold uppercase tracking-wider text-right pr-1" style={{ color: "var(--muted)" }}>Line {i + 1}</span><span />
+                <span /><span />
+                <SplitBranch first={i === 0} last={i === d.split.length - 1} />
                 <Select ariaLabel={`Split line ${i + 1} category`} value={l.categoryId} onChange={(v) => set({ split: d.split.map((x, j) => (j === i ? { ...x, categoryId: v } : x)) })} options={catOptions} placeholder="Category…" className="w-full" menuWidth={300} />
                 <span className="text-[12px] truncate" style={{ color: "var(--muted)" }}>{i === d.split.length - 1 && remainder !== 0 && cents ? (remainder > 0 ? `${formatMoney(remainder)} still to place` : `${formatMoney(-remainder)} too much`) : i === d.split.length - 1 && cents ? "All placed ✓" : ""}</span>
                 <span className="flex justify-end gap-2 text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>
@@ -216,6 +220,21 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
         {onDelete && <button onClick={onDelete} className="ml-auto font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}
       </div>
     </div>
+  );
+}
+
+/** The connector drawn in the Account column of each split line: a stem down from the account box that forks into each category. */
+function SplitBranch({ first, last }: { first: boolean; last: boolean }) {
+  // the stem runs the full line height plus the gap to the next line so the vertical reads as one unbroken line
+  return (
+    <span className="flex items-center h-[34px] min-w-0" style={{ color: "var(--accent-text)" }} aria-hidden="true">
+      <svg width="24" height="34" viewBox="0 0 24 34" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="butt" style={{ overflow: "visible", flexShrink: 0 }}>
+        <line x1="12" y1={first ? -2 : -8} x2="12" y2={last ? 17 : 36} />
+        <path d="M12 17 Q12 17 14 17 H24" />
+      </svg>
+      <span className="flex-1 h-px" style={{ background: "currentColor", opacity: 0.9 }} />
+      <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor" style={{ flexShrink: 0 }}><path d="M0 0 L8 5 L0 10 Z" /></svg>
+    </span>
   );
 }
 

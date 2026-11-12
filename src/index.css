@@ -82,6 +82,10 @@
 }
 
 html, body, #root { height: 100%; }
+/* Anything clickable shows the hand (Tailwind's preflight makes buttons use the arrow); disabled controls say so. */
+button:not(:disabled), [role="button"], [role="option"], a[href], summary, label:has(> input[type="checkbox"]), label:has(> input[type="radio"]),
+input[type="checkbox"], input[type="radio"], input[type="date"], input[type="file"], select { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
 /* Pills (filters, options) share one size so rows of them line up; the text is trimmed to cap height so it sits
    dead-centre whatever the font's ascent/descent (Barlow's are lopsided). Older browsers get a 1px nudge instead. */
 .pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; flex-shrink: 0; }

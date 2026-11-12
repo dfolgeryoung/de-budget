@@ -156,7 +156,6 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
 
         <span className="relative min-w-0 flex">
           <Select ariaLabel={d.transfer ? "From account" : "Account"} value={d.accountId} onChange={(v) => set({ accountId: v ?? d.accountId, transferToAccountId: d.transferToAccountId === v ? null : d.transferToAccountId })} options={acctOptions} className="w-full" />
-          {d.split.length > 0 && <span aria-hidden="true" className="absolute left-[11px] top-full w-[1.5px] h-4 pointer-events-none" style={{ background: "var(--accent-text)" }} />}
         </span>
 
         {d.transfer ? (
@@ -223,17 +222,15 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
   );
 }
 
-/** The connector drawn in the Account column of each split line: a stem down from the account box that forks into each category. */
+/** The connector drawn in the Account column of each split line: a 1px stem under the account box that forks into each category. */
 function SplitBranch({ first, last }: { first: boolean; last: boolean }) {
-  // the stem runs the full line height plus the gap to the next line so the vertical reads as one unbroken line
+  const line = { background: "var(--accent-text)" } as const;
   return (
-    <span className="flex items-center h-[34px] min-w-0" style={{ color: "var(--accent-text)" }} aria-hidden="true">
-      <svg width="24" height="34" viewBox="0 0 24 34" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="butt" style={{ overflow: "visible", flexShrink: 0 }}>
-        <line x1="12" y1={first ? -2 : -8} x2="12" y2={last ? 17 : 36} />
-        <path d="M12 17 Q12 17 14 17 H24" />
-      </svg>
-      <span className="flex-1 h-px" style={{ background: "currentColor", opacity: 0.9 }} />
-      <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor" style={{ flexShrink: 0 }}><path d="M0 0 L8 5 L0 10 Z" /></svg>
+    <span className="relative block h-[34px] min-w-0" aria-hidden="true" style={{ color: "var(--accent-text)" }}>
+      {/* vertical: starts 5px clear of the account box on the first line, runs through the 6px gap to the next line, stops at the elbow on the last */}
+      <span className="absolute w-px" style={{ ...line, left: 12, top: first ? -3 : -6, bottom: last ? 17 : -6 }} />
+      <span className="absolute h-px" style={{ ...line, left: 12, right: 7, top: 17 }} />
+      <svg className="absolute" style={{ right: 0, top: 13 }} width="8" height="9" viewBox="0 0 8 9" fill="currentColor"><path d="M0 0.5 L8 4.5 L0 8.5 Z" /></svg>
     </span>
   );
 }

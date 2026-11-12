@@ -92,12 +92,14 @@ export function parseExport(text: string): SheetState {
         if (!cat) continue;
         const marker = cell(rows, r, COL("C")).trim();
         if (marker === "▾" || marker === "▸") { cur = cat; groups.push([cat, []]); continue; }
-        if (cur) groups[groups.length - 1]![1].push(cat);
+        const group = cell(rows, r, COL("AA")).trim();
+        if (!group || !cur) continue; // notes and tips under the table have no group
+        groups[groups.length - 1]![1].push(cat);
         cats[cat] = {
           assigned: num(cell(rows, r, COL("F"))), goal_type: cell(rows, r, COL("Q")).trim(), goal_amount: num(cell(rows, r, COL("R"))),
           freq: num(cell(rows, r, COL("T"))), goal_date: dt(cell(rows, r, COL("S"))),
           activity: num(cell(rows, r, COL("G"))), available: num(cell(rows, r, COL("H"))),
-          group: cell(rows, r, COL("AA")).trim().replace(/^[▾▸]\s*/, ""),
+          group: group.replace(/^[▾▸]\s*/, ""),
         };
       }
       const accts: Record<string, number> = {};

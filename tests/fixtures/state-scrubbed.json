@@ -1260,16 +1260,6 @@ false
 "activity": 0.0,
 "available": 1000.0,
 "group": "Irregular & Annual Expenses"
-},
-"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists.": {
-"assigned": null,
-"goal_type": "",
-"goal_amount": null,
-"freq": null,
-"goal_date": null,
-"activity": null,
-"available": null,
-"group": ""
 }
 },
 "rta": 0.0,
@@ -1387,8 +1377,7 @@ false
 "Life Insurance",
 "Gifts",
 "Donations",
-"Christmas",
-"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists."
+"Christmas"
 ]
 ]
 ]
@@ -1875,16 +1864,6 @@ false
 "activity": 0.0,
 "available": 1000.0,
 "group": "Irregular & Annual Expenses"
-},
-"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists.": {
-"assigned": null,
-"goal_type": "",
-"goal_amount": null,
-"freq": null,
-"goal_date": null,
-"activity": null,
-"available": null,
-"group": ""
 }
 },
 "rta": 0.0,
@@ -2002,8 +1981,7 @@ false
 "Life Insurance",
 "Gifts",
 "Donations",
-"Christmas",
-"Adding a category: each category is two rows (name row + thin bar row). Select both rows of a category in its group, copy, insert two rows below and paste, then retype the name. Adding a group: a row with \u25be in column C and the name in D, plus the SUM formulas in F, G, H. Past months keep their own lists."
+"Christmas"
 ]
 ]
 ]

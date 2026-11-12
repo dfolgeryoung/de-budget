@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatMoney, parseMoney } from "../budget/money";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
@@ -55,12 +55,21 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
     <button key={t} onClick={() => setTab(t)} className="px-2.5 py-2 text-[13px]" style={tab === t ? { color: "var(--accent-text)", fontWeight: 600, borderBottom: "2px solid var(--navy)" } : { color: "var(--muted)", fontWeight: 500 }}>{l}</button>
   );
 
+  const boxHead = (title: string, right?: ReactNode) => (
+    <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--group)", borderBottom: "1px solid var(--border)" }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>{title}</h2>
+      {right}
+    </div>
+  );
   return (
-    <div className="rounded-xl flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)", minHeight: 320 }}>
-      <div className="px-4 pt-4 flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
+    <div className="rounded-xl flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      {boxHead(rtaMode ? "Ready to Assign" : "Category", (
+        <button onClick={onClose} className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--accent-text)" }}><Chevron dir="left" size={11} /> Month summary</button>
+      ))}
+      <div className="px-4 pt-3 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="text-[17px] font-bold">{rtaMode ? "Ready to Assign" : `${meta?.emoji ?? ""} ${meta?.name}`}</div>
-          <button aria-label="Close" onClick={onClose} className="w-8 h-8 rounded-full inline-flex items-center justify-center" style={{ background: "var(--group)" }}><Chevron dir="down" /></button>
         </div>
         {c && (
           <>
@@ -132,8 +141,11 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
         {rtaMode && <p className="text-[13px]" style={{ color: "var(--muted)" }}>Move money straight from Ready to Assign into a category. Negative means more is assigned than you have.</p>}
       </div>
 
-      <div className="mt-auto px-4 py-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border)", background: "var(--card-alt)" }}>
-        <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Move money</div>
+    </div>
+
+    <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      {boxHead("Move money")}
+      <div className="px-4 py-3 flex flex-col gap-2">
         <div className="flex gap-2 items-center">
           {!rtaMode && (
             <select value={dir} onChange={(e) => setDir(e.target.value as "to" | "from")} className="sel rounded-lg pl-2 py-2 text-[13px]" style={{ border: "1px solid var(--field)", background: "var(--card)", width: 72 }}>
@@ -153,6 +165,7 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
         </div>
         {!rtaMode && cats.length > 0 && <button onClick={() => { const next = cats[(cats.findIndex((x) => x.id === categoryId) + 1) % cats.length]; if (next) onOpenOther(next.id); }} className="text-xs text-left" style={{ color: "var(--accent-text)" }}>Next category ›</button>}
       </div>
+    </div>
     </div>
   );
 }

@@ -15,8 +15,8 @@ export function Popover({ anchor, open, onClose, width = 220, children, panelRef
     const w = Math.max(r.width, width);
     const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
     const below = window.innerHeight - r.bottom - 8, above = r.top - 8;
-    if (below >= 240 || below >= above) setPos({ top: r.bottom + 4, left, width: w, maxH: Math.min(360, below) });
-    else setPos({ bottom: window.innerHeight - r.top + 4, left, width: w, maxH: Math.min(360, above) });
+    if (below >= 240 || below >= above) setPos({ top: r.bottom + 4, left, width: w, maxH: Math.min(560, below) });
+    else setPos({ bottom: window.innerHeight - r.top + 4, left, width: w, maxH: Math.min(560, above) });
   }, [open, anchor, width]);
   useEffect(() => {
     if (!open) return;

@@ -7,6 +7,7 @@ import { api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
+import { NavIcon } from "./icons";
 
 const screens = [
   { id: "home", label: "Home", phoneOnly: true },
@@ -78,7 +79,7 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={screen === "home" && isPhone ? { paddingTop: 0 } : undefined}>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} />
         ) : screen === "budget" || screen === "home" ? (
@@ -107,16 +108,17 @@ function ShellInner({ me }: { me: Me }) {
       {/* Phone bottom bar */}
       <nav
         aria-label="Main"
-        className="md:hidden fixed bottom-0 inset-x-0 h-20 flex justify-around items-start pt-2"
-        style={{ background: "var(--card)", borderTop: "1px solid var(--border)" }}
+        className="md:hidden fixed bottom-0 inset-x-0 flex justify-around items-start pt-2.5"
+        style={{ background: "var(--card)", borderTop: "1px solid var(--border)", height: "calc(78px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {screens.filter((s) => !("desktopOnly" in s)).map((s) => (
           <a
             key={s.id}
             href={`#${s.id}`}
-            className="text-[11px] font-medium w-16 text-center"
+            className="flex flex-col items-center gap-[3px] text-[11px] w-16 text-center"
             style={{ color: screen === s.id ? "var(--accent-text)" : "var(--muted)", fontWeight: screen === s.id ? 600 : 500 }}
           >
+            <NavIcon id={s.id} />
             {s.label}
           </a>
         ))}

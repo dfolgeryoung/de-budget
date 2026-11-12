@@ -43,20 +43,20 @@ export function Bar({ c }: { c: CategoryMonth }) {
   const funded = Math.min(1, Math.max(0, (c.available + Math.max(0, -c.activity)) / base));
   const color = c.status === "overspent" ? "var(--red)" : c.status === "underfunded" || c.status === "not_enough" ? "var(--yellow)" : "var(--green)";
   return (
-    <div className="h-1.5 rounded-full overflow-hidden flex w-full" style={{ background: "var(--track)" }}>
+    <div className="rounded-full overflow-hidden flex w-full" style={{ height: 5, background: "var(--track)" }}>
       <div className="h-full stripes" style={{ width: `${spent * 100}%` }} />
       <div className="h-full" style={{ width: `${Math.max(0, funded - spent) * 100}%`, background: color }} />
     </div>
   );
 }
 
-export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { id: string; initial?: string }; showBarsDefault: boolean; refreshKey: number; onChanged: () => void }) {
+export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { id: string; initial?: string; avatarEmoji?: string }; showBarsDefault: boolean; refreshKey: number; onChanged: () => void }) {
   const [month, setMonth] = useState<string | null>(null);
   const [data, setData] = useState<MonthPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [open, setOpen] = useState<string | "rta" | null>(null);
+  const [open, setOpen] = useState<string | "rta" | "summary" | null>(null);
   const [bars, setBars] = useState(showBarsDefault);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
@@ -133,7 +133,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
   const tb = "tb-btn inline-flex items-center gap-1.5 rounded-md px-2.5 h-7 text-[13px] font-semibold leading-none";
   const ic = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
-  const panel = open ? (
+  const panel = open && open !== "summary" ? (
     <CategoryPanel
       key={open}
       month={data.month}
@@ -145,6 +145,84 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
       onOpenOther={(id) => setOpen(id)}
     />
   ) : null;
+
+  const statusIcon = (c: CategoryMonth) =>
+    c.status === "funded" ? <span aria-label="Funded" className="inline-flex w-4 h-4 rounded-full items-center justify-center text-white shrink-0" style={{ background: "var(--green)" }}><svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12.5 10 17.5 19 7" /></svg></span>
+    : c.status === "underfunded" || c.status === "not_enough" ? <span aria-label="Partly funded" className="inline-block w-4 h-4 rounded-full shrink-0" style={{ border: "2px solid var(--yellow)", background: "linear-gradient(90deg, var(--yellow) 50%, transparent 50%)" }} />
+    : c.goal && c.status !== "overspent" ? <span aria-label="Partly funded" className="inline-block w-4 h-4 rounded-full shrink-0" style={{ border: "2px solid var(--green)", background: "linear-gradient(90deg, var(--green) 50%, transparent 50%)" }} />
+    : null;
+
+  if (isPhone) {
+    const [summaryOpen, setSummaryOpen] = [open === "summary", (v: boolean) => setOpen(v ? "summary" : null)];
+    const pill = rta === 0 ? { text: "All money assigned", bg: "var(--green-solid)", fg: "#fff" } : rta > 0 ? { text: `${formatMoney(rta)} to assign`, bg: "var(--yellow-bg)", fg: "var(--yellow-text)" } : { text: `Over by ${formatMoney(-rta)}`, bg: "var(--red-bg)", fg: "var(--red-text)" };
+    return (
+      <div className="flex flex-col -mx-4" style={{ gap: 10 }}>
+        <div className="relative px-5 pb-4 flex flex-col" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))", gap: 14 }}>
+          <a href="#settings" aria-label="Profile and settings" className="absolute left-4 w-[30px] h-[30px] rounded-lg flex items-center justify-center text-base" style={{ top: "calc(0.75rem + env(safe-area-inset-top))", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</a>
+          <div className="flex items-center justify-between pt-9">
+            <button aria-label="Previous month" onClick={() => setMonth(addMonths(data.month, -1))} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}><Chevron dir="left" size={16} /></button>
+            <div className="text-lg font-semibold tracking-wide">{monthLabel(data.month)}</div>
+            <button aria-label="Next month" onClick={() => setMonth(addMonths(data.month, 1))} className="w-11 h-11 rounded-full inline-flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}><Chevron dir="right" size={16} /></button>
+          </div>
+          <div className="flex items-end justify-between">
+            <button onClick={() => setOpen("rta")} className="flex flex-col text-left" style={{ gap: 2 }}>
+              <span className="text-xs font-medium uppercase opacity-80" style={{ letterSpacing: "0.08em" }}>Ready to Assign</span>
+              <span className="font-bold" style={{ fontSize: 34, lineHeight: 1.1 }}>{formatMoney(rta)}</span>
+            </button>
+            <button onClick={() => setOpen("rta")} className="text-xs font-semibold rounded-full" style={{ background: pill.bg, color: pill.fg, padding: "6px 10px" }}>{pill.text}</button>
+          </div>
+          <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center justify-between rounded-[10px] text-[13px]" style={{ background: "rgba(255,255,255,0.10)", padding: "10px 12px" }}>
+            <span className="flex items-center gap-2.5">
+              <span>Cash <strong>{formatMoney(view.cashOnBudget).replace(/\.\d\d$/, "")}</strong></span><span className="opacity-50">·</span>
+              <span>Cards <strong>{formatMoney(view.owedOnCards).replace(/\.\d\d$/, "")}</strong></span><span className="opacity-50">·</span>
+              <span>Buffer <strong>{Number.isFinite(data.daysOfBuffer) ? `${data.daysOfBuffer} days` : "∞"}</strong></span>
+            </span>
+            <span aria-hidden="true" className="flex items-center justify-center w-[22px] h-[22px] rounded-full shrink-0" style={{ background: "rgba(255,255,255,0.16)" }}><Chevron size={12} /></span>
+          </button>
+        </div>
+
+        {data.check && !data.check.ok && (
+          <div className="mx-3 rounded-xl p-3 text-xs" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>Differs from the spreadsheet in {data.check.diffs.length} place{data.check.diffs.length === 1 ? "" : "s"} (expected while testing entries here).</div>
+        )}
+
+        <div className="px-3 flex flex-col" style={{ gap: 10 }}>
+          {data.groups.map((g) => {
+            const rows = g.categories.map((id) => byId.get(id)).filter((c): c is CategoryMonth => !!c && !data.categories[c.categoryId]?.hidden);
+            const isOpen = !collapsed.has(g.id);
+            const total = rows.reduce((s, c) => s + c.available, 0);
+            return (
+              <div key={g.id} className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <button onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })} className="w-full flex items-center justify-between text-[13px] font-semibold" style={{ padding: "10px 14px", background: "var(--group)", color: "var(--text-2)" }}>
+                  <span className="flex items-center gap-2 min-w-0 whitespace-nowrap"><Chevron dir={isOpen ? "down" : "right"} size={11} /><span className="truncate">{g.name}</span></span>
+                  <span className="shrink-0 pl-3">{formatMoney(total)}</span>
+                </button>
+                {isOpen && rows.map((c) => {
+                  const meta = data.categories[c.categoryId]!;
+                  const chip = chipStyle[c.status] ?? chipStyle.none!;
+                  const st = statusText(c);
+                  const icon = statusIcon(c);
+                  return (
+                    <button key={c.categoryId} onClick={() => setOpen(c.categoryId)} className="w-full flex items-center gap-3 text-left" style={{ padding: "11px 14px", borderTop: "1px solid var(--border-soft)", background: c.status === "underfunded" ? "var(--yellow-row)" : undefined }}>
+                      <span className="text-lg w-6 text-center shrink-0">{meta.emoji ?? "·"}</span>
+                      <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 6 }}>
+                        <span className="flex justify-between items-center gap-2">
+                          <span className="flex items-baseline gap-2 whitespace-nowrap min-w-0 text-[15px]"><span className="font-medium shrink-0">{meta.name}</span><span className="text-[11px] overflow-hidden text-ellipsis" style={{ color: st.color }}>{st.text}</span></span>
+                          <span className="inline-flex items-center gap-1.5 rounded-full text-[13px] font-semibold shrink-0" style={{ background: chip.bg, color: chip.fg, padding: icon ? "3px 10px 3px 4px" : "4px 10px" }}>{icon}{formatMoney(c.available)}</span>
+                        </span>
+                        {bars && (c.goal || c.activity !== 0 || c.available !== 0) && <Bar c={c} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+        {summaryOpen && <Sheet onClose={() => setOpen(null)}><MonthPanel data={data} onPick={(id) => setOpen(id)} /></Sheet>}
+        {panel && <Sheet onClose={() => setOpen(null)}>{panel}</Sheet>}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

@@ -39,7 +39,7 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
   const lines = (c: ClassicColumn, s: "recurring" | "variable") => data.lines.filter((l) => l.column === c && l.section === s);
 
   const Row = ({ label, budget, actual, bold, bg, onBudget, children }: { label: ReactNode; budget?: number | null; actual?: number | null; bold?: boolean; bg?: string; onBudget?: (v: number) => void; children?: ReactNode }) => (
-    <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: bold ? "9px 14px" : "8px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: bold ? 700 : undefined, background: bg, color: bg ? "#1A1D23" : undefined }}>
+    <div className={"grid items-center text-[13px]" + (bg ? "" : " row-hover")} style={{ gridTemplateColumns: GRID, padding: bold ? "9px 14px" : "8px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: bold ? 700 : undefined, background: bg, color: bg ? "#1A1D23" : undefined }}>
       <span className="min-w-0 truncate flex items-center gap-2">{label}{children}</span>
       <span className="text-right">{budget == null ? "" : onBudget ? <Editable value={budget} onSave={onBudget} muted={!bold} /> : <span style={{ color: bold ? undefined : "var(--muted)" }}>{formatMoney(budget)}</span>}</span>
       <span className="text-right" style={{ color: actual === 0 ? (bg ? "#6B7684" : "var(--faint)") : undefined }}>{actual == null ? "" : actual === 0 ? "—" : formatMoney(actual)}</span>
@@ -76,7 +76,7 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
     const t = tone(p === "D" ? "david" : "eliz");
     const s = data.people[p];
     const line = (label: ReactNode, budget: ReactNode, actual: ReactNode, opts: { bold?: boolean; color?: string; bg?: string } = {}) => (
-      <div className="grid items-center text-[13px]" style={{ gridTemplateColumns: GRID, padding: "7px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: opts.bold ? 700 : undefined, color: opts.bg ? "#1A1D23" : opts.color, background: opts.bg }}>
+      <div className={"grid items-center text-[13px]" + (opts.bg ? "" : " row-hover")} style={{ gridTemplateColumns: GRID, padding: "7px 14px", borderTop: "1px solid var(--border-soft)", fontWeight: opts.bold ? 700 : undefined, color: opts.bg ? "#1A1D23" : opts.color, background: opts.bg }}>
         <span style={{ color: opts.bg ? "#1A1D23" : opts.color ?? (opts.bold ? undefined : "var(--muted)") }}>{label}</span><span className="text-right" style={{ color: opts.bold ? undefined : "var(--muted)" }}>{budget}</span><span className="text-right" style={{ color: opts.bg ? "#1A1D23" : undefined }}>{actual}</span>
       </div>
     );
@@ -176,7 +176,7 @@ function LineList({ l, t }: { l: ClassicLine; t: ReturnType<typeof tone> }) {
       {l.entries.length > 0 && (
         <div className="flex flex-col text-xs" style={{ padding: "0 14px 8px 22px", gap: 3, color: "var(--text-2)" }}>
           {l.entries.map((e, i) => (
-            <div key={e.id + i} className="flex justify-between gap-3"><span className="truncate">{short(e.date)} · {e.payee}{l.name === "Misc shared" ? ` · ${e.category}` : ""}{e.half ? " (½ shared)" : ""}</span><span className="shrink-0">{formatMoney(e.amount)}</span></div>
+            <div key={e.id + i} className="row-hover flex justify-between gap-3 rounded px-1 -mx-1"><span className="truncate">{short(e.date)} · {e.payee}{l.name === "Misc shared" ? ` · ${e.category}` : ""}{e.half ? " (½ shared)" : ""}</span><span className="shrink-0">{formatMoney(e.amount)}</span></div>
           ))}
         </div>
       )}

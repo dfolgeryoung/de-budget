@@ -57,6 +57,8 @@ export interface BudgetInput {
   assignments: AssignmentIn[];
   goals: GoalIn[];
   firstMonth: MonthKey; // the first budgeted month (before it: history / starting balances)
+  /** Available already sitting in each category when firstMonth opens (from the last history month). */
+  openingAvailable?: Record<string, Cents>;
 }
 
 // ---------- output shapes ----------
@@ -95,11 +97,22 @@ export function accountBalance(input: BudgetInput, accountId: string, asOf?: ISO
   const acct = byId(input.accounts).get(accountId);
   if (!acct) throw new Error(`unknown account ${accountId}`);
   let bal = acct.startingBalance;
+  // 50/50 entries: the paying person's checking is owed half by the other person's checking
+  const checkingOf = (owner: "D" | "E") => input.accounts.find((a) => a.type === "checking" && a.owner === owner)?.id;
   for (const t of input.transactions) {
     if (asOf && t.date > asOf) continue;
     if (t.confirmed === false) continue;
     if (t.accountId === accountId) bal += t.amount;
     if (t.transferToAccountId === accountId) bal -= t.amount; // amount is negative on the source side
+    if (t.sharedFiftyFifty && !t.transferToAccountId) {
+      const payer = byId(input.accounts).get(t.accountId);
+      if (payer && payer.owner !== "shared") {
+        const other = checkingOf(payer.owner === "D" ? "E" : "D");
+        const half = Math.round(-t.amount / 2); // positive for an outflow
+        if (accountId === t.accountId) bal += half; // reimbursement due to the payer
+        if (accountId === other) bal -= half; // owed by the other
+      }
+    }
   }
   return bal;
 }
@@ -150,6 +163,20 @@ export function incomeToRTA(input: BudgetInput, month: MonthKey): Cents {
   return s;
 }
 
+/** Net transfers between on-budget and off-budget accounts in a month (money entering or leaving the budget). */
+export function offBudgetNet(input: BudgetInput, month: MonthKey): Cents {
+  const acct = byId(input.accounts);
+  let s = 0;
+  for (const t of input.transactions) {
+    if (monthOf(t.date) !== month || t.confirmed === false || !t.transferToAccountId) continue;
+    const from = acct.get(t.accountId), to = acct.get(t.transferToAccountId);
+    if (!from || !to) continue;
+    if (!from.onBudget && to.onBudget) s += -t.amount; // money arriving on budget
+    if (from.onBudget && !to.onBudget) s += t.amount; // money leaving (amount negative)
+  }
+  return s;
+}
+
 function goalFor(goals: GoalIn[], categoryId: string, month: MonthKey): GoalIn | null {
   let best: GoalIn | null = null;
   for (const g of goals) {
@@ -178,7 +205,7 @@ export function neededThisMonth(goal: GoalIn | null, carriedIn: Cents, available
 export function computeMonth(input: BudgetInput, month: MonthKey): MonthView {
   const cats = input.categories.filter((c) => c.kind !== "savings_mirror");
   // walk months from firstMonth to month to accumulate carried balances
-  const carried = new Map<string, Cents>();
+  const carried = new Map<string, Cents>(Object.entries(input.openingAvailable ?? {}));
   let rtaCarried = 0;
   let m = input.firstMonth;
   const assignedIn = (mm: MonthKey) => {
@@ -194,13 +221,9 @@ export function computeMonth(input: BudgetInput, month: MonthKey): MonthView {
     for (const c of cats) {
       const avail = (carried.get(c.id) ?? 0) + (asg.get(c.id) ?? 0) + (act.get(c.id) ?? 0);
       totalAssigned += asg.get(c.id) ?? 0;
-      // overspent normal categories reset to 0 and the shortfall comes off RTA next month (YNAB rule)
-      if (c.kind === "normal" && avail < 0) {
-        rtaCarried += avail;
-        carried.set(c.id, 0);
-      } else carried.set(c.id, avail);
+      carried.set(c.id, avail); // the sheet carries Available as it is, negative included
     }
-    rtaCarried += incomeToRTA(input, m) - totalAssigned;
+    rtaCarried += incomeToRTA(input, m) + offBudgetNet(input, m) - totalAssigned;
     m = addMonths(m, 1);
   }
   const act = activityByCategory(input, month);
@@ -230,9 +253,10 @@ export function computeMonth(input: BudgetInput, month: MonthKey): MonthView {
     const progress = target > 0 ? Math.max(0, Math.min(1, (goal?.targetDate || goal?.type === "refill_to" ? available : assigned) / target)) : available > 0 ? 1 : 0;
     categories.push({ categoryId: c.id, carriedIn, assigned, activity, available, goal, needed, short, status, progress });
   }
-  // RTA at the first month = on-budget cash at the end of the month before firstMonth (starting balances)
+  // First-month RTA = starting cash minus balances already in categories (the sheet's "Carried in"); then it carries in full.
   const startCash = input.accounts.filter((a) => a.onBudget && a.type !== "credit_card").reduce((s, a) => s + a.startingBalance, 0);
-  const readyToAssign = startCash + rtaCarried + incomeToRTA(input, month) - totalAssigned;
+  const openingInCats = Object.values(input.openingAvailable ?? {}).reduce((s, v) => s + v, 0);
+  const readyToAssign = startCash - openingInCats + rtaCarried + incomeToRTA(input, month) + offBudgetNet(input, month) - totalAssigned;
   const lastDay = `${month.slice(0, 7)}-${String(daysInMonth(month)).padStart(2, "0")}`;
   const cash = cashOnBudget(input, lastDay);
   const cardCats = cats.filter((c) => c.kind === "card_payment");
@@ -245,7 +269,7 @@ export function computeMonth(input: BudgetInput, month: MonthKey): MonthView {
     categories,
     owedOnCards: owed,
     setAsideForCards: setAside,
-    uncoveredCardDebt: Math.max(0, owed - setAside),
+    uncoveredCardDebt: owed - setAside, // negative = more set aside than owed, as the sheet shows it
     zeroCheck: cash - (sumAvailable + readyToAssign),
   };
 }

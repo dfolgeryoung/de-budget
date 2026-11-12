@@ -58,7 +58,7 @@ describe("zero-based identity", () => {
     expect(v.zeroCheck).toBe(0);
   });
 
-  it("overspending resets to zero and comes off next month's RTA", () => {
+  it("overspending carries into next month as a negative available, RTA unchanged (the sheet's rule)", () => {
     const input: BudgetInput = {
       ...base,
       transactions: [{ id: "t1", date: "2026-11-20", accountId: "dchk", amount: -1000, lines: [{ categoryId: "gas", amount: -1000 }] }],
@@ -66,9 +66,18 @@ describe("zero-based identity", () => {
     const nov = computeMonth(input, "2026-11-01");
     expect(nov.categories.find((c) => c.categoryId === "gas")!.status).toBe("overspent");
     const dec = computeMonth(input, "2026-12-01");
-    expect(dec.categories.find((c) => c.categoryId === "gas")!.carriedIn).toBe(0);
-    expect(dec.readyToAssign).toBe(70000 - 1000);
+    expect(dec.categories.find((c) => c.categoryId === "gas")!.carriedIn).toBe(-1000);
+    expect(dec.readyToAssign).toBe(70000);
     expect(dec.zeroCheck).toBe(0);
+  });
+});
+
+describe("first month", () => {
+  it("starting RTA is starting cash minus what the history already had in categories", () => {
+    const v = computeMonth({ ...base, openingAvailable: { groc: 10000, gas: 5000 } }, "2026-11-01");
+    expect(v.readyToAssign).toBe(100000 - 15000 - 30000);
+    expect(v.categories.find((c) => c.categoryId === "groc")!.carriedIn).toBe(10000);
+    expect(v.zeroCheck).toBe(0);
   });
 });
 

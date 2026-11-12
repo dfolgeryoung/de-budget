@@ -65,7 +65,6 @@ function ShellInner({ me }: { me: Me }) {
             <div className="text-xs opacity-70">D&amp;E Budget</div>
           </div>
         </div>
-        <button onClick={openNew} className="mx-1 mb-2 rounded-lg py-2 text-sm font-semibold" style={{ background: "rgba(255,255,255,0.14)", color: "#fff" }}>+ Add entry</button>
         {screens.filter((s) => !("phoneOnly" in s)).map((s) => (
           <a
             key={s.id}
@@ -101,7 +100,7 @@ function ShellInner({ me }: { me: Me }) {
         )}
       </main>
 
-      {/* Add entry: floating button on the phone, in the rail on desktop */}
+      {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
       {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} />}
 

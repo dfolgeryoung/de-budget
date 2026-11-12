@@ -144,6 +144,7 @@ export const transactions = pgTable(
     recurringId: text("recurring_id"),
     trackedAmountId: text("tracked_amount_id"),
     confirmed: boolean("confirmed").notNull().default(true), // recurring entries wait for a confirm
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete, so Undo is cheap
     createdBy: text("created_by").references(() => users.id),
     ...audit,
   },

@@ -1,5 +1,5 @@
 /** Load the budget from the database, run the engine, and shape the month for the client. */
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { computeMonth, accountBalance, daysOfBuffer, type BudgetInput, type MonthView } from "../budget/engine.js";
@@ -10,7 +10,7 @@ export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: {
     db.select().from(t.accounts),
     db.select().from(t.categoryGroups),
     db.select().from(t.categories),
-    db.select().from(t.transactions),
+    db.select().from(t.transactions).where(isNull(t.transactions.deletedAt)),
     db.select().from(t.transactionLines),
     db.select().from(t.assignments),
     db.select().from(t.goals),

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Budget } from "./Budget";
 import { Settings } from "./Settings";
+import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
+import type { EntryDraft } from "./EntryForm";
+import { api, type Lists } from "./api";
+import { ToastHost, useToast } from "./Toast";
 
 const screens = [
   { id: "home", label: "Home", phoneOnly: true },
@@ -13,13 +17,36 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-export function Shell({ me }: { me: { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean } }) {
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean };
+
+export function Shell({ me }: { me: Me }) {
+  return (
+    <ToastHost>
+      <ShellInner me={me} />
+    </ToastHost>
+  );
+}
+
+function ShellInner({ me }: { me: Me }) {
   const [screen, setScreen] = useState<string>(location.hash.slice(1) || "budget");
+  const [lists, setLists] = useState<Lists | null>(null);
+  const [draft, setDraft] = useState<EntryDraft | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [account, setAccount] = useState<string | null>(null);
+  const toast = useToast();
+  const loadLists = () => api<Lists>("/lists").then(setLists).catch((e) => toast(String(e)));
   useEffect(() => {
     const onHash = () => setScreen(location.hash.slice(1) || "budget");
     addEventListener("hashchange", onHash);
+    loadLists();
     return () => removeEventListener("hashchange", onHash);
   }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", me.appearance ?? "system");
+  }, [me.appearance]);
+  const openNew = () => lists && setDraft(emptyDraft(lists, me, screen === "transactions" ? account ?? undefined : undefined));
+  const onSaved = (_id: string, summary: string) => { setDraft(null); setRefreshKey((k) => k + 1); loadLists(); toast(summary); };
   return (
     <div className="min-h-full flex">
       {/* Desktop rail: sticky, full height; hidden on phones */}
@@ -35,6 +62,7 @@ export function Shell({ me }: { me: { id: string; email: string; name: string; i
             <div className="text-xs opacity-70">D&amp;E Budget</div>
           </div>
         </div>
+        <button onClick={openNew} className="mx-1 mb-2 rounded-lg py-2 text-sm font-semibold" style={{ background: "rgba(255,255,255,0.14)", color: "#fff" }}>+ Add entry</button>
         {screens.filter((s) => !("phoneOnly" in s)).map((s) => (
           <a
             key={s.id}
@@ -49,7 +77,9 @@ export function Shell({ me }: { me: { id: string; email: string; name: string; i
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
         {screen === "budget" || screen === "home" ? (
-          <Budget showBars={me.showBars ?? true} />
+          <Budget showBars={me.showBars ?? true} key={refreshKey} />
+        ) : screen === "transactions" && lists ? (
+          <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />
         ) : screen === "settings" || screen === "more" ? (
           <>
             <Settings />
@@ -64,6 +94,10 @@ export function Shell({ me }: { me: { id: string; email: string; name: string; i
           </>
         )}
       </main>
+
+      {/* Add entry: floating button on the phone, in the rail on desktop */}
+      <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
+      {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} />}
 
       {/* Phone bottom bar */}
       <nav

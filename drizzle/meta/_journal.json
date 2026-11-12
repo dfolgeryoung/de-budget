@@ -15,6 +15,13 @@
       "when": 1794480395920,
       "tag": "0001_opening_and_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794480984578,
+      "tag": "0002_soft_delete",
+      "breakpoints": true
     }
   ]
 }

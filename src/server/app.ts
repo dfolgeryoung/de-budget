@@ -6,6 +6,7 @@ import { db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { importSheetExport } from "./importer.js";
 import { monthPayload } from "./month.js";
+import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 
 type Env = { Variables: { user: SessionUser } };
 
@@ -56,6 +57,35 @@ app.get("/month/:key", async (c) => {
   return c.json(await monthPayload(db, key, today()));
 });
 app.get("/month", async (c) => c.json(await monthPayload(db, today().slice(0, 7) + "-01", today())));
+
+// ---- phase 2: ledger ----
+app.get("/lists", async (c) => c.json(await lists(db, c.get("user").id)));
+
+app.get("/transactions", async (c) => {
+  const q = c.req.query();
+  const limit = q.limit ? Number(q.limit) : undefined;
+  return c.json(await listTransactions(db, c.get("user").id, { accountId: q.account, month: q.month, categoryId: q.category, search: q.q, limit }));
+});
+app.get("/transactions/duplicate", async (c) => {
+  const q = c.req.query();
+  return c.json({ duplicate: await findDuplicate(db, q.payee ?? "", Number(q.amount), q.date ?? today(), q.exclude) });
+});
+app.post("/transactions", async (c) => {
+  const parsed = entrySchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") }, 400);
+  const id = await createTransaction(db, c.get("user").id, parsed.data);
+  return c.json({ id });
+});
+app.put("/transactions/:id", async (c) => {
+  const parsed = entrySchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") }, 400);
+  await updateTransaction(db, c.get("user").id, c.req.param("id"), parsed.data);
+  return c.json({ ok: true });
+});
+app.delete("/transactions/:id", async (c) => {
+  await deleteTransaction(db, c.get("user").id, c.req.param("id"), c.req.query("undo") === "1");
+  return c.json({ ok: true });
+});
 
 // Daily job (Vercel cron): recurring entries, pushes, sheet mirror, backups, Monday summary.
 app.get("/cron/daily", async (c) => {

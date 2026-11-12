@@ -138,7 +138,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>{d.transfer ? "From" : "Account"}</span>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="no-bar flex gap-2 overflow-x-auto">
           {lists.accounts.map((a) => (
             <button key={a.id} onClick={() => set({ accountId: a.id })} className="px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap" style={chip(d.accountId === a.id)}>{a.name}</button>
           ))}
@@ -164,7 +164,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       {d.transfer ? (
         <div className="flex flex-col gap-2">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>To</span>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="no-bar flex gap-2 overflow-x-auto">
             {lists.accounts.filter((a) => a.id !== d.accountId).map((a) => (
               <button key={a.id} onClick={() => set({ transferToAccountId: a.id })} className="px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap" style={chip(d.transferToAccountId === a.id)}>{a.name}</button>
             ))}

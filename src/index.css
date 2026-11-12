@@ -111,6 +111,10 @@ html, body, #root { height: 100%; }
 .tb-btn:hover { background: var(--hover); }
 .tb-btn.on { background: var(--selected); }
 
+/* Horizontal chip rows that scroll by dragging: no visible scrollbar */
+.no-bar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-bar::-webkit-scrollbar { display: none; }
+
 /* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
 @media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }

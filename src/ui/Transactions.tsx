@@ -83,7 +83,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.85 }}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-white placeholder:text-white/60" />
           </label>
-          <div className="flex gap-1.5 overflow-x-auto -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
+          <div className="no-bar flex gap-1.5 overflow-x-auto -mx-5 px-5">
             <Select pill ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: balances.has(a.id) ? `${a.name} · ${formatMoney(balances.get(a.id)!)}` : a.name }))]} style={account ? hpOn : hpOff} />
             <Select pill ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={catOpts} style={category ? hpOn : hpOff} />
             <Select pill ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} placeholder="Month" searchable={false} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} style={month ? hpOn : hpOff} />
@@ -141,7 +141,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         <h1 className="text-xl font-bold">{acct ? acct.name : "Transactions"}</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search payee, memo, amount" className="fld rounded-lg px-3 py-2 text-sm w-full md:w-72 outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)" }} />
       </div>
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="no-bar flex items-center gap-2 overflow-x-auto pb-1">
         <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!month} ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} searchable={false} />

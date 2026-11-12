@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, todayISO, type Lists } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
@@ -63,6 +63,12 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   const [err, setErr] = useState<string | null>(null);
   const toast = useToast();
   const set = (p: Partial<EntryDraft>) => setD((x) => ({ ...x, ...p }));
+  // Focus the amount once the sheet has finished sliding in, without letting the browser scroll anything.
+  const amountRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const h = setTimeout(() => { const el = amountRef.current; if (!el) return; el.focus({ preventScroll: true }); const sc = el.closest<HTMLElement>(".overflow-y-auto"); if (sc) sc.scrollTop = 0; }, 260);
+    return () => clearTimeout(h);
+  }, []);
 
   const cents = parseMoney(d.amountText) ?? 0;
   const signed = d.outflow ? -Math.abs(cents) : Math.abs(cents);
@@ -121,8 +127,6 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
 
   return (
     <div className="flex flex-col gap-4">
-      {/* header + amount stay pinned under the handle while the rest scrolls, so the amount is always in view */}
-      <div className="sticky z-10 -mx-5 px-5 pb-3 flex flex-col gap-4 md:static md:mx-0 md:px-0 md:pb-0" style={{ top: 28, background: "var(--card)", boxShadow: "0 8px 8px -8px rgba(0,0,0,0.08)" }}>
       <div className="flex items-center justify-between">
         <button onClick={onClose} className="text-[15px]" style={{ color: "var(--muted)" }}>Cancel</button>
         <div className="font-semibold">{d.id ? "Edit entry" : "New entry"}</div>
@@ -138,11 +142,9 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
         <span className="flex items-center gap-1 leading-none" style={{ color: d.outflow ? "var(--neg)" : "var(--green-text)" }}>
           <span className="text-5xl font-bold">{d.outflow ? "−" : "+"}</span>
           <span className="text-3xl font-semibold mt-1">$</span>
-          <input autoFocus inputMode="decimal" value={d.amountText} onChange={(e) => set({ amountText: e.target.value })} placeholder="0.00" className="w-40 text-5xl font-bold bg-transparent outline-none" style={{ color: "inherit" }}
-            onFocus={(e) => { const sc = e.currentTarget.closest<HTMLElement>(".overflow-y-auto"); if (sc) sc.scrollTop = 0; }} />
+          <input ref={amountRef} inputMode="decimal" value={d.amountText} onChange={(e) => set({ amountText: e.target.value })} placeholder="0.00" className="w-40 text-5xl font-bold bg-transparent outline-none" style={{ color: "inherit" }} />
         </span>
       </label>
-      </div>
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>{d.transfer ? "From" : "Account"}</span>

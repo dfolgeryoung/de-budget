@@ -4,6 +4,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 export function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   const [open, setOpen] = useState(false);
   const [drag, setDrag] = useState<{ y: number; moving: boolean } | null>(null);
+  // Size to the visible area so the on-screen keyboard shrinks the sheet instead of pushing its top off screen.
+  const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
+  useEffect(() => {
+    const v = window.visualViewport; if (!v) return;
+    const upd = () => setVv({ top: v.offsetTop, height: v.height });
+    upd(); v.addEventListener("resize", upd); v.addEventListener("scroll", upd);
+    return () => { v.removeEventListener("resize", upd); v.removeEventListener("scroll", upd); };
+  }, []);
   const start = useRef<{ y: number; t: number } | null>(null);
   useEffect(() => {
     const h = requestAnimationFrame(() => setOpen(true));
@@ -25,10 +33,10 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose: () 
   };
   const transform = !open ? "translate(0, 100%)" : drag ? `translate(0, ${drag.y}px)` : "translate(0,0)";
   return (
-    <div className="fixed inset-0 z-40 flex items-end md:items-stretch md:justify-end" onClick={onClose} style={{ background: `rgba(20,28,40,${open ? 0.55 : 0})`, transition: "background 200ms" }}>
+    <div className="fixed inset-x-0 z-40 flex items-end md:items-stretch md:justify-end" onClick={onClose} style={{ top: vv?.top ?? 0, height: vv?.height ?? "100%", background: `rgba(20,28,40,${open ? 0.55 : 0})`, transition: "background 200ms" }}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full md:w-[440px] max-h-[92vh] md:max-h-none md:h-full overflow-y-auto rounded-t-[22px] md:rounded-none px-5 pb-8 md:p-6 pt-0 md:pt-6"
+        className="w-full md:w-[440px] max-h-[92%] md:max-h-none md:h-full overflow-y-auto rounded-t-[22px] md:rounded-none px-5 pb-8 md:p-6 pt-0 md:pt-6"
         style={{ background: "var(--card)", color: "var(--text)", boxShadow: "0 -8px 30px rgba(0,0,0,0.18)", transform, transition: drag?.moving ? "none" : "transform 220ms cubic-bezier(0.22,1,0.36,1)", paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
         {/* the grab handle: a full-width, 28px-tall touch target that stays put while the sheet scrolls */}

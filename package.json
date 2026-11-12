@@ -6,13 +6,14 @@
   "scripts": {
     "test": "vitest run",
     "dev": "vite",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build": "npm run db:migrate && tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint src api",
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "build:local": "tsc -p tsconfig.json --noEmit && vite build"
   },
   "keywords": [],
   "author": "",

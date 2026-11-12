@@ -42,3 +42,8 @@ npx vercel dev           # API on :3000 (needs `npm i -g vercel` once)
 npm run dev              # Vite on :5173, proxies /api to :3000
 npm test                 # budget engine tests
 ```
+
+## Migrations run on deploy
+
+`npm run build` on Vercel runs `drizzle-kit migrate` against `DATABASE_URL` before building the client,
+so a schema change is live as soon as its deploy finishes. Locally use `npm run build:local`.

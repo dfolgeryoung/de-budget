@@ -5,4 +5,4 @@ dist
 !.env.example
 .vercel
 *.local
-drizzle/meta/_journal.json.bak
+

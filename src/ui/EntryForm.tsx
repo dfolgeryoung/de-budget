@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, todayISO, type Lists } from "./api";
+import { api, todayISO, categoryOptions, type Lists } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
@@ -73,10 +73,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   const cents = parseMoney(d.amountText) ?? 0;
   const signed = d.outflow ? -Math.abs(cents) : Math.abs(cents);
   const allCats = useMemo(() => lists.groups.flatMap((g) => g.categories.map((c) => ({ ...c, group: g.name, system: g.system }))), [lists]);
-  const catOptions = useMemo(() => [
-    { value: "rta", label: "Ready to Assign (income)", group: "Income" },
-    ...lists.groups.filter((g) => !g.system || g.name === "One Month Ahead").flatMap((g) => g.categories.filter((c) => c.kind !== "card_payment").map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name }))),
-  ], [lists]);
+  const catOptions = useMemo(() => categoryOptions(lists, { income: true }), [lists]);
   const cat = (id: string | null) => allCats.find((c) => c.id === id);
   const payeeMatches = d.payee.length >= 1 ? lists.payees.filter((p) => p.name.toLowerCase().includes(d.payee.toLowerCase())).slice(0, 6) : [];
   const splitTotal = d.split.reduce((s, l) => s + (parseMoney(l.amountText) ?? 0), 0);

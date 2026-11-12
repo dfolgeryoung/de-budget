@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, type Lists } from "./api";
+import { api, categoryOptions, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
@@ -67,7 +67,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     const hp = { height: 32, padding: "0 11px", fontSize: 12 } as const;
     const hpOff = { ...hp, background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.35)", fontWeight: 500 };
     const hpOn = { ...hp, background: "#fff", color: "var(--rail)", border: "1px solid #fff", fontWeight: 600 };
-    const catOpts = [{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))];
+    const catOpts = [{ value: "", label: "All categories" }, ...categoryOptions(lists, { all: true })];
     const cols = account ? "minmax(0,1fr) 88px 80px" : "minmax(0,1fr) 100px";
     return (
       <div className="flex flex-col -mx-4">
@@ -143,7 +143,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
       </div>
       <div className="no-bar flex items-center gap-2 overflow-x-auto pb-1">
         <Select pill on={!!account} ariaLabel="Account filter" value={account} onChange={setAccount} options={[{ value: "", label: "All accounts" }, ...lists.accounts.map((a) => ({ value: a.id, label: a.name }))]} style={{ maxWidth: "14rem" }} />
-        <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...lists.groups.flatMap((g) => g.categories.map((c) => ({ value: c.id, label: `${c.emoji ? c.emoji + " " : ""}${c.name}`, group: g.name })))]} style={{ maxWidth: "14rem" }} />
+        <Select pill on={!!category} ariaLabel="Category filter" value={category} onChange={setCategory} placeholder="Category" menuWidth={280} options={[{ value: "", label: "All categories" }, ...categoryOptions(lists, { all: true })]} style={{ maxWidth: "14rem" }} />
         <Select pill on={!!month} ariaLabel="Month filter" value={month || ""} onChange={(v) => setMonth(v ?? "")} options={[{ value: "", label: "All months" }, ...monthOptions.map((m) => ({ value: m, label: `${MON[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}` }))]} searchable={false} />
         {lists.tags.length > 0 && <Select pill on={!!tag} ariaLabel="Tag filter" value={tag} onChange={setTag} placeholder="Tags" options={[{ value: "", label: "All tags" }, ...lists.tags.map((t) => ({ value: t.id, label: t.name }))]} />}
         <button onClick={() => setOnlyHidden((v) => !v)} className={"pill" + (onlyHidden ? " on" : "")} style={{ background: onlyHidden ? "var(--navy)" : "var(--card)", color: onlyHidden ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${onlyHidden ? "var(--navy)" : "var(--field)"}` }}><span className="tb">Hidden only</span></button>

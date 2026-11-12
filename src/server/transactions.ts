@@ -159,7 +159,7 @@ export async function lists(db: Db, me: string) {
     accounts: accts.filter((a) => !a.closed).sort((a, b) => a.sortOrder - b.sortOrder).map((a) => ({ id: a.id, name: a.name, type: a.type, owner: a.owner })),
     groups: groups.sort((a, b) => a.sortOrder - b.sortOrder).map((g) => ({
       id: g.id, name: g.name, system: g.system,
-      categories: cats.filter((c) => c.groupId === g.id && !c.hiddenInBudget).sort((a, b) => a.sortOrder - b.sortOrder).map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: c.kind, favourite: c.favouriteOrder?.[me] ?? null })),
+      categories: cats.filter((c) => c.groupId === g.id && !c.hiddenInBudget).sort((a, b) => a.sortOrder - b.sortOrder).map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: c.kind, favourite: c.favouriteOrder?.[me] ?? c.favouriteOrder?._ ?? null })),
     })),
     payees: payees.sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({ name: p.name, lastCategoryId: p.lastCategoryId, lastAccountId: p.lastAccountId })),
     tags: tagRows.sort((a, b) => a.sortOrder - b.sortOrder).map((x) => ({ id: x.id, name: x.name, color: x.color })),

@@ -122,5 +122,17 @@ export function parseExport(text: string): SheetState {
   }
   const recurring = sheets["Recurring"]?.slice(1).filter((r) => r[0]?.trim()).map((r) => r.slice(0, 8));
   const moves = sheets["Money moves"]?.slice(1).filter((r) => r.slice(0, 6).some((x) => x?.trim())).map((r) => r.slice(0, 6));
-  return { accounts, first_month, current_month, ledger, months, history, recurring, moves };
+  // Pinned categories: the labelled block in column AE (names listed under the label, in dropdown order)
+  const pinned: string[] = [];
+  for (let r = 0; r < lg.length; r++) {
+    if (cell(lg, r, COL("AE")).trim().startsWith("Pinned categories")) {
+      for (let k = r + 1; k < Math.min(lg.length, r + 20); k++) {
+        const v = cell(lg, k, COL("AE")).trim();
+        if (v.startsWith("Dropdown order")) break;
+        if (v) pinned.push(v);
+      }
+      break;
+    }
+  }
+  return { accounts, first_month, current_month, ledger, months, history, recurring, moves, pinned };
 }

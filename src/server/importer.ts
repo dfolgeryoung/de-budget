@@ -53,6 +53,7 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
   // groups and categories (with Classic defaults filled in later from Settings)
   await db.insert(t.categoryGroups).values(m.groups.map((g) => ({ id: g.id, name: g.name, sortOrder: g.sortOrder, system: g.system, updatedBy: byUserId })));
   const catIn = m.input.categories;
+  const pinnedIndex = new Map((state.pinned ?? []).map((n, i) => [n, i]));
   const catRows = catIn.map((c, i) => {
     const name = [...m.names.categories].find(([, id]) => id === c.id)![0];
     return {
@@ -64,6 +65,7 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
       accountId: c.accountId ?? null,
       openingAvailable: m.input.openingAvailable?.[c.id] ?? 0,
       sortOrder: i,
+      favouriteOrder: pinnedIndex.has(name) ? { _: pinnedIndex.get(name)! } : null, // "_" = the shared pin order from the sheet
       updatedBy: byUserId,
     };
   });

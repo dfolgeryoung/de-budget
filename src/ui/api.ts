@@ -18,3 +18,20 @@ export interface Lists {
   tags: { id: string; name: string; color: string }[];
   tracked: { id: string; name: string; emoji: string | null }[];
 }
+
+/**
+ * Category options for a dropdown: Ready to Assign (when income is allowed), then the pinned categories in their
+ * pinned order under "Pinned", then everything else by group. Card-payment categories are never pickable.
+ */
+export function categoryOptions(lists: Lists, opts: { income?: boolean; all?: boolean } = {}): { value: string; label: string; group?: string }[] {
+  const label = (c: { name: string; emoji: string | null }) => `${c.emoji ? c.emoji + " " : ""}${c.name}`;
+  const groups = opts.all ? lists.groups : lists.groups.filter((g) => !g.system || g.name === "One Month Ahead");
+  const pickable = groups.flatMap((g) => g.categories.filter((c) => opts.all || c.kind !== "card_payment").map((c) => ({ ...c, groupName: g.name })));
+  const pinned = pickable.filter((c) => c.favourite !== null).sort((a, b) => a.favourite! - b.favourite!);
+  const pinnedIds = new Set(pinned.map((c) => c.id));
+  return [
+    ...(opts.income ? [{ value: "rta", label: "Ready to Assign (income)", group: "Income" }] : []),
+    ...pinned.map((c) => ({ value: c.id, label: label(c), group: "Pinned" })),
+    ...pickable.filter((c) => !pinnedIds.has(c.id)).map((c) => ({ value: c.id, label: label(c), group: c.groupName })),
+  ];
+}

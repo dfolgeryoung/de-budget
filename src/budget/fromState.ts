@@ -15,6 +15,7 @@ export interface SheetState {
   history: Record<string, { cats: Record<string, { assigned: number | null; activity: number | null; available: number | null }> }>;
   recurring?: string[][];
   moves?: string[][];
+  pinned?: string[]; // the Ledger tab's "Pinned categories (dropdown order)" list
 }
 export interface SheetMonth {
   picked: string;

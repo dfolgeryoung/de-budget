@@ -10,7 +10,7 @@ export function RailAccounts({ refreshKey, onPick, selected }: { refreshKey: num
   const onBudget = m.accounts.filter((a) => a.onBudget && a.type !== "credit_card");
   const cards = m.accounts.filter((a) => a.type === "credit_card");
   const Row = ({ a }: { a: MonthPayload["accounts"][number] }) => (
-    <button onClick={() => onPick(a.id)} className="flex justify-between items-center py-1.5 pl-2.5 pr-2 rounded-md text-left" style={selected === a.id ? { background: "rgba(255,255,255,0.14)", color: "#fff" } : undefined}>
+    <button onClick={() => onPick(a.id)} title={`Open the ${a.name} ledger`} className={"rail-link flex justify-between items-center py-1.5 pl-2.5 pr-2 rounded-md text-left cursor-pointer" + (selected === a.id ? " on" : "")} style={selected === a.id ? { background: "rgba(255,255,255,0.14)", color: "#fff" } : undefined}>
       <span className="text-[13px] font-medium">{a.name}</span>
       {a.type === "credit_card" ? (
         <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={a.balance < 0 ? { background: "#FBE4E2", color: "#8C1D18" } : { background: "rgba(255,255,255,0.18)", color: "#fff" }}>{formatMoney(a.balance)}</span>

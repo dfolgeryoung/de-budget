@@ -72,7 +72,7 @@ function ShellInner({ me }: { me: Me }) {
           <a
             key={s.id}
             href={`#${s.id}`}
-            className={"rail-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium" + (screen === s.id ? " on" : "")}
+            className={"rail-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer" + (screen === s.id ? " on" : "")}
             style={screen === s.id ? { background: "rgba(255,255,255,0.14)", color: "#fff", fontWeight: 600 } : undefined}
           >
             <span className="inline-flex shrink-0" style={{ opacity: screen === s.id ? 1 : 0.8 }}><NavIcon id={s.id} size={18} /></span>

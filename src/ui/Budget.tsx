@@ -186,8 +186,14 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
               <button className={tb} onClick={async () => setRecent(recent ? null : await api(`/moves/${data.month}`))}>Recent moves</button>
             </div>
             <div className="flex rounded-md p-0.5" style={{ background: "var(--group)" }} role="group" aria-label="Row density">
-              <button aria-label="Detailed rows" onClick={() => setBars(true)} className="w-8 h-6 rounded inline-flex items-center justify-center" style={bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>☰</button>
-              <button aria-label="Compact rows" onClick={() => setBars(false)} className="w-8 h-6 rounded inline-flex items-center justify-center" style={!bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>≡</button>
+              <button aria-label="Show progress bars" title="Show progress bars" aria-pressed={bars} onClick={() => setBars(true)} className="w-9 h-7 rounded inline-flex items-center justify-center" style={bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>
+                {/* two rows, each with a progress bar beneath */}
+                <svg aria-hidden="true" width="18" height="16" viewBox="0 0 18 16" fill="currentColor"><rect x="1" y="1" width="9" height="2" rx="1" /><rect x="1" y="5" width="16" height="2.5" rx="1.25" opacity="0.45" /><rect x="1" y="5" width="10" height="2.5" rx="1.25" /><rect x="1" y="10" width="7" height="2" rx="1" /><rect x="1" y="14" width="16" height="2.5" rx="1.25" opacity="0.45" /><rect x="1" y="14" width="5" height="2.5" rx="1.25" /></svg>
+              </button>
+              <button aria-label="Hide progress bars" title="Hide progress bars (compact rows)" aria-pressed={!bars} onClick={() => setBars(false)} className="w-9 h-7 rounded inline-flex items-center justify-center" style={!bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>
+                {/* four plain rows */}
+                <svg aria-hidden="true" width="18" height="16" viewBox="0 0 18 16" fill="currentColor"><rect x="1" y="1" width="9" height="2" rx="1" /><rect x="1" y="5" width="12" height="2" rx="1" /><rect x="1" y="9" width="7" height="2" rx="1" /><rect x="1" y="13" width="10" height="2" rx="1" /></svg>
+              </button>
             </div>
           </div>
           {recent && (
@@ -222,12 +228,17 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
                   return (
                     <div key={c.categoryId} className={"grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")} style={{ gridTemplateColumns: "36px minmax(0,1fr) 110px 110px 130px", borderTop: "1px solid var(--border-soft)", background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined }}>
                       <input type="checkbox" aria-label={`Select ${meta.name}`} checked={selected.has(c.categoryId)} onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(c.categoryId) : n.delete(c.categoryId); return n; })} className="m-0" />
-                      <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col gap-1.5 pr-3">
+                      <button onClick={() => setOpen(c.categoryId)} className="min-w-0 text-left flex flex-col pr-3">
                         <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">
                           <span className="font-medium shrink-0" style={{ fontWeight: isSel ? 600 : 500 }}>{meta.emoji ? `${meta.emoji} ` : ""}{meta.name}</span>
                           <span className="text-xs overflow-hidden text-ellipsis" style={{ color: st.color }}>{st.text}</span>
                         </div>
-                        {bars && (c.goal || c.activity !== 0 || c.available !== 0) && <Bar c={c} />}
+                        {/* the bar slides open/closed when progress bars are toggled */}
+                        {(c.goal || c.activity !== 0 || c.available !== 0) && (
+                          <div className="grid w-full transition-[grid-template-rows,opacity] duration-200 ease-out" style={{ gridTemplateRows: bars ? "1fr" : "0fr", opacity: bars ? 1 : 0 }}>
+                            <div className="overflow-hidden"><div className="pt-1.5"><Bar c={c} /></div></div>
+                          </div>
+                        )}
                       </button>
                       <span className="text-right hidden md:block">
                         {editing?.id === c.categoryId ? (

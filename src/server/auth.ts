@@ -37,9 +37,16 @@ export function externalRequest(req: Request): Request {
   const proto = req.headers.get("x-forwarded-proto");
   const host = req.headers.get("x-forwarded-host");
   if (proto) url.protocol = `${proto.split(",")[0]!.trim()}:`;
-  if (host) url.host = host.split(",")[0]!.trim();
+  if (host) {
+    const [h, port] = host.split(",")[0]!.trim().split(":");
+    url.hostname = h!;
+    url.port = port ?? ""; // setting host alone would keep the internal port
+  }
   if (url.href === req.url) return req;
-  return new Request(url, req);
+  const hasBody = !["GET", "HEAD"].includes(req.method);
+  // Node needs `duplex: "half"` to accept a streamed body on a new Request.
+  const init = { method: req.method, headers: req.headers, body: hasBody ? req.body : undefined, duplex: "half" } as RequestInit;
+  return new Request(url, init);
 }
 
 export const handleAuth = (req: Request) => Auth(externalRequest(req), authConfig);

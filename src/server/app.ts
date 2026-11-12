@@ -6,6 +6,11 @@ type Env = { Variables: { user: SessionUser } };
 
 export const app = new Hono<Env>().basePath("/api");
 
+app.onError((err, c) => {
+  console.error(`[api] ${c.req.method} ${c.req.path}:`, err);
+  return c.json({ error: err.message }, 500);
+});
+
 app.get("/health", (c) => c.json({ ok: true, at: new Date().toISOString() }));
 
 // Auth.js handles /api/auth/* (signin, callback, session, signout)

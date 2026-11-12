@@ -1,3 +1,4 @@
+import type React from "react";
 import { formatMoney } from "../budget/money";
 import type { MonthPayload } from "../server/month";
 import { monthLabel } from "./Budget";
@@ -15,44 +16,47 @@ export function MonthPanel({ data, onPick }: { data: MonthPayload; onPick: (id: 
   const row = (l: string, val: string, strong = false, color?: string) => (
     <div className="flex justify-between text-[13px]" style={strong ? { fontWeight: 700 } : undefined}><span style={{ color: strong ? undefined : "var(--muted)" }}>{l}</span><span style={{ color }}>{val}</span></div>
   );
-  const head = (t: string) => <div className="text-[11px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--muted)" }}>{t}</div>;
+  const Box = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <section className="rounded-xl flex flex-col gap-2 p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--muted)" }}>{title}</h2>
+      {children}
+    </section>
+  );
+  const ord = (d: number) => `${d}${["th", "st", "nd", "rd"][d % 10 > 3 || Math.floor((d % 100) / 10) === 1 ? 0 : d % 10]}`;
+  const list = (items: typeof cats, val: (c: typeof cats[number]) => number, bg: string, fg: string, label: string) => (
+    <div className="rounded-lg p-3 flex flex-col gap-1.5" style={{ background: bg, color: fg }}>
+      <span className="flex items-baseline gap-1.5"><span className="text-xl font-bold">{items.length}</span><span className="text-xs font-bold">{label}</span></span>
+      {items.slice(0, 4).map((c) => <button key={c.categoryId} onClick={() => onPick(c.categoryId)} className="flex justify-between text-xs text-left"><span className="truncate">{name(c.categoryId)}</span><span className="font-semibold ml-2">{formatMoney(val(c))}</span></button>)}
+      {items.length > 4 && <span className="text-xs">+ {items.length - 4} more</span>}
+    </div>
+  );
   return (
-    <div className="rounded-xl flex flex-col gap-3 p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="text-[17px] font-bold">{monthLabel(data.month)}</div>
-      {head("Month summary")}
-      {row("Left over from last month", formatMoney(sum("carriedIn")))}
-      {row("Assigned this month", formatMoney(sum("assigned")))}
-      {row("Activity", formatMoney(sum("activity")))}
-      {row("Available", formatMoney(sum("available")), true)}
-      {row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign === 0 ? "var(--green-text)" : v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
-
-      {head("Budget check")}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg p-2.5 flex flex-col gap-1" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>
-          <span className="flex items-baseline gap-1.5"><span className="text-lg font-bold">{overspent.length}</span><span className="text-[11px] font-bold">overspent</span></span>
-          {overspent.slice(0, 3).map((c) => <button key={c.categoryId} onClick={() => onPick(c.categoryId)} className="flex justify-between text-[11px] text-left"><span className="truncate">{name(c.categoryId)}</span><span className="font-semibold ml-1.5">{formatMoney(c.available)}</span></button>)}
-          {overspent.length > 3 && <span className="text-[11px]">+ {overspent.length - 3} more</span>}
-        </div>
-        <div className="rounded-lg p-2.5 flex flex-col gap-1" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>
-          <span className="flex items-baseline gap-1.5"><span className="text-lg font-bold">{under.length}</span><span className="text-[11px] font-bold">underfunded</span></span>
-          {under.slice(0, 3).map((c) => <button key={c.categoryId} onClick={() => onPick(c.categoryId)} className="flex justify-between text-[11px] text-left"><span className="truncate">{name(c.categoryId)}</span><span className="font-semibold ml-1.5">{formatMoney(c.short)}</span></button>)}
-          {under.length > 3 && <span className="text-[11px]">+ {under.length - 3} more</span>}
-        </div>
-      </div>
-      {row("Funded", `${funded} ✓`)}
-      {row("Total underfunded", formatMoney(under.reduce((s, c) => s + c.short, 0)))}
-
-      {head("Bills still to come")}
-      {bills.length === 0 && <span className="text-[13px]" style={{ color: "var(--muted)" }}>All recurring bills are in.</span>}
-      {bills.slice(0, 8).map((b) => (
-        <div key={b.id} className="flex justify-between text-[13px]"><span style={{ color: "var(--text-2)" }}>{b.day ? `${b.day}th · ` : ""}{b.payee}</span><span className="font-semibold">{formatMoney(-b.amount)}</span></div>
-      ))}
-      {bills.length > 0 && row("Total", formatMoney(-bills.reduce((s, b) => s + b.amount, 0)), true)}
-
-      {head("Cards")}
-      {row("Owed on cards", formatMoney(v.owedOnCards))}
-      {row("Set aside", formatMoney(v.setAsideForCards))}
-      {row("Uncovered", formatMoney(v.uncoveredCardDebt), false, v.uncoveredCardDebt > 0 ? "var(--red-text)" : undefined)}
+    <div className="flex flex-col gap-3">
+      <Box title={`Month summary · ${monthLabel(data.month)}`}>
+        {row("Left over from last month", formatMoney(sum("carriedIn")))}
+        {row("Assigned this month", formatMoney(sum("assigned")))}
+        {row("Activity", formatMoney(sum("activity")))}
+        {row("Available", formatMoney(sum("available")), true)}
+        {row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign === 0 ? "var(--green-text)" : v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
+      </Box>
+      <Box title="Budget check">
+        {list(overspent, (c) => c.available, "var(--red-bg)", "var(--red-text)", "overspent")}
+        {list(under, (c) => c.short, "var(--yellow-bg)", "var(--yellow-text)", "underfunded")}
+        {row("Funded", `${funded} ✓`)}
+        {row("Total underfunded", formatMoney(under.reduce((s, c) => s + c.short, 0)))}
+      </Box>
+      <Box title="Bills still to come">
+        {bills.length === 0 && <span className="text-[13px]" style={{ color: "var(--muted)" }}>All recurring bills are in.</span>}
+        {bills.slice(0, 8).map((b) => (
+          <div key={b.id} className="flex justify-between text-[13px]"><span style={{ color: "var(--text-2)" }}>{b.day ? `${ord(b.day)} · ` : ""}{b.payee}</span><span className="font-semibold">{formatMoney(-b.amount)}</span></div>
+        ))}
+        {bills.length > 0 && <div className="pt-1" style={{ borderTop: "1px solid var(--border-soft)" }}>{row("Total", formatMoney(-bills.reduce((s, b) => s + b.amount, 0)), true)}</div>}
+      </Box>
+      <Box title="Cards">
+        {row("Owed on cards", formatMoney(v.owedOnCards))}
+        {row("Set aside", formatMoney(v.setAsideForCards))}
+        {row("Uncovered", formatMoney(v.uncoveredCardDebt), false, v.uncoveredCardDebt > 0 ? "var(--red-text)" : undefined)}
+      </Box>
     </div>
   );
 }

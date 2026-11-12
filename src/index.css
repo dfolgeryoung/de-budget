@@ -124,6 +124,14 @@ button:disabled { cursor: not-allowed; }
 .rail-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .rail-link.on:hover { background: rgba(255,255,255,0.18); }
 
+/* Truncated text slides left to reveal itself while its row is hovered (Marquee component sets --marquee to the overflow) */
+.marquee { --marquee: 0px; }
+.marquee > span { transition: transform 200ms ease-out; }
+@media (hover: hover) {
+  .row-hover:hover .marquee { text-overflow: clip; }
+  .row-hover:hover .marquee > span { transform: translateX(calc(-1 * var(--marquee))); transition: transform calc(var(--marquee) * 14ms + 200ms) linear 350ms; }
+}
+
 /* Ledger rows: a subtle shade under the cursor on devices with a real pointer. */
 @media (hover: hover) { .row-hover:hover { background: var(--hover) !important; } }
 input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }

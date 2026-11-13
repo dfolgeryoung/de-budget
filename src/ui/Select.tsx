@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Chevron } from "./icons";
 
@@ -27,11 +28,14 @@ export function Popover({ anchor, open, onClose, width = 220, children, panelRef
     return () => { document.removeEventListener("mousedown", down); window.removeEventListener("scroll", scroll, true); window.removeEventListener("resize", scroll); document.removeEventListener("keydown", key); };
   }, [open, onClose, anchor, ref]);
   if (!open || !pos) return null;
-  return (
+  // portaled to <body>: inside a transformed ancestor (the entry sheet slides in with a transform) position: fixed
+  // would be measured from that ancestor instead of the viewport, so the menu landed off-screen
+  return createPortal(
     <div ref={ref} tabIndex={-1} className="fixed z-50 flex flex-col rounded-lg outline-none overflow-hidden"
       style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, background: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 8px 28px rgba(0,0,0,0.16)", color: "var(--text)" }}>
       {children(pos.maxH)}
-    </div>
+    </div>,
+    document.body,
   );
 }
 

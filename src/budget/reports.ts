@@ -23,7 +23,7 @@ export interface ExplainRow { k: string; v: number | string; op?: string; result
 export interface ExplainBox { title: string; rows: ExplainRow[]; note?: string }
 
 /** budget = this month's plan: the larger of assigned and the goal's monthly need (or what was spent from carry-over when neither); assigned = this month's assignment alone. */
-export interface CategorySpend { id: string; name: string; emoji: string | null; spent: Cents; budget: Cents; assigned: Cents }
+export interface CategorySpend { id: string; name: string; emoji: string | null; spent: Cents; budget: Cents; assigned: Cents; carriedIn: Cents; available: Cents }
 export interface OwnerSpend { who: "shared" | "D" | "E"; spent: Cents; share: number }
 export interface Mover { id: string; name: string; emoji: string | null; now: Cents; before: Cents; delta: Cents }
 export interface BillToCome { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; overdue: boolean }
@@ -128,6 +128,7 @@ export function computeReports(r: ReportsInput): ReportsView {
   const prevFull = spendByCategory(input, prevMonth, null);
   const assigned = new Map(view.categories.map((c) => [c.categoryId, c.assigned]));
   const availIn = new Map(view.categories.map((c) => [c.categoryId, Math.max(0, c.carriedIn + c.assigned)]));
+  const carriedOf = new Map(view.categories.map((c) => [c.categoryId, c.carriedIn]));
   // this month's budget for a category: the larger of what was assigned and what its goal needs; a category with neither
   // (spending from a balance carried over) counts what it spent, up to what it had
   const budgetOf = new Map(view.categories.map((c) => {
@@ -137,7 +138,7 @@ export function computeReports(r: ReportsInput): ReportsView {
 
   const spentIds = new Set([...byCat.keys(), ...assigned.keys()].filter((id) => spendable({ kind: meta.get(id)?.kind ?? "normal" })));
   const byCategory: CategorySpend[] = [...spentIds]
-    .map((id) => ({ id, name: name(id), emoji: emoji(id), spent: byCat.get(id) ?? 0, budget: budgetOf.get(id) ?? 0, assigned: assigned.get(id) ?? 0 }))
+    .map((id) => ({ id, name: name(id), emoji: emoji(id), spent: byCat.get(id) ?? 0, budget: budgetOf.get(id) ?? 0, assigned: assigned.get(id) ?? 0, carriedIn: carriedOf.get(id) ?? 0, available: availIn.get(id) ?? 0 }))
     .filter((c) => c.spent !== 0 || c.budget !== 0 || c.assigned !== 0)
     .sort((a, b) => b.spent - a.spent || b.budget - a.budget);
   const spent = sum(byCategory.map((c) => c.spent));

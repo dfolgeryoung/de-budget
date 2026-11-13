@@ -89,26 +89,32 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
 
   // ----- spend by category
   const cats = showAll ? tm.byCategory : tm.byCategory.slice(0, ph ? 6 : 9);
-  const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
+  // the bar runs to what the category can spend this month: the budget, plus anything carried over (shown as a hatched band)
+  const roomOf = (c: CategorySpend) => Math.max(c.budget, c.available);
+  const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, roomOf(c))));
   // each row is its own grid, so the amount column is sized once to the widest figure to keep every bar the same length
   const colFor = (labels: string[]) => `${Math.max(3, ...labels.map((l) => l.length)) * 7.4 + 4}px`;
   const catAmtCol = colFor(cats.map((c) => money(c.spent, ph)));
   const CatBar = ({ c }: { c: CategorySpend }) => {
-    const w = Math.max(0, Math.min(100, (c.spent / scale) * 100)), tick = Math.min(100, (c.budget / scale) * 100);
-    const over = c.budget > 0 && c.spent > c.budget;
+    const pct = (v: number) => Math.max(0, Math.min(100, (v / scale) * 100));
+    const carry = Math.max(0, c.available - c.budget); // room beyond this month's budget, carried in from before
+    const over = roomOf(c) > 0 ? c.spent > roomOf(c) : c.spent > 0;
+    const tip = `${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted${carry > 0 ? ` + ${formatMoney(carry)} carried over = ${formatMoney(roomOf(c))} to spend` : ""} — open its entries`;
     return (
-      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted — open its entries`} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? `112px minmax(0,1fr) ${catAmtCol}` : "150px minmax(0,1fr) 80px", height: 28 }}>
+      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} title={tip} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? `112px minmax(0,1fr) ${catAmtCol}` : "150px minmax(0,1fr) 80px", height: 28 }}>
         <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}</span>
         <span className="relative block rounded" style={{ height: 16, background: "var(--track)" }}>
-          <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${w}%`, background: over ? "var(--red)" : BAR, transition: "width 400ms ease-out" }} />
-          {c.budget > 0 && <span className="absolute" style={{ left: `calc(${tick}% - 1px)`, top: -3, width: 2, height: 22, background: "var(--text)" }} />}
+          {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(c.budget)}%`, width: `${pct(c.available) - pct(c.budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
+          <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${pct(c.spent)}%`, background: over ? "var(--red)" : BAR, transition: "width 400ms ease-out" }} />
+          {c.budget > 0 && <span className="absolute" style={{ left: `calc(${pct(c.budget)}% - 1px)`, top: -3, width: 2, height: 22, background: "var(--text)" }} />}
+          {carry > 0 && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 18, background: "var(--muted)", opacity: 0.7 }} />}
         </span>
         <span className="text-right font-semibold tabular-nums">{money(c.spent, ph)}</span>
       </button>
     );
   };
   const spendCard = (
-    <Card title="Spend by category" sub={ph ? "tick = budget · tap a bar" : "bar = spent · tick = budget · click a bar for its transactions"}>
+    <Card title="Spend by category" sub={ph ? "tick = budget · hatched = carried over" : "bar = spent · dark tick = this month's budget · hatched band = carried over from before, up to the lighter tick · click a bar for its entries"}>
       {cats.length === 0 ? <p className="text-sm m-0" style={{ color: "var(--muted)" }}>Nothing spent yet.</p> : <div className="flex flex-col gap-1">{cats.map((c) => <CatBar key={c.id} c={c} />)}</div>}
       {tm.byCategory.length > cats.length ? <button onClick={() => setShowAll(true)} className="text-[13px] font-semibold text-left" style={{ color: "var(--accent-text)" }}>{ph ? `All ${tm.byCategory.length} categories ›` : `Show all ${tm.byCategory.length} categories ›`}</button>
         : showAll && tm.byCategory.length > 9 ? <button onClick={() => setShowAll(false)} className="text-[13px] font-semibold text-left" style={{ color: "var(--accent-text)" }}>Show fewer</button> : null}

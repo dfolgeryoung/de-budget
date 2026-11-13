@@ -16,7 +16,7 @@ export interface ReportsInput {
   month: MonthKey;
   today: ISODate;
   /** whose spending it is, by Classic's routing (shared lines vs each person's); falls back to who paid */
-  whoSpent?: (month: MonthKey, through: ISODate | null) => Record<"shared" | "D" | "E", Cents>;
+  whoSpent?: (month: MonthKey, through: ISODate | null) => Record<"shared" | "D" | "E", Cents> & { lines?: { column: "shared" | "D" | "E"; name: string; amount: Cents }[] };
 }
 
 export interface ExplainRow { k: string; v: number | string; op?: string; result?: boolean; sub?: boolean }
@@ -24,7 +24,7 @@ export interface ExplainBox { title: string; rows: ExplainRow[]; note?: string }
 
 /** budget = this month's plan: the larger of assigned and the goal's monthly need (or what was spent from carry-over when neither); assigned = this month's assignment alone. */
 export interface CategorySpend { id: string; name: string; emoji: string | null; spent: Cents; budget: Cents; assigned: Cents; carriedIn: Cents; available: Cents }
-export interface OwnerSpend { who: "shared" | "D" | "E"; spent: Cents; share: number }
+export interface OwnerSpend { who: "shared" | "D" | "E"; spent: Cents; share: number; parts?: { name: string; amount: Cents }[] }
 export interface Mover { id: string; name: string; emoji: string | null; now: Cents; before: Cents; delta: Cents }
 export interface BillToCome { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; overdue: boolean }
 export interface ProjectedCategory { id: string; name: string; emoji: string | null; spent: Cents; billsLeft: Cents; avgDaily: number; projected: Cents; available: Cents; budget: Cents; over: Cents; isBills: boolean; how: "bills" | "daily" | "one-off" }
@@ -177,10 +177,15 @@ export function computeReports(r: ReportsInput): ReportsView {
   const summary = !prevSpent ? "Nothing recorded last month" : [ups.length ? `${ups.join(" and ")} up` : "", downs.length ? `${downs.join(", ")} down` : ""].filter(Boolean).join("; ") || "About the same mix";
 
   // who spent
-  const who = r.whoSpent ?? ((m: MonthKey, th: ISODate | null) => spendByOwner(input, m, th));
-  const owners = daysElapsed ? who(month, through) : { shared: 0, D: 0, E: 0 };
+  type Who = Record<"shared" | "D" | "E", Cents> & { lines?: { column: "shared" | "D" | "E"; name: string; amount: Cents }[] };
+  const who = (m: MonthKey, th: ISODate | null): Who => (r.whoSpent ? r.whoSpent(m, th) : spendByOwner(input, m, th));
+  const owners: Who = daysElapsed ? who(month, through) : { shared: 0, D: 0, E: 0 };
   const ownerTotal = owners.shared + owners.D + owners.E;
-  const byOwner: OwnerSpend[] = (["shared", "D", "E"] as const).map((who) => ({ who, spent: owners[who], share: ownerTotal ? owners[who] / ownerTotal : 0 }));
+  // the shared slice broken down by Classic line (biggest first, the long tail folded into "Other shared")
+  const sharedLines = (owners.lines ?? []).filter((l) => l.column === "shared" && l.amount > 0).sort((a, b) => b.amount - a.amount);
+  const topShared = sharedLines.slice(0, 6), rest = sum(sharedLines.slice(6).map((l) => l.amount));
+  const parts = [...topShared.map((l) => ({ name: l.name, amount: l.amount })), ...(rest > 0 ? [{ name: "Other shared", amount: rest }] : [])];
+  const byOwner: OwnerSpend[] = (["shared", "D", "E"] as const).map((who) => ({ who, spent: owners[who], share: ownerTotal ? owners[who] / ownerTotal : 0, ...(who === "shared" && parts.length ? { parts } : {}) }));
 
   // ----- trends: the last six months up to this one
   // months before the budget began still have their entries (history), just nothing assigned
@@ -192,7 +197,7 @@ export function computeReports(r: ReportsInput): ReportsView {
   const trendMonths = tm.map((m) => {
     const full = spendByCategory(input, m, m === month ? through : null);
     const assignedTotal = m < input.firstMonth ? 0 : sum((m === month ? view : computeMonth(input, m)).categories.map((c) => c.assigned));
-    return { month: m, spent: sum([...full.values()]), income: incomeToRTA(input, m), assigned: assignedTotal, byOwner: who(m, m === month ? through : null), full };
+    return { month: m, spent: sum([...full.values()]), income: incomeToRTA(input, m), assigned: assignedTotal, byOwner: (({ shared, D, E }) => ({ shared, D, E }))(who(m, m === month ? through : null)), full };
   });
   const catTotals = new Map<string, Cents>();
   for (const t of trendMonths) for (const [id, v] of t.full) catTotals.set(id, (catTotals.get(id) ?? 0) + v);

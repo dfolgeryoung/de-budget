@@ -172,10 +172,10 @@ export function computeClassic(input: ClassicInput): ClassicView {
  * Whose spending a set of entries is, by Classic's own routing (shared lines → shared; a person's lines → that person;
  * a 50/50 entry in a by-account category half each), optionally only through a date. Used by Reports' "who spent".
  */
-export function attributeSpend(input: ClassicInput, through: ISODate | null): Record<ClassicColumn, Cents> {
+export function attributeSpend(input: ClassicInput, through: ISODate | null): Record<ClassicColumn, Cents> & { lines: { column: ClassicColumn; name: string; amount: Cents }[] } {
   const txns = through ? input.transactions.filter((x) => x.date <= through) : input.transactions;
   const view = computeClassic({ ...input, transactions: txns });
-  const out: Record<ClassicColumn, Cents> = { shared: 0, D: 0, E: 0 };
-  for (const l of view.lines) out[l.column] += l.actual;
+  const out = { shared: 0, D: 0, E: 0, lines: [] as { column: ClassicColumn; name: string; amount: Cents }[] };
+  for (const l of view.lines) { out[l.column] += l.actual; if (l.actual) out.lines.push({ column: l.column, name: l.name, amount: l.actual }); }
   return out;
 }

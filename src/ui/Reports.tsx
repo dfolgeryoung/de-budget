@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api";
 import { formatMoney } from "../budget/money";
 import { addMonths } from "../budget/dates";
@@ -121,30 +121,44 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     </Card>
   );
 
-  // ----- who spent
+  // ----- who spent: the shared slice is broken into its Classic lines (shades of the shared colour)
   const total = tm.byOwner.reduce((s, o) => s + o.spent, 0);
+  const shared = tm.byOwner.find((o) => o.who === "shared");
+  const sharedParts = shared?.parts ?? [];
+  const shade = (i: number, n: number) => `color-mix(in srgb, var(--classic-shared) ${Math.round(100 - (i / Math.max(1, n)) * 60)}%, var(--card))`;
+  const slices: { key: string; amount: number; color: string }[] = [
+    ...(sharedParts.length ? sharedParts.map((p, i) => ({ key: "s:" + p.name, amount: p.amount, color: shade(i, sharedParts.length) })) : shared?.spent ? [{ key: "s:all", amount: shared.spent, color: WHO.shared.color }] : []),
+    ...tm.byOwner.filter((o) => o.who !== "shared" && o.spent > 0).map((o) => ({ key: o.who, amount: o.spent, color: WHO[o.who].color })),
+  ];
   const donut = (() => {
     const r = 34, cx = 44, cy = 44, C = 2 * Math.PI * r;
     let off = 0;
     return (
       <svg aria-hidden="true" width={88} height={88} viewBox="0 0 88 88" className="shrink-0">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={14} />
-        {total > 0 && tm.byOwner.filter((o) => o.spent > 0).map((o) => {
-          const len = (o.spent / total) * C, el = <circle key={o.who} cx={cx} cy={cy} r={r} fill="none" stroke={WHO[o.who].color} strokeWidth={14} strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} transform={`rotate(-90 ${cx} ${cy})`} />;
+        {total > 0 && slices.map((sl) => {
+          const len = (sl.amount / total) * C, gap = slices.length > 1 ? 1.5 : 0;
+          const el = <circle key={sl.key} cx={cx} cy={cy} r={r} fill="none" stroke={sl.color} strokeWidth={14} strokeDasharray={`${Math.max(0, len - gap)} ${C - Math.max(0, len - gap)}`} strokeDashoffset={-off} transform={`rotate(-90 ${cx} ${cy})`} />;
           off += len; return el;
         })}
       </svg>
     );
   })();
+  const Row = ({ color, label, amount, sub, bold }: { color: string; label: string; amount: number; sub?: boolean; bold?: boolean }) => (
+    <div className="grid items-center gap-2" style={{ gridTemplateColumns: "10px minmax(0,1fr) auto 38px", paddingLeft: sub ? 14 : 0 }}>
+      <span className={sub ? "rounded-sm" : "rounded-full"} style={{ width: 10, height: 10, background: color }} /><span className={"truncate" + (sub ? " text-[12px]" : "")} style={sub ? { color: "var(--text-2)" } : undefined}>{label}</span><span className={(bold ? "font-semibold " : "") + "tabular-nums" + (sub ? " text-[12px]" : "")}>{money(amount, ph)}</span><span className="text-right" style={{ color: "var(--muted)" }}>{total ? Math.round((amount / total) * 100) : 0}%</span>
+    </div>
+  );
   const whoCard = (
-    <Card title={ph ? "Who spent" : `Shared vs ${people.D} vs ${people.E}`} box={tm.explain.who}>
-      <div className="flex items-center gap-4">
+    <Card title={ph ? "Whose spending" : `Shared vs ${people.D} vs ${people.E}`} sub="by Classic line" box={tm.explain.who}>
+      <div className="flex items-start gap-4">
         {donut}
-        <div className="flex-1 flex flex-col gap-1.5 text-[13px] min-w-0">
+        <div className="flex-1 flex flex-col gap-1 text-[13px] min-w-0">
           {tm.byOwner.map((o) => (
-            <div key={o.who} className="grid items-center gap-2" style={{ gridTemplateColumns: "10px minmax(0,1fr) auto 38px" }}>
-              <span className="rounded-full" style={{ width: 10, height: 10, background: WHO[o.who].color }} /><span className="truncate">{people[o.who]}</span><span className="font-semibold tabular-nums">{money(o.spent, ph)}</span><span className="text-right" style={{ color: "var(--muted)" }}>{Math.round(o.share * 100)}%</span>
-            </div>
+            <Fragment key={o.who}>
+              <Row color={WHO[o.who].color} label={people[o.who]} amount={o.spent} bold />
+              {o.who === "shared" && sharedParts.map((p, i) => <Row key={p.name} color={shade(i, sharedParts.length)} label={p.name} amount={p.amount} sub />)}
+            </Fragment>
           ))}
         </div>
       </div>

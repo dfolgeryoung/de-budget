@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, categoryOptions, todayISO, PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, type Lists } from "./api";
 import { Select } from "./Select";
+import { Chevron } from "./icons";
 import { EmojiButton } from "./EmojiPicker";
 import { formatMoney, parseMoney } from "../budget/money";
 import { useToast } from "./Toast";
@@ -347,6 +348,7 @@ function RecurringSection() {
   const [rows, setRows] = useState<Rec[] | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
   const [adding, setAdding] = useState(false);
+  const [openRow, setOpenRow] = useState<string | null>(null);
   const blank = { payee: "", accountId: "", categoryId: null as string | null, memo: "", amount: "", dayOfMonth: "1", active: true };
   const [n, setN] = useState(blank);
   const load = () => { api<Rec[]>("/recurring").then((r) => setRows(Array.isArray(r) ? r : [])).catch(() => setRows([])); api<Lists>("/lists").then(setLists).catch(() => {}); };
@@ -354,7 +356,7 @@ function RecurringSection() {
   const put = async (id: string, body: object) => { try { await api(`/recurring/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   const cats = lists ? categoryOptions(lists, { income: true }) : [];
   const acctOpts = lists ? lists.accounts.map((a) => ({ value: a.id, label: a.name })) : [];
-  const AmountCell = ({ r }: { r: Rec }) => <TextCell value={(Math.abs(r.amount) / 100).toFixed(2)} onSave={(v) => { const c = parseMoney(v); if (c !== null) put(r.id, { amount: r.amount > 0 ? Math.abs(c) : -Math.abs(c) }); }} className="text-right" width={80} />;
+  const AmountCell = ({ r, width = 80 }: { r: Rec; width?: number | string }) => <TextCell value={(Math.abs(r.amount) / 100).toFixed(2)} onSave={(v) => { const c = parseMoney(v); if (c !== null) put(r.id, { amount: r.amount > 0 ? Math.abs(c) : -Math.abs(c) }); }} className="text-right" width={width} />;
   const DayCell = ({ r }: { r: Rec }) => <TextCell value={r.dayOfMonth ? String(r.dayOfMonth) : ""} onSave={(v) => put(r.id, { dayOfMonth: /^\d+$/.test(v) ? Math.min(31, Math.max(1, Number(v))) : null })} className="text-center" placeholder="any" width={56} />;
   const REPEATS = [{ value: "month", label: "Monthly" }, { value: "7", label: "Weekly" }, { value: "14", label: "2 weeks" }, { value: "28", label: "4 weeks" }, { value: "30", label: "30 days" }];
   const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -388,13 +390,40 @@ function RecurringSection() {
       )}
       {!rows || !lists ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : phone ? (
         <div className="flex flex-col gap-2">
-          {rows.map((r) => (
-            <div key={r.id} className="rounded-lg p-3 flex flex-col gap-2" style={{ border: "1px solid var(--border)", opacity: r.active ? 1 : 0.55 }}>
-              <div className="flex items-center gap-2"><TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} className="flex-1" /><AmountCell r={r} /></div>
-              <div className="flex gap-2"><Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 32 }} className="flex-1 min-w-0" /><Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 32 }} className="flex-1 min-w-0" menuWidth={260} /></div>
-              <div className="flex items-center justify-between text-[13px]"><ScheduleCell r={r} /><label className="flex items-center gap-1.5"><input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} /> Active</label><button onClick={async () => { await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); }} className="text-xs" style={{ color: "var(--red-text)" }}>Delete</button></div>
-            </div>
-          ))}
+          {rows.map((r) => {
+            const isOpen = openRow === r.id;
+            const acctName = lists.accounts.find((a) => a.id === r.accountId)?.name ?? "";
+            const catLabel = cats.find((c) => c.value === (r.categoryId ?? "rta"))?.label ?? "";
+            const when = r.everyDays ? `every ${r.everyDays} days` : r.dayOfMonth ? `day ${r.dayOfMonth}` : "any day";
+            return (
+              <div key={r.id} className="rounded-xl" style={{ border: `1px solid ${isOpen ? "var(--navy)" : "var(--border)"}`, background: "var(--card)", opacity: r.active || isOpen ? 1 : 0.6 }}>
+                {/* summary: one tap opens the editor; the big targets are all on the right where a thumb lands */}
+                <button onClick={() => setOpenRow(isOpen ? null : r.id)} aria-expanded={isOpen} className="w-full text-left flex items-center gap-3" style={{ padding: "12px 14px", minHeight: 56 }}>
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="font-semibold text-[15px] truncate">{r.payee}{!r.active && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>off</span>}</span>
+                    <span className="text-xs truncate" style={{ color: "var(--muted)" }}>{acctName} · {catLabel} · {when}{r.nextDue && r.active ? ` · next ${shortDate(r.nextDue)}` : ""}</span>
+                  </span>
+                  <span className="font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(r.amount))}</span>
+                  <Chevron dir={isOpen ? "up" : "down"} size={14} />
+                </button>
+                {isOpen && (
+                  <div className="flex flex-col gap-3 px-3.5 pb-3.5">
+                    <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Payee<TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} className="w-full" /></label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Amount<AmountCell r={r} width="100%" /></label>
+                      <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Account<Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 40 }} className="w-full" /></div>
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Category<Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 40 }} className="w-full" menuWidth={300} /></div>
+                    <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Repeats<ScheduleCell r={r} /></div>
+                    <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                      <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} style={{ width: 20, height: 20 }} /> Active</label>
+                      <button onClick={async () => { if (!confirm(`Delete ${r.payee}?`)) return; await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); toast(`Removed ${r.payee}`); }} className="rounded-lg px-4 text-[13px] font-semibold" style={{ minHeight: 40, border: "1px solid var(--field)", color: "var(--red-text)" }}>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>

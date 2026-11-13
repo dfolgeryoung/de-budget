@@ -518,7 +518,10 @@ function NotificationsSection() {
       const perm = await Notification.requestPermission();
       if (perm !== "granted") { toast("Notifications were not allowed"); return; }
       const reg = await navigator.serviceWorker.ready;
-      const key = Uint8Array.from(atob(cfg.publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(cfg.publicKey.length + ((4 - (cfg.publicKey.length % 4)) % 4), "=")), (c) => c.charCodeAt(0));
+      // the key is base64url; tolerate stray whitespace or quotes from copy-paste
+      const raw = cfg.publicKey.replace(/[^A-Za-z0-9_-]/g, "");
+      const b64 = raw.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (raw.length % 4)) % 4);
+      const key = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
       const j = sub.toJSON();
       const label = isIOS ? "iPhone" : /Android/.test(navigator.userAgent) ? "Android" : /Mac/.test(navigator.userAgent) ? "Mac" : "Computer";

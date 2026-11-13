@@ -7,11 +7,13 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 
-export function pushConfigured(): boolean { return !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY); }
+const clean = (k: string | undefined) => (k ?? "").replace(/[^A-Za-z0-9_-]/g, "");
+export const vapidPublic = () => clean(process.env.VAPID_PUBLIC_KEY);
+export function pushConfigured(): boolean { return !!(vapidPublic() && clean(process.env.VAPID_PRIVATE_KEY)); }
 export function emailConfigured(): boolean { return !!process.env.RESEND_API_KEY; }
 
 function setup() {
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:budget@example.com", process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
+  webpush.setVapidDetails((process.env.VAPID_SUBJECT || "mailto:budget@example.com").trim(), vapidPublic(), clean(process.env.VAPID_PRIVATE_KEY));
 }
 
 /** Send a push to every device of a user; dead subscriptions are removed. */

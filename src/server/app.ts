@@ -12,7 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
-import { pushConfigured, emailConfigured, pushToUser } from "./notify.js";
+import { pushConfigured, emailConfigured, pushToUser, vapidPublic } from "./notify.js";
 import webpush from "web-push";
 import { weeklySummary } from "./summary.js";
 import { z } from "zod";
@@ -314,7 +314,7 @@ app.post("/transactions/:id/confirm", async (c) => {
 app.get("/push/config", async (c) => {
   const me = c.get("user").id;
   const subs = await db.select().from(t.pushSubscriptions).where(eq(t.pushSubscriptions.userId, me));
-  return c.json({ push: pushConfigured(), email: emailConfigured(), publicKey: process.env.VAPID_PUBLIC_KEY ?? null, devices: subs.map((s) => ({ id: s.id, label: s.deviceLabel, endpoint: s.endpoint })) });
+  return c.json({ push: pushConfigured(), email: emailConfigured(), publicKey: vapidPublic() || null, devices: subs.map((s) => ({ id: s.id, label: s.deviceLabel, endpoint: s.endpoint })) });
 });
 app.post("/push/subscribe", async (c) => {
   const p = z.object({ endpoint: z.string().url(), keys: z.object({ p256dh: z.string(), auth: z.string() }), label: z.string().max(80).optional() }).safeParse(await c.req.json());

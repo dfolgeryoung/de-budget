@@ -10,6 +10,7 @@ import { entrySchema, listTransactions, createTransaction, updateTransaction, de
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
+import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
@@ -256,6 +257,22 @@ app.get("/classic/:month", async (c) => {
   return c.json(await classicPayload(db, m, today(), c.get("user").id));
 });
 app.get("/classic", async (c) => c.json(await classicPayload(db, today().slice(0, 7) + "-01", today(), c.get("user").id)));
+
+// ---------- tracked amounts ----------
+app.get("/tracked", async (c) => c.json({ tracked: await listTracked(db) }));
+app.get("/tracked/:id/entries", async (c) => c.json({ entries: await trackedEntries(db, c.req.param("id")) }));
+app.post("/tracked", async (c) => {
+  const p = trackedInput.safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "A tracked amount needs a name, an amount and the date it arrived" }, 400);
+  return c.json({ id: await createTracked(db, c.get("user").id, p.data) });
+});
+app.put("/tracked/:id", async (c) => {
+  const p = trackedInput.partial().extend({ closed: z.boolean().optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Invalid tracked amount" }, 400);
+  await updateTracked(db, c.get("user").id, c.req.param("id"), p.data);
+  return c.json({ ok: true });
+});
+app.delete("/tracked/:id", async (c) => c.json({ result: await deleteTracked(db, c.req.param("id")) }));
 
 // ---------- reports ----------
 app.get("/reports/:month", async (c) => {

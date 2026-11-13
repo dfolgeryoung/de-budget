@@ -34,11 +34,12 @@ export function Settings() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
       <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
-        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
+        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />
       <CategoriesSection />
       <RecurringSection />
+      <CsvSection />
       <AppearanceSection />
       <div id="s-import" />
       <section className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -380,6 +381,114 @@ function RecurringSection() {
         </div>
       )}
       <p className="text-xs" style={{ color: "var(--muted)" }}>The nightly run creates the day's pending entries; "Bills still to come" on the Budget screen lists the ones not yet seen this month.</p>
+    </section>
+  );
+}
+
+interface Preview {
+  account: { id: string; name: string };
+  bank: { account: string | null; balance: number | null; asOf: string | null; rows: number; from: string | null; to: string | null };
+  appBalance: number;
+  matched: { id: string; date: string; payee: string | null; amount: number; bankDate: string; bankPayee: string }[];
+  newRows: { key: number; date: string; postedDate: string; payee: string; description: string; amount: number; transfer: boolean; suggestedCategoryId: string | null; suggestedPayee: string | null; bankCategory: string | null }[];
+  missing: { id: string; date: string; payee: string | null; amount: number; pending: boolean }[];
+}
+const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const shortDate = (d: string) => `${MONS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
+
+/** Import a bank CSV for one account: matches are marked, missing entries can be added with a category, app entries the bank lacks get a mismatch mark. */
+function CsvSection() {
+  const toast = useToast();
+  const [lists, setLists] = useState<Lists | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [add, setAdd] = useState<Record<number, { on: boolean; payee: string; categoryId: string | null; transferToAccountId: string | null }>>({});
+  const [flag, setFlag] = useState<Record<string, boolean>>({});
+  useEffect(() => { api<Lists>("/lists").then((l) => { setLists(l); setAccountId((a) => a ?? l.accounts[0]?.id ?? null); }).catch(() => {}); }, []);
+  async function onFile(f: File) {
+    if (!accountId) return toast("Pick the account first");
+    setBusy(true); setPreview(null);
+    try {
+      const p = await api<Preview>("/reconcile/preview", { method: "POST", json: { accountId, csv: await f.text() } });
+      setPreview(p);
+      const a: typeof add = {}; for (const r of p.newRows) a[r.key] = { on: !r.transfer, payee: r.suggestedPayee ?? r.payee, categoryId: r.suggestedCategoryId, transferToAccountId: null };
+      setAdd(a);
+      const fl: typeof flag = {}; for (const m of p.missing) fl[m.id] = !m.pending; setFlag(fl);
+    } catch (e) { toast(`Couldn't read that file: ${(e as Error).message}`); } finally { setBusy(false); }
+  }
+  async function apply() {
+    if (!preview) return;
+    setBusy(true);
+    try {
+      const r = await api<{ matched: number; mismatches: number; added: number }>("/reconcile/apply", { method: "POST", json: {
+        accountId: preview.account.id, matched: preview.matched.map((m) => m.id),
+        mismatches: preview.missing.filter((m) => flag[m.id]).map((m) => ({ id: m.id, note: `Not in the bank export of ${preview.bank.asOf ?? "this period"}` })),
+        add: preview.newRows.filter((n) => add[n.key]?.on).map((n) => ({ date: n.date, payee: add[n.key]!.payee, memo: "", amount: n.amount, categoryId: add[n.key]!.categoryId === "rta" ? null : add[n.key]!.categoryId, transferToAccountId: add[n.key]!.transferToAccountId })),
+      } });
+      toast(`Reconciled: ${r.matched} matched, ${r.added} added, ${r.mismatches} marked`); setPreview(null); refreshApp();
+    } catch (e) { toast(`Not applied: ${(e as Error).message}`); } finally { setBusy(false); }
+  }
+  const cats = lists ? categoryOptions(lists, { income: true }) : [];
+  const acctOpts = lists ? lists.accounts.map((a) => ({ value: a.id, label: a.name })) : [];
+  const money = (c: number) => <span style={{ color: c < 0 ? "var(--neg)" : "var(--green-text)" }}>{formatMoney(c)}</span>;
+  return (
+    <section id="s-csv" className={sec} style={secStyle}>
+      <div><h2 className="font-bold">Import a bank CSV</h2><p className="text-sm" style={{ color: "var(--muted)" }}>Export transactions from the bank (SECU's CSV works as is) and pick the matching account. Entries that line up by amount and date are marked as matched, anything the bank has that the app doesn't can be added with a category, and app entries the bank doesn't show get a ⚠ mark in the ledger.</p></div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select ariaLabel="Account" value={accountId} onChange={setAccountId} options={acctOpts} placeholder="Account…" style={{ height: 36 }} />
+        <label className="inline-flex items-center gap-2 text-[13px] font-semibold rounded-lg px-4 cursor-pointer" style={{ height: 36, background: "var(--navy)", color: "var(--navy-text)", opacity: busy ? 0.6 : 1 }}>
+          {busy ? "Reading…" : "Choose CSV file"}
+          <input type="file" accept=".csv,text/csv" className="hidden" disabled={busy || !accountId} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+        </label>
+      </div>
+      {preview && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] rounded-lg p-3" style={{ background: "var(--card-alt)", border: "1px solid var(--border-soft)" }}>
+            <span><strong>{preview.bank.rows}</strong> bank rows{preview.bank.from && preview.bank.to ? ` · ${shortDate(preview.bank.from)} – ${shortDate(preview.bank.to)}` : ""}</span>
+            <span><strong>{preview.matched.length}</strong> matched</span>
+            <span><strong>{preview.newRows.length}</strong> not in the app</span>
+            <span><strong>{preview.missing.length}</strong> not at the bank</span>
+            {preview.bank.balance !== null && <span>Bank balance {formatMoney(preview.bank.balance)} · app {formatMoney(preview.appBalance)} <strong style={{ color: preview.bank.balance === preview.appBalance ? "var(--green-text)" : "var(--yellow-text)" }}>{preview.bank.balance === preview.appBalance ? "✓ same" : `(${formatMoney(preview.bank.balance - preview.appBalance)} apart)`}</strong></span>}
+          </div>
+          {preview.newRows.length > 0 && (
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: "var(--group)", color: "var(--text-2)" }}>At the bank, not in the app — tick to add</div>
+              {preview.newRows.map((n) => { const a = add[n.key]!; return (
+                <div key={n.key} className="flex flex-wrap items-center gap-2 px-3 py-2" style={{ borderTop: "1px solid var(--border-soft)", opacity: a.on ? 1 : 0.6 }}>
+                  <input type="checkbox" checked={a.on} onChange={(e) => setAdd({ ...add, [n.key]: { ...a, on: e.target.checked } })} className="m-0" />
+                  <span className="text-[13px] w-14 shrink-0" style={{ color: "var(--muted)" }} title={`posted ${shortDate(n.postedDate)}`}>{shortDate(n.date)}</span>
+                  <input value={a.payee} onChange={(e) => setAdd({ ...add, [n.key]: { ...a, payee: e.target.value } })} title={n.description} className="fld rounded-md px-2 text-[13px] outline-none flex-1 min-w-[10rem]" style={fieldStyle} />
+                  {n.transfer ? (
+                    <Select ariaLabel="Transfer to" value={a.transferToAccountId} onChange={(v) => setAdd({ ...add, [n.key]: { ...a, transferToAccountId: v, categoryId: null } })} options={acctOpts.filter((o) => o.value !== preview.account.id)} placeholder="Transfer to…" style={{ height: 32 }} className="w-48" />
+                  ) : (
+                    <Select ariaLabel="Category" value={a.categoryId} onChange={(v) => setAdd({ ...add, [n.key]: { ...a, categoryId: v } })} options={cats} placeholder="Category…" style={{ height: 32 }} className="w-56" menuWidth={280} />
+                  )}
+                  <span className="text-[13px] font-semibold w-20 text-right">{money(n.amount)}</span>
+                </div>
+              ); })}
+            </div>
+          )}
+          {preview.missing.length > 0 && (
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: "var(--group)", color: "var(--text-2)" }}>In the app, not at the bank — tick to mark ⚠ in the ledger</div>
+              {preview.missing.map((m) => (
+                <label key={m.id} className="flex items-center gap-2 px-3 py-2 text-[13px]" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                  <input type="checkbox" checked={!!flag[m.id]} onChange={(e) => setFlag({ ...flag, [m.id]: e.target.checked })} className="m-0" />
+                  <span className="w-14 shrink-0" style={{ color: "var(--muted)" }}>{shortDate(m.date)}</span>
+                  <span className="flex-1 truncate">{m.payee ?? "—"}{m.pending && <span className="ml-2 px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>Pending</span>}</span>
+                  <span className="font-semibold">{money(m.amount)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {preview.matched.length > 0 && <details className="text-[13px]"><summary className="cursor-pointer font-semibold" style={{ color: "var(--accent-text)" }}>{preview.matched.length} matched entries</summary><div className="flex flex-col gap-0.5 pt-1" style={{ color: "var(--text-2)" }}>{preview.matched.map((m) => <span key={m.id}>{shortDate(m.date)} · {m.payee ?? "—"} · {formatMoney(m.amount)} <em style={{ color: "var(--muted)" }}>(bank: {m.bankPayee}, {shortDate(m.bankDate)})</em></span>)}</div></details>}
+          <div className="flex items-center gap-2">
+            <button onClick={apply} disabled={busy} className="rounded-lg px-4 h-9 text-[13px] font-semibold disabled:opacity-60" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>Apply: mark {preview.matched.length} matched, add {preview.newRows.filter((n) => add[n.key]?.on).length}, flag {preview.missing.filter((m) => flag[m.id]).length}</button>
+            <button onClick={() => setPreview(null)} className="rounded-lg px-3 h-9 text-[13px]" style={{ border: "1px solid var(--field)" }}>Cancel</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -11,6 +11,7 @@ import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory 
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
+import { previewReconcile, applyReconcile } from "./reconcile.js";
 import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
@@ -300,6 +301,19 @@ app.post("/transactions/:id/confirm", async (c) => {
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await confirmEntry(db, c.get("user").id, c.req.param("id"), p.data);
   return c.json({ ok: true });
+});
+
+// ---------- bank CSV reconciliation ----------
+app.post("/reconcile/preview", async (c) => {
+  const p = z.object({ accountId: z.string(), csv: z.string().min(1).max(2_000_000) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Pick an account and a CSV file" }, 400);
+  try { return c.json(await previewReconcile(db, p.data.accountId, p.data.csv, today())); } catch (e) { return c.json({ error: (e as Error).message }, 400); }
+});
+app.post("/reconcile/apply", async (c) => {
+  const p = z.object({ accountId: z.string(), matched: z.array(z.string()), mismatches: z.array(z.object({ id: z.string(), note: z.string().max(200) })),
+    add: z.array(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), payee: z.string().max(120), memo: z.string().max(200), amount: z.number().int(), categoryId: z.string().nullable(), transferToAccountId: z.string().nullable() })) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: p.error.issues.map((i) => i.message).join("; ") }, 400);
+  return c.json(await applyReconcile(db, c.get("user").id, p.data.accountId, p.data));
 });
 
 // ---------- sheet mirror (manual runs from Settings) ----------

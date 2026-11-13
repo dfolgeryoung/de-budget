@@ -13,6 +13,7 @@ import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
 import { pushConfigured, emailConfigured, pushToUser } from "./notify.js";
+import webpush from "web-push";
 import { weeklySummary } from "./summary.js";
 import { z } from "zod";
 
@@ -327,6 +328,16 @@ app.delete("/push/subscribe", async (c) => {
   const p = z.object({ endpoint: z.string() }).safeParse(await c.req.json());
   if (p.success) await db.delete(t.pushSubscriptions).where(eq(t.pushSubscriptions.endpoint, p.data.endpoint));
   return c.json({ ok: true });
+});
+// one-time helper: shows a fresh VAPID key pair to a signed-in person until the real keys are configured (then it stops working)
+app.get("/push/generate-keys", async (c) => {
+  if (pushConfigured()) return c.text("Push keys are already set up.", 400);
+  const k = webpush.generateVAPIDKeys();
+  return c.html(`<!doctype html><meta charset="utf-8"><title>Push keys</title><body style="font-family:system-ui;max-width:720px;margin:40px auto;line-height:1.5">
+<h2>One-time push keys</h2><p>Copy these into Vercel → Settings → Environment Variables, then redeploy. This page stops working once they're set. Don't share the private key.</p>
+<p><b>VAPID_PUBLIC_KEY</b><br><code style="word-break:break-all">${k.publicKey}</code></p>
+<p><b>VAPID_PRIVATE_KEY</b><br><code style="word-break:break-all">${k.privateKey}</code></p>
+<p><b>VAPID_SUBJECT</b><br><code>mailto:${c.get("user").email}</code></p></body>`);
 });
 app.post("/push/test", async (c) => c.json({ sent: await pushToUser(db, c.get("user").id, { title: "D&E Budget", body: "Notifications are working on this device.", url: "/#home", tag: "test" }) }));
 app.post("/summary/weekly", async (c) => c.json(await weeklySummary(db, today())));

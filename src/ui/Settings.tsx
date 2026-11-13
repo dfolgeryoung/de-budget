@@ -498,7 +498,7 @@ function CsvSection() {
 /** Push on this device (needs the app installed to the home screen on iPhone), what to be told about, and the weekly email. */
 function NotificationsSection() {
   const toast = useToast();
-  const [cfg, setCfg] = useState<{ push: boolean; email: boolean; publicKey: string | null; devices: { id: string; label: string | null; endpoint: string }[] } | null>(null);
+  const [cfg, setCfg] = useState<{ push: boolean; email: boolean; keyProblem: string | null; publicKey: string | null; devices: { id: string; label: string | null; endpoint: string }[] } | null>(null);
   const [me, setMe] = useState<{ email: string; pushRecurring?: boolean; weeklyEmail?: boolean } | null>(null);
   const [here, setHere] = useState<string | null>(null); // this browser's subscription endpoint, if any
   const [busy, setBusy] = useState(false);
@@ -538,6 +538,7 @@ function NotificationsSection() {
   return (
     <section id="s-notifications" className={sec} style={secStyle}>
       <h2 className="font-bold">Notifications <span className="text-xs font-normal" style={{ color: "var(--muted)" }}>· per person</span></h2>
+      {cfg?.keyProblem && <p className="text-sm rounded-lg p-3" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>{cfg.keyProblem}. Fix the value in Vercel (no quotes, nothing cut off) and redeploy.</p>}
       {!cfg ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : !cfg.push ? (
         <p className="text-sm rounded-lg p-3" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)" }}>Push isn't set up on the server yet (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY). See DEPLOY.md.</p>
       ) : (

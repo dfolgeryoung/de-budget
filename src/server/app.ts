@@ -314,7 +314,9 @@ app.post("/transactions/:id/confirm", async (c) => {
 app.get("/push/config", async (c) => {
   const me = c.get("user").id;
   const subs = await db.select().from(t.pushSubscriptions).where(eq(t.pushSubscriptions.userId, me));
-  return c.json({ push: pushConfigured(), email: emailConfigured(), publicKey: vapidPublic() || null, devices: subs.map((s) => ({ id: s.id, label: s.deviceLabel, endpoint: s.endpoint })) });
+  const pub = vapidPublic(), priv = (process.env.VAPID_PRIVATE_KEY ?? "").replace(/[^A-Za-z0-9_-]/g, "");
+  const keyProblem = !pub ? "VAPID_PUBLIC_KEY is missing" : pub.length !== 87 ? `VAPID_PUBLIC_KEY should be 87 characters, it is ${pub.length}${pub.length === 43 ? " — that looks like the private key" : ""}` : priv.length !== 43 ? `VAPID_PRIVATE_KEY should be 43 characters, it is ${priv.length}${priv.length === 87 ? " — that looks like the public key" : ""}` : null;
+  return c.json({ push: pushConfigured(), email: emailConfigured(), keyProblem, publicKey: vapidPublic() || null, devices: subs.map((s) => ({ id: s.id, label: s.deviceLabel, endpoint: s.endpoint })) });
 });
 app.post("/push/subscribe", async (c) => {
   const p = z.object({ endpoint: z.string().url(), keys: z.object({ p256dh: z.string(), auth: z.string() }), label: z.string().max(80).optional() }).safeParse(await c.req.json());

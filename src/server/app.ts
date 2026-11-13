@@ -10,6 +10,7 @@ import { entrySchema, listTransactions, createTransaction, updateTransaction, de
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
+import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
@@ -270,8 +271,35 @@ app.get("/cron/daily", async (c) => {
     try { ran.inbox = await pickUpInbox(db, system); } catch (e) { ran.inboxError = (e as Error).message; }
     try { ran.mirror = await mirrorToSheet(db, system, { backup: true }); } catch (e) { ran.mirrorError = (e as Error).message; }
   }
-  // phase 5: create due recurring entries; phase 6: summaries
+  try { const system = (await db.select().from(t.users))[0]?.id ?? "system"; ran.recurring = await createDueRecurring(db, today(), system); } catch (e) { ran.recurringError = (e as Error).message; }
+  // phase 6: summaries
   return c.json({ ok: true, ran });
+});
+
+// ---------- recurring bills and pending entries ----------
+const recurringBody = z.object({ payee: z.string().trim().min(1).max(80), accountId: z.string(), categoryId: z.string().nullable(), memo: z.string().max(200).nullable(), amount: z.number().int(), dayOfMonth: z.number().int().min(1).max(31).nullable(), active: z.boolean() });
+app.get("/recurring", async (c) => c.json((await db.select().from(t.recurring)).sort((a, b) => (a.dayOfMonth ?? 99) - (b.dayOfMonth ?? 99) || a.sortOrder - b.sortOrder).map((r) => ({ id: r.id, payee: r.payee, accountId: r.accountId, categoryId: r.categoryId, memo: r.memo, amount: r.amount, dayOfMonth: r.dayOfMonth, active: r.active, lastCreatedMonth: r.lastCreatedMonth }))));
+app.post("/recurring", async (c) => {
+  const p = recurringBody.safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: p.error.issues.map((i) => i.message).join("; ") }, 400);
+  const id = `rec-${Date.now().toString(36)}`;
+  await db.insert(t.recurring).values({ id, ...p.data, sortOrder: (await db.select().from(t.recurring)).length, updatedBy: c.get("user").id });
+  return c.json({ id });
+});
+app.put("/recurring/:id", async (c) => {
+  const p = recurringBody.partial().safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await db.update(t.recurring).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.recurring.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
+app.delete("/recurring/:id", async (c) => { await db.delete(t.recurring).where(eq(t.recurring.id, c.req.param("id"))); return c.json({ ok: true }); });
+app.post("/recurring/run", async (c) => c.json(await createDueRecurring(db, today(), c.get("user").id)));
+app.get("/pending", async (c) => c.json(await pending(db)));
+app.post("/transactions/:id/confirm", async (c) => {
+  const p = z.object({ amount: z.number().int().optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).safeParse(await c.req.json().catch(() => ({})));
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await confirmEntry(db, c.get("user").id, c.req.param("id"), p.data);
+  return c.json({ ok: true });
 });
 
 // ---------- sheet mirror (manual runs from Settings) ----------

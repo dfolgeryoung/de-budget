@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Budget } from "./Budget";
 import { Settings } from "./Settings";
 import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
+import { draftFromRow } from "./EntryForm";
+import type { LedgerRow } from "../server/transactions";
 import type { EntryDraft } from "./EntryForm";
 import { api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
@@ -87,7 +89,7 @@ function ShellInner({ me }: { me: Me }) {
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
-          <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} />
+          <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} openEdit={async (id) => { const rows = await api<LedgerRow[]>("/transactions?limit=500"); const r = rows.find((x) => x.id === id); if (r) setDraft(draftFromRow(r, lists)); }} />
         ) : screen === "budget" || screen === "home" ? (
           <Budget me={me} showBarsDefault={me.showBars ?? true} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         ) : screen === "transactions" && lists ? (

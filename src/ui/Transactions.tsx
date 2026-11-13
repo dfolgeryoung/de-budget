@@ -29,6 +29,16 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [menu, setMenu] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
+  async function confirm(r: LedgerRow) {
+    try { await api(`/transactions/${r.id}/confirm`, { method: "POST", json: {} }); toast(`Confirmed ${r.payee ?? "entry"} ${formatMoney(Math.abs(r.amount ?? 0))}`); load(); dispatchEvent(new Event("lists-changed")); }
+    catch (e) { toast(`Couldn't confirm: ${(e as Error).message}`); }
+  }
+  const PendingBadge = ({ r }: { r: LedgerRow }) => (
+    <span className="inline-flex items-center gap-1 shrink-0">
+      <span className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>Pending</span>
+      <button onClick={(e) => { e.stopPropagation(); confirm(r); }} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--green-bg)", color: "var(--green-text)", border: "1px solid var(--green)" }} title="Confirm this recurring entry as is">Confirm</button>
+    </span>
+  );
   const [moreFilters, setMoreFilters] = useState(false);
   useEffect(() => { api<MonthPayload>("/month").then((m) => setBalances(new Map(m.accounts.map((a) => [a.id, a.balance])))).catch(() => {}); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [prefill, setPrefill] = useState<EntryDraft | undefined>(undefined);
@@ -115,6 +125,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                         <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? "Transfer" : "—")}</span>
                         {r.hidden && r.mine && <span title="Hidden from the other person" className="text-xs">🔒</span>}
                         {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} className="text-xs" style={{ color: "var(--neg)" }}>⚠</span>}
+                        {!r.confirmed && <PendingBadge r={r} />}
                       </span>
                       <span className="text-xs flex items-center gap-1.5 min-w-0" style={{ color: "var(--muted)" }}>
                         <span className="truncate">{!account && !masked ? `${acctName.get(r.accountId)} · ` : ""}{cats}{r.memo ? ` · ${r.memo}` : ""}</span>
@@ -206,35 +217,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                     </div>
                   )}
                 </div>
-                ) : (
-                <div key={r.id} className="relative grid items-center px-4 py-2.5 text-sm" style={{ gridTemplateColumns: account ? "minmax(0,1fr) 96px 88px 32px" : "minmax(0,1fr) 96px 32px", borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
-                  <button onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="min-w-0 text-left flex flex-col gap-0.5">
-                    <span className="font-medium flex items-center gap-1.5 truncate" style={{ color: masked ? "var(--muted)" : undefined }}>
-                      {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}
-                      {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
-                      {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
-                      {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
-                    </span>
-                    <span className="text-xs flex items-center gap-1.5 flex-wrap" style={{ color: "var(--muted)" }}>
-                      {!account && <span>{acctName.get(r.accountId)} · </span>}
-                      <span>{cats}</span>
-                      {r.memo && <span>· {r.memo}</span>}
-                      {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
-                      {r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <span key={tg!.id} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</span>)}
-                    </span>
-                  </button>
-                  <span className="text-right font-semibold" style={{ color: shownAmount === null ? "var(--faint)" : shownAmount < 0 ? "var(--neg)" : "var(--green-text)" }}>{shownAmount === null ? "—" : (shownAmount > 0 ? "+" : "") + formatMoney(shownAmount)}</span>
-                  {account && <span className="text-right text-xs" style={{ color: "var(--muted)" }}>{r.balance !== null ? formatMoney(r.balance) : ""}</span>}
-                  <button aria-label="Row menu" onClick={() => setMenu(menu === r.id ? null : r.id)} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>
-                  {menu === r.id && (
-                    <div className="absolute right-4 top-9 z-10 rounded-lg shadow-lg text-sm flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); openEntry(draftFromRow(r, lists)); }}>Edit</button>
-                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); const d = draftFromRow(r, lists); delete d.id; openEntry(d); }}>Duplicate</button>
-                      <button className="px-4 py-2 text-left" style={{ color: "var(--red-text)" }} onClick={() => del(r)}>Delete</button>
-                    </div>
-                  )}
-                </div>
-                )
+                ) : null
               );
             })}
           </div>

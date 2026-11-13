@@ -6,7 +6,7 @@
  *  - backup: optionally copy the spreadsheet into a Drive folder once a day.
  * Settings keys: sheet_id (or SHEET_ID env), mirror_last (status), live_months.
  */
-import { eq, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { sheets, driveCopy, serviceAccount } from "./google.js";
@@ -129,7 +129,7 @@ export function newInSheet(sheet: ParsedEntry[], appGroups: { rows: LedgerCell[]
 
 export async function ledgerRows(db: Db): Promise<(string | number | boolean | null)[][]> {
   const [txns, lines, accts, cats] = await Promise.all([
-    db.select().from(t.transactions).where(isNull(t.transactions.deletedAt)).orderBy(desc(t.transactions.date), desc(t.transactions.createdAt)),
+    db.select().from(t.transactions).where(and(isNull(t.transactions.deletedAt), eq(t.transactions.confirmed, true))).orderBy(desc(t.transactions.date), desc(t.transactions.createdAt)),
     db.select().from(t.transactionLines),
     db.select().from(t.accounts),
     db.select().from(t.categories),
@@ -152,9 +152,10 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
   try {
     const back = await sheets.get(id, `Ledger!F${LEDGER_FIRST}:M${LEDGER_LAST}`, true);
     const parsed = parseLedgerRows(back.map((r) => Array.from({ length: 8 }, (_, i) => r[i] ?? "") as SheetLedgerRow));
-    const [txns, lines, accts, cats] = await Promise.all([
+    const [allTxns, lines, accts, cats] = await Promise.all([
       db.select().from(t.transactions).where(isNull(t.transactions.deletedAt)), db.select().from(t.transactionLines), db.select().from(t.accounts), db.select().from(t.categories),
     ]);
+    const txns = allTxns.filter((x) => x.confirmed), pendingTxns = allTxns.filter((x) => !x.confirmed);
     const byTxn = new Map<string, { categoryId: string | null; amount: number; sortOrder: number }[]>();
     for (const l of lines) { const a = byTxn.get(l.transactionId) ?? []; a.push(l); byTxn.set(l.transactionId, a); }
     const acct = new Map(accts.map((a) => [a.id, a.name])), cat = new Map(cats.map((c) => [c.id, c.name]));
@@ -172,6 +173,9 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
         if (bad) { warnings.push(`Sheet row ${usDate(e.date)} ${e.payee || "—"}: unknown category "${bad}"`); continue; }
       }
       if (!e.amount && !ls.length) continue;
+      // the same bill is waiting as a pending recurring entry: confirm that one with the sheet's figures instead of adding a twin
+      const twin = pendingTxns.find((x) => x.accountId === accountId && (x.payee ?? "").trim().toLowerCase() === e.payee.trim().toLowerCase() && x.date.slice(0, 7) === e.date.slice(0, 7));
+      if (twin) { await db.update(t.transactions).set({ confirmed: true, amount: e.amount, date: e.date, updatedBy: me, updatedAt: new Date() }).where(eq(t.transactions.id, twin.id)); const tl = lines.filter((l) => l.transactionId === twin.id); if (tl.length === 1) await db.update(t.transactionLines).set({ amount: e.amount }).where(eq(t.transactionLines.id, tl[0]!.id)); pendingTxns.splice(pendingTxns.indexOf(twin), 1); reconciled++; continue; }
       await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [] });
       reconciled++;
     }

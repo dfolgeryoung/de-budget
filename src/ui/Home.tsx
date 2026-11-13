@@ -2,19 +2,31 @@ import { useEffect, useState } from "react";
 import { api, todayISO, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
+import { useToast } from "./Toast";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function Home({ me, lists, refreshKey, goTransactions }: { me: { name: string; initial?: string }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void }) {
+export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
+  const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
+  const [bump, setBump] = useState(0);
+  const toast = useToast();
   useEffect(() => {
     api<MonthPayload>("/month").then(setM).catch(() => setM(null));
     api<LedgerRow[]>("/transactions?limit=4").then(setRecent).catch(() => setRecent([]));
-  }, [refreshKey]);
+    api<typeof pend>("/pending").then((p) => setPend(Array.isArray(p) ? p : [])).catch(() => setPend([]));
+  }, [refreshKey, bump]);
+  async function act(id: string, what: "confirm" | "skip", label: string) {
+    try {
+      if (what === "confirm") await api(`/transactions/${id}/confirm`, { method: "POST", json: {} }); else await api(`/transactions/${id}`, { method: "DELETE" });
+      toast(what === "confirm" ? `Confirmed ${label}` : `Skipped ${label} this month`, what === "skip" ? async () => { await api(`/transactions/${id}?undo=1`, { method: "DELETE" }); setBump((b) => b + 1); } : undefined);
+      setBump((b) => b + 1); dispatchEvent(new Event("lists-changed"));
+    } catch (e) { toast((e as Error).message); }
+  }
   const initial = me.initial ?? "D";
   const mine = m?.accounts.find((a) => a.type === "checking" && lists.accounts.find((x) => x.id === a.id)?.owner === initial) ?? null;
   const funName = initial === "E" ? "elizabeth fun" : "david fun";
@@ -51,6 +63,22 @@ export function Home({ me, lists, refreshKey, goTransactions }: { me: { name: st
       </div>
 
       <div className="px-3 flex flex-col gap-3 md:px-0">
+        {pend.length > 0 && (
+          <div className="rounded-xl overflow-hidden" style={{ ...cs, borderColor: "var(--yellow)" }}>
+            <div className="flex justify-between items-center px-3.5 py-2.5" style={{ background: "var(--yellow-row)", borderBottom: "1px solid var(--border-soft)" }}>
+              <span className="text-sm font-bold">To confirm</span><span className="text-xs" style={{ color: "var(--yellow-text)" }}>{pend.length} recurring {pend.length === 1 ? "bill" : "bills"} landed</span>
+            </div>
+            {pend.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 px-3.5 py-2" style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                <span className="flex flex-col min-w-0 flex-1"><span className="text-sm font-medium truncate">{p.payee ?? "—"}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{MON[Number(p.date.slice(5, 7)) - 1]} {Number(p.date.slice(8, 10))} · {catName(p.categoryId)} · {acctName(p.accountId)}</span></span>
+                <span className="text-sm font-semibold shrink-0" style={{ color: p.amount < 0 ? "var(--neg)" : "var(--green-text)" }}>{formatMoney(p.amount)}</span>
+                <button onClick={() => act(p.id, "confirm", p.payee ?? "entry")} className="rounded-full px-2.5 h-7 text-[12px] font-semibold shrink-0" style={{ background: "var(--green-solid)", color: "#fff" }}>Confirm</button>
+                {openEdit && <button onClick={() => openEdit(p.id)} className="rounded-full px-2.5 h-7 text-[12px] font-semibold shrink-0" style={{ border: "1px solid var(--field)" }}>Adjust</button>}
+                <button onClick={() => act(p.id, "skip", p.payee ?? "entry")} className="rounded-full px-2 h-7 text-[12px] font-semibold shrink-0" style={{ color: "var(--muted)" }}>Skip</button>
+              </div>
+            ))}
+          </div>
+        )}
         {fun && (
           <button onClick={() => goTransactions(null)} className="block w-full text-left rounded-xl" style={{ ...cs, padding: "12px 14px" }}>
             {/* layout lives in a div: iOS Safari won't lay out a <button> itself as a flex column */}

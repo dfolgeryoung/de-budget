@@ -117,6 +117,7 @@ export async function updateTransaction(db: Db, me: string, id: string, e: Entry
   await db.update(t.transactions).set({
     date: e.date, accountId: e.accountId, payee: e.payee || null, memo: e.memo || null, amount: e.amount,
     transferToAccountId: e.transferToAccountId, sharedFiftyFifty: e.sharedFiftyFifty, hidden: e.hidden, trackedAmountId: e.trackedAmountId,
+    confirmed: true, // saving a pending recurring entry confirms it
     updatedBy: me, updatedAt: new Date(),
   }).where(eq(t.transactions.id, id));
   await db.delete(t.transactionLines).where(eq(t.transactionLines.transactionId, id));

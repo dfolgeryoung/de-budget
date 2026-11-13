@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "./api";
+import { api, categoryOptions, type Lists } from "./api";
 import { Select } from "./Select";
 import { formatMoney, parseMoney } from "../budget/money";
 import { useToast } from "./Toast";
@@ -34,10 +34,11 @@ export function Settings() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
       <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
-        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
+        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />
       <CategoriesSection />
+      <RecurringSection />
       <AppearanceSection />
       <div id="s-import" />
       <section className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -59,7 +60,7 @@ export function Settings() {
       </section>
       <div id="s-mirror" />
       <MirrorSection />
-      <p className="text-xs" style={{ color: "var(--muted)" }}>Recurring bills, tags management, tracked amounts, payees, notifications and the home-screen layout arrive in later phases.</p>
+      <p className="text-xs" style={{ color: "var(--muted)" }}>Tags management, tracked amounts, payees, notifications and the home-screen layout arrive in later phases.</p>
     </div>
   );
 }
@@ -311,6 +312,74 @@ function AppearanceSection() {
           <label className="flex items-center gap-2"><input type="checkbox" checked={me.showBars ?? true} onChange={(e) => save({ showBars: e.target.checked })} /> Show progress bars by default</label>
         </div>
       )}
+    </section>
+  );
+}
+
+interface Rec { id: string; payee: string; accountId: string; categoryId: string | null; memo: string | null; amount: number; dayOfMonth: number | null; active: boolean; lastCreatedMonth: string | null }
+
+/** Recurring bills: each becomes a pending entry on its day of the month; confirm it (or adjust / skip) on Home or in the ledger. */
+function RecurringSection() {
+  const toast = useToast();
+  const phone = usePhone();
+  const [rows, setRows] = useState<Rec[] | null>(null);
+  const [lists, setLists] = useState<Lists | null>(null);
+  const [adding, setAdding] = useState(false);
+  const blank = { payee: "", accountId: "", categoryId: null as string | null, memo: "", amount: "", dayOfMonth: "1", active: true };
+  const [n, setN] = useState(blank);
+  const load = () => { api<Rec[]>("/recurring").then((r) => setRows(Array.isArray(r) ? r : [])).catch(() => setRows([])); api<Lists>("/lists").then(setLists).catch(() => {}); };
+  useEffect(load, []);
+  const put = async (id: string, body: object) => { try { await api(`/recurring/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
+  const cats = lists ? categoryOptions(lists, { income: true }) : [];
+  const acctOpts = lists ? lists.accounts.map((a) => ({ value: a.id, label: a.name })) : [];
+  const AmountCell = ({ r }: { r: Rec }) => <TextCell value={(Math.abs(r.amount) / 100).toFixed(2)} onSave={(v) => { const c = parseMoney(v); if (c !== null) put(r.id, { amount: r.amount > 0 ? Math.abs(c) : -Math.abs(c) }); }} className="text-right" width={96} />;
+  const DayCell = ({ r }: { r: Rec }) => <TextCell value={r.dayOfMonth ? String(r.dayOfMonth) : ""} onSave={(v) => put(r.id, { dayOfMonth: /^\d+$/.test(v) ? Math.min(31, Math.max(1, Number(v))) : null })} className="text-center" placeholder="any" width={56} />;
+  const grid = "minmax(140px,1.3fr) 140px minmax(150px,1.2fr) 110px 64px 70px 60px";
+  return (
+    <section id="s-recurring" className={sec} style={secStyle}>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div><h2 className="font-bold">Recurring bills</h2><p className="text-sm" style={{ color: "var(--muted)" }}>On its day each bill lands as a pending entry (outside the totals) for you to confirm, adjust or skip on Home. A bill you've already entered by hand that month is left alone. Amounts are outflows; use a minus for an inflow such as a paycheck.</p></div>
+        <button onClick={() => setAdding((v) => !v)} className="rounded-lg px-3 h-8 text-[13px] font-semibold shrink-0" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>+ Recurring bill</button>
+      </div>
+      {adding && lists && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg p-3" style={{ background: "var(--card-alt)", border: "1px solid var(--border-soft)" }}>
+          <input value={n.payee} onChange={(e) => setN({ ...n, payee: e.target.value })} placeholder="Payee" className="fld rounded-md px-2 text-[13px] outline-none w-full md:w-44" style={fieldStyle} />
+          <Select ariaLabel="Account" value={n.accountId || null} onChange={(v) => setN({ ...n, accountId: v ?? "" })} options={acctOpts} placeholder="Account…" style={{ height: 32 }} />
+          <Select ariaLabel="Category" value={n.categoryId} onChange={(v) => setN({ ...n, categoryId: v })} options={cats} placeholder="Category…" style={{ height: 32 }} menuWidth={280} />
+          <span className="flex items-center rounded-md px-2 w-28" style={fieldStyle}><span style={{ color: "var(--muted)" }}>$</span><input value={n.amount} onChange={(e) => setN({ ...n, amount: e.target.value })} placeholder="amount" inputMode="decimal" className="w-full min-w-0 bg-transparent outline-none text-right text-[13px]" /></span>
+          <span className="flex items-center gap-1 text-[13px]" style={{ color: "var(--muted)" }}>day <input value={n.dayOfMonth} onChange={(e) => setN({ ...n, dayOfMonth: e.target.value })} inputMode="numeric" className="fld w-12 rounded-md px-1 text-center outline-none" style={fieldStyle} /></span>
+          <input value={n.memo} onChange={(e) => setN({ ...n, memo: e.target.value })} placeholder="Memo" className="fld rounded-md px-2 text-[13px] outline-none w-36" style={fieldStyle} />
+          <button onClick={async () => { const c = parseMoney(n.amount); if (!n.payee.trim() || !n.accountId || c === null) return toast("Payee, account and amount are needed"); try { await api("/recurring", { method: "POST", json: { payee: n.payee.trim(), accountId: n.accountId, categoryId: n.categoryId === "rta" ? null : n.categoryId, memo: n.memo || null, amount: -c, dayOfMonth: /^\d+$/.test(n.dayOfMonth) ? Number(n.dayOfMonth) : null, active: true } }); setAdding(false); setN(blank); load(); refreshApp(); } catch (e) { toast((e as Error).message); } }} className="rounded-md px-3 h-8 text-[13px] font-semibold" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>Add</button>
+        </div>
+      )}
+      {!rows || !lists ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : phone ? (
+        <div className="flex flex-col gap-2">
+          {rows.map((r) => (
+            <div key={r.id} className="rounded-lg p-3 flex flex-col gap-2" style={{ border: "1px solid var(--border)", opacity: r.active ? 1 : 0.55 }}>
+              <div className="flex items-center gap-2"><TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} className="flex-1" /><AmountCell r={r} /></div>
+              <div className="flex gap-2"><Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 32 }} className="flex-1 min-w-0" /><Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 32 }} className="flex-1 min-w-0" menuWidth={260} /></div>
+              <div className="flex items-center justify-between text-[13px]"><span className="flex items-center gap-1.5" style={{ color: "var(--muted)" }}>day <DayCell r={r} /></span><label className="flex items-center gap-1.5"><input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} /> Active</label><button onClick={async () => { await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); }} className="text-xs" style={{ color: "var(--red-text)" }}>Delete</button></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
+          <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 820 }}><span>Payee</span><span>Account</span><span>Category</span><span className="text-right">Amount</span><span className="text-center">Day</span><span>Active</span><span /></div>
+          {rows.map((r) => (
+            <div key={r.id} className="row-hover grid gap-2 items-center px-3 py-1.5" style={{ gridTemplateColumns: grid, borderTop: "1px solid var(--border-soft)", opacity: r.active ? 1 : 0.55, minWidth: 820 }}>
+              <TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} />
+              <Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 32 }} className="w-full" />
+              <Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 32 }} className="w-full" menuWidth={280} />
+              <span className="flex justify-end"><AmountCell r={r} /></span>
+              <span className="flex justify-center"><DayCell r={r} /></span>
+              <input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} className="m-0 justify-self-start" />
+              <button onClick={async () => { await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); toast(`Removed ${r.payee}`); }} className="text-xs justify-self-end" style={{ color: "var(--red-text)" }}>Delete</button>
+            </div>
+          ))}
+          {rows.length === 0 && <p className="px-3 py-3 text-sm" style={{ color: "var(--muted)" }}>No recurring bills yet.</p>}
+        </div>
+      )}
+      <p className="text-xs" style={{ color: "var(--muted)" }}>The nightly run creates the day's pending entries; "Bills still to come" on the Budget screen lists the ones not yet seen this month.</p>
     </section>
   );
 }

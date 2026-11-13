@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "./api";
 import { parseMoney } from "../budget/money";
 import { Select } from "./Select";
+import { EmojiButton } from "./EmojiPicker";
 import { useToast } from "./Toast";
 import type { MonthPayload } from "../server/month";
 import { monthLabel } from "./Budget";
@@ -33,7 +34,7 @@ export function AddCategory({ data, onDone }: { data: MonthPayload; onDone: () =
     <div className="flex flex-col gap-4 md:pt-0">
       <h2 className="text-lg font-bold">New category</h2>
       <div className="flex gap-2">
-        <input aria-label="Emoji" value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="🙂" className="fld w-14 rounded-lg text-center text-lg outline-none" style={field} />
+        <EmojiButton value={emoji} onPick={setEmoji} size={40} className="rounded-lg" />
         <input autoFocus aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="Category name" className="fld flex-1 rounded-lg px-3 text-[15px] outline-none" style={field} />
       </div>
       <label className="flex flex-col gap-1.5 text-xs font-medium" style={{ color: "var(--muted)" }}>Group

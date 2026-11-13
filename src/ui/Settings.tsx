@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, categoryOptions, type Lists } from "./api";
 import { Select } from "./Select";
+import { EmojiButton } from "./EmojiPicker";
 import { formatMoney, parseMoney } from "../budget/money";
 import { useToast } from "./Toast";
 
@@ -246,7 +247,7 @@ function CategoriesSection() {
                 {rows.map((c) => (
                   <div key={c.id} className="flex flex-col gap-2 px-3 py-2.5" style={{ borderTop: "1px solid var(--border-soft)", opacity: c.hidden ? 0.55 : 1 }}>
                     <div className="flex items-center gap-2">
-                      <TextCell value={c.emoji ?? ""} onSave={(emoji) => put(c.id, { emoji })} className="text-center" placeholder="🙂" width={44} />
+                      <EmojiButton value={c.emoji} onPick={(emoji) => put(c.id, { emoji })} size={36} />
                       <TextCell value={c.name} onSave={(name) => put(c.id, { name })} className="flex-1" />
                       <button aria-label={c.favourite !== null ? "Unpin" : "Pin"} aria-pressed={c.favourite !== null} onClick={() => put(c.id, { favourite: c.favourite === null })} className="text-xl leading-none px-1" style={{ color: c.favourite !== null ? "var(--yellow)" : "var(--faint)" }}>{c.favourite !== null ? "★" : "☆"}</button>
                     </div>
@@ -279,7 +280,7 @@ function CategoriesSection() {
               </div>
               {rows.map((c) => (
                 <div key={c.id} className="row-hover grid gap-2 items-center px-3 py-1" style={{ gridTemplateColumns: grid, borderTop: "1px solid var(--border-soft)", opacity: c.hidden ? 0.55 : 1, minWidth: 760 }}>
-                  <TextCell value={c.emoji ?? ""} onSave={(emoji) => put(c.id, { emoji })} className="text-center" placeholder="🙂" />
+                  <EmojiButton value={c.emoji} onPick={(emoji) => put(c.id, { emoji })} />
                   <TextCell value={c.name} onSave={(name) => put(c.id, { name })} />
                   {c.kind === "normal" ? <Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 32 }} className="w-full" /> : <span className="text-[13px]" style={{ color: "var(--muted)" }}>{g.name}</span>}
                   {c.kind === "card_payment" ? <span className="text-[13px]" style={{ color: "var(--muted)" }}>—</span> : <Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 32 }} className="w-full" menuWidth={260} />}

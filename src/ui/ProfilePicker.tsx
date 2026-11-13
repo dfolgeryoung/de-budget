@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { EmojiPicker } from "./EmojiPicker";
 import { api } from "./api";
 import { useToast } from "./Toast";
 
@@ -17,7 +18,8 @@ export function Avatar({ emoji, url, size = 36, radius = 8, className = "" }: { 
 export function ProfilePicker({ me, onClose }: { me: { name: string; avatarEmoji?: string; avatarUrl?: string | null }; onClose: () => void }) {
   const [emoji, setEmoji] = useState<string>(me.avatarEmoji ?? "🙂");
   const [url, setUrl] = useState<string | null>(me.avatarUrl ?? null);
-  const [custom, setCustom] = useState(false);
+  const [more, setMore] = useState(false);
+  const moreBtn = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -53,13 +55,10 @@ export function ProfilePicker({ me, onClose }: { me: { name: string; avatarEmoji
           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Pick an emoji</div>
           <div className="grid grid-cols-8 gap-1.5">
             {EMOJIS.slice(0, 15).map((e) => (
-              <button key={e} onClick={() => { setEmoji(e); setUrl(null); setCustom(false); }} aria-pressed={!url && emoji === e} className="h-12 rounded-lg text-2xl inline-flex items-center justify-center tb-btn" style={{ border: `2px solid ${!url && emoji === e ? "var(--navy)" : "var(--border)"}`, background: !url && emoji === e ? "var(--selected)" : "var(--card)" }}>{e}</button>
+              <button key={e} onClick={() => { setEmoji(e); setUrl(null); }} aria-pressed={!url && emoji === e} className="h-12 rounded-lg text-2xl inline-flex items-center justify-center tb-btn" style={{ border: `2px solid ${!url && emoji === e ? "var(--navy)" : "var(--border)"}`, background: !url && emoji === e ? "var(--selected)" : "var(--card)" }}>{e}</button>
             ))}
-            {custom ? (
-              <input autoFocus aria-label="Any emoji" value={EMOJIS.includes(emoji) ? "" : emoji} onChange={(e) => { const v = [...e.target.value].slice(-2).join(""); if (v) { setEmoji(v); setUrl(null); } }} placeholder="…" className="h-12 rounded-lg text-2xl text-center outline-none" style={{ border: "2px solid var(--navy)", background: "var(--card)", color: "var(--text)" }} />
-            ) : (
-              <button onClick={() => setCustom(true)} title="Type any emoji" className="h-12 rounded-lg text-xl inline-flex items-center justify-center tb-btn" style={{ border: `2px solid ${!EMOJIS.includes(emoji) && !url ? "var(--navy)" : "var(--border)"}`, color: "var(--muted)" }}>{!EMOJIS.includes(emoji) && !url ? emoji : "…"}</button>
-            )}
+            <button ref={moreBtn} onClick={() => setMore((o) => !o)} title="All emoji" aria-expanded={more} className="h-12 rounded-lg text-xl inline-flex items-center justify-center tb-btn" style={{ border: `2px solid ${!EMOJIS.includes(emoji) && !url ? "var(--navy)" : "var(--border)"}`, background: !EMOJIS.includes(emoji) && !url ? "var(--selected)" : "var(--card)", color: "var(--muted)" }}>{!EMOJIS.includes(emoji) && !url ? emoji : "…"}</button>
+            <EmojiPicker anchor={moreBtn} open={more} onClose={() => setMore(false)} onPick={(e) => { setEmoji(e); setUrl(null); }} />
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm" style={{ color: "var(--muted)" }}><span className="flex-1 h-px" style={{ background: "var(--border)" }} />or<span className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>

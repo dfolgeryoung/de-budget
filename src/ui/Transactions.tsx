@@ -32,7 +32,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
   async function confirm(r: LedgerRow) {
-    try { await api(`/transactions/${r.id}/confirm`, { method: "POST", json: {} }); toast(`Confirmed ${r.payee ?? "entry"} ${formatMoney(Math.abs(r.amount ?? 0))}`); load(); dispatchEvent(new Event("lists-changed")); }
+    try { await api(`/transactions/${r.id}/confirm`, { method: "POST", json: {} }); toast(`Confirmed ${r.payee ?? "entry"} ${formatMoney(Math.abs(r.amount ?? 0))}`); dispatchEvent(new Event("lists-changed")); dispatchEvent(new Event("lists-changed")); }
     catch (e) { toast(`Couldn't confirm: ${(e as Error).message}`); }
   }
   const PendingBadge = ({ r }: { r: LedgerRow }) => (
@@ -65,8 +65,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   async function del(r: LedgerRow) {
     setMenu(null);
     await api(`/transactions/${r.id}`, { method: "DELETE" });
-    load();
-    toast(`Deleted: ${r.payee ?? "entry"} ${r.amount != null ? formatMoney(Math.abs(r.amount)) : ""}`, async () => { await api(`/transactions/${r.id}?undo=1`, { method: "DELETE" }); load(); });
+    dispatchEvent(new Event("lists-changed"));
+    toast(`Deleted: ${r.payee ?? "entry"} ${r.amount != null ? formatMoney(Math.abs(r.amount)) : ""}`, async () => { await api(`/transactions/${r.id}?undo=1`, { method: "DELETE" }); dispatchEvent(new Event("lists-changed")); });
   }
 
   const groups: { day: string; rows: LedgerRow[] }[] = [];
@@ -172,7 +172,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
 
       {/* below LEDGER_MIN the entry box and ledger scroll sideways together rather than clipping the last columns */}
       <div className="flex flex-col gap-3 overflow-x-auto pb-1"><div className="flex flex-col gap-3" style={{ minWidth: LEDGER_MIN }}>
-      {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); load(); }} />}
+      {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); dispatchEvent(new Event("lists-changed")); }} />}
 
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         {isDesktop && (
@@ -192,7 +192,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
                 isDesktop && editing === r.id + (r.half?.share ?? "") ? (
-                <EntryRow key={r.id + (r.half?.share ?? "")} mode="edit" lists={lists} me={me} account={account} initial={draftFromRow(r, lists)} onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} onDelete={() => { setEditing(null); del(r); }} />
+                <EntryRow key={r.id + (r.half?.share ?? "")} mode="edit" lists={lists} me={me} account={account} initial={draftFromRow(r, lists)} onSaved={() => { setEditing(null); dispatchEvent(new Event("lists-changed")); }} onCancel={() => setEditing(null)} onDelete={() => { setEditing(null); del(r); }} />
                 ) : isDesktop ? (
                 <div key={r.id + (r.half?.share ?? "")} onClick={(e) => { if (!masked && !(e.target as HTMLElement).closest("button")) setEditing(r.id + (r.half?.share ?? "")); }} className={"row-hover relative grid items-center px-4 py-2 text-[13px]" + (masked ? "" : " cursor-pointer")} title={masked ? undefined : "Click to edit"} style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>

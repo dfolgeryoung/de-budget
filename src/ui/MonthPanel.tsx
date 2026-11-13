@@ -4,8 +4,10 @@ import type { MonthPayload } from "../server/month";
 import { monthLabel } from "./Budget";
 
 /** What the side panel shows when no category is picked: the sheet's month summary and budget details. */
-export function MonthPanel({ data, onPick }: { data: MonthPayload; onPick: (id: string) => void }) {
+export function MonthPanel({ data, onPick, onRelease }: { data: MonthPayload; onPick: (id: string) => void; onRelease?: (categoryId: string, amount: number) => void }) {
   const v = data.view;
+  // Next Month's Money: what was set aside last month, ready to be released into this month's Ready to Assign
+  const nmm = v.categories.find((c) => data.categories[c.categoryId]?.kind === "next_month" && c.available > 0 && c.carriedIn > 0);
   const cats = v.categories.filter((c) => !data.categories[c.categoryId]?.hidden);
   const sum = (k: "carriedIn" | "assigned" | "activity" | "available") => cats.reduce((s, c) => s + c[k], 0);
   const overspent = cats.filter((c) => c.status === "overspent").sort((a, b) => a.available - b.available);
@@ -42,6 +44,11 @@ export function MonthPanel({ data, onPick }: { data: MonthPayload; onPick: (id: 
         {row("Activity", formatMoney(sum("activity")))}
         {row("Available", formatMoney(sum("available")), true)}
         {row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign === 0 ? "var(--green-text)" : v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
+        {nmm && onRelease && (
+          <button onClick={() => onRelease(nmm.categoryId, Math.min(nmm.available, nmm.carriedIn))} className="mt-2 rounded-lg px-3 py-2 text-[13px] font-semibold text-left" style={{ background: "var(--selected)", color: "var(--accent-text)", border: "1px solid var(--navy)" }}>
+            Release {formatMoney(Math.min(nmm.available, nmm.carriedIn))} from {data.categories[nmm.categoryId]?.name} into Ready to Assign ›
+          </button>
+        )}
       </Box>
       <Box title="Budget check">
         {list(overspent, (c) => c.available, "var(--red-bg)", "var(--red-text)", "Overspent")}

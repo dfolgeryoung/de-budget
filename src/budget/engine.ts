@@ -183,7 +183,7 @@ function goalFor(goals: GoalIn[], categoryId: string, month: MonthKey): GoalIn |
     if (g.categoryId !== categoryId || g.validFrom > month) continue;
     if (!best || g.validFrom > best.validFrom) best = g;
   }
-  return best;
+  return best && best.amount > 0 ? best : null; // a zero-amount goal row means "no goal from this month on"
 }
 
 /** Needed this month (the sheet's rule): refill_to spreads the gap over the months left in the cycle; set_aside is goal/frequency; a target date overrides. */

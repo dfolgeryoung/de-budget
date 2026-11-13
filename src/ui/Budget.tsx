@@ -10,6 +10,7 @@ import { useToast } from "./Toast";
 import { CategoryPanel } from "./CategoryPanel";
 import { Sheet } from "./Sheet";
 import { MonthPanel } from "./MonthPanel";
+import { AddCategory } from "./AddCategory";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
@@ -103,6 +104,11 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
     if (t.timer) { clearTimeout(t.timer); t.timer = null; }
     if (t.id) { t.id = null; setTouchDrag(null); dropCategory(); }
   };
+  const [addOpen, setAddOpen] = useState(false);
+  async function release(categoryId: string, amount: number) {
+    try { await api("/move", { method: "POST", json: { month: data!.month, from: categoryId, to: null, amount, how: "release" } }); toast(`Released ${formatMoney(amount)} into Ready to Assign`); load(); onChanged(); }
+    catch (e) { toast(`Couldn't release: ${(e as Error).message}`); }
+  }
   const [recent, setRecent] = useState<{ id: string; at: string; fromCategoryId: string | null; toCategoryId: string | null; amount: number; how: string; undone: boolean }[] | null>(null);
   const undoStack = useRef<string[][]>([]);
   const redoStack = useRef<{ month: string; from: string | null; to: string | null; amount: number }[][]>([]);
@@ -205,6 +211,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
       onMove={doMove}
       onAssign={(id, amount) => commitAssigned(id, String(amount / 100))}
       onOpenOther={(id) => setOpen(id)}
+      onChanged={() => { load(); onChanged(); }}
     />
   ) : null;
 
@@ -285,7 +292,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             );
           })}
         </div>
-        {summaryOpen && <Sheet onClose={() => setOpen(null)}><MonthPanel data={data} onPick={(id) => setOpen(id)} /></Sheet>}
+        {summaryOpen && <Sheet onClose={() => setOpen(null)}><MonthPanel data={data} onPick={(id) => setOpen(id)} onRelease={release} /></Sheet>}
         {panel && <Sheet onClose={() => setOpen(null)}>{panel}</Sheet>}
       </div>
     );
@@ -326,7 +333,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
         <div className="flex-1 min-w-0 rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap" style={{ background: "var(--card-alt)", borderBottom: "1px solid var(--border)" }}>
             <div className="flex items-center gap-1" style={{ color: "var(--accent-text)" }}>
-              <button className={tb} onClick={() => toast("Adding categories arrives with Settings in phase 4")}><svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Category</button>
+              <button className={tb} onClick={() => setAddOpen(true)}><svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Category</button>
               <button className={tb} onClick={undo} title="Undo the last move"><svg {...ic}><polyline points="9 14 4 9 9 4" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg>Undo</button>
               <button className={tb} onClick={redo} title="Redo"><svg {...ic}><polyline points="15 14 20 9 15 4" /><path d="M20 9H10a6 6 0 0 0 0 12h3" /></svg>Redo</button>
               <button className={tb + (recent ? " on" : "")} onClick={async () => setRecent(recent ? null : await api(`/moves/${data.month}`))}><svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>Recent moves</button>
@@ -420,7 +427,8 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           })}
         </div>
 
-        {!isPhone && <aside className="w-[340px] shrink-0 sticky top-4">{panel ?? <MonthPanel data={data} onPick={(id) => setOpen(id)} />}</aside>}
+        {!isPhone && <aside className="w-[340px] shrink-0 sticky top-4">{panel ?? <MonthPanel data={data} onPick={(id) => setOpen(id)} onRelease={release} />}</aside>}
+        {addOpen && <Sheet onClose={() => setAddOpen(false)}><AddCategory data={data} onDone={() => { setAddOpen(false); load(); onChanged(); }} /></Sheet>}
       </div>
       {panel && isPhone && <Sheet onClose={() => setOpen(null)}>{panel}</Sheet>}
 

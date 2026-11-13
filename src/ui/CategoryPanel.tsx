@@ -6,15 +6,17 @@ import { api } from "./api";
 import { Bar, statusText } from "./Budget";
 import { Chevron } from "./icons";
 import { Select } from "./Select";
+import { GoalEditor } from "./GoalEditor";
 
 type Tab = "summary" | "goal" | "transactions" | "history";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssign, onOpenOther }: {
+export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssign, onOpenOther, onChanged }: {
   month: string; categoryId: string | null; data: MonthPayload; onClose: () => void;
   onMove: (from: string | null, to: string | null, amount: number) => Promise<void>;
   onAssign: (id: string, amount: number) => void;
   onOpenOther: (id: string) => void;
+  onChanged?: () => void;
 }) {
   const c = categoryId ? data.view.categories.find((x) => x.categoryId === categoryId) ?? null : null;
   const meta = categoryId ? data.categories[categoryId] : null;
@@ -102,20 +104,7 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
             )}
           </>
         )}
-        {c && tab === "goal" && (
-          <div className="text-[13px] flex flex-col gap-2">
-            {c.goal ? (
-              <>
-                {row("Type", c.goal.type === "refill_to" ? "Refill up to" : "Set aside another")}
-                {row("Amount", formatMoney(c.goal.amount))}
-                {row("Frequency", c.goal.targetDate ? `by ${c.goal.targetDate}` : `every ${c.goal.frequencyMonths ?? 1} month${(c.goal.frequencyMonths ?? 1) > 1 ? "s" : ""}`)}
-                {row("Needed this month", formatMoney(c.needed))}
-                {row("Progress", `${Math.round(c.progress * 100)}%`)}
-                <p style={{ color: "var(--muted)" }}>Editing goals arrives in phase 4; until then they come from the sheet.</p>
-              </>
-            ) : <p style={{ color: "var(--muted)" }}>No goal on this category.</p>}
-          </div>
-        )}
+        {c && categoryId && tab === "goal" && <GoalEditor categoryId={categoryId} month={month} current={c} onChanged={() => onChanged?.()} />}
         {c && tab === "transactions" && (
           <div className="text-[13px] flex flex-col gap-1.5">
             {txns === null && <span style={{ color: "var(--muted)" }}>Loading…</span>}

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { SessionUser } from "./auth.js";
 import { handleAuth, getSessionUser } from "./auth.js";
 import { db } from "../db/client.js";
@@ -100,9 +100,9 @@ app.post("/assign", async (c) => {
   return c.json({ moveId: id });
 });
 app.post("/move", async (c) => {
-  const p = z.object({ month: monthKey, from: z.string().nullable(), to: z.string().nullable(), amount: z.number().int().positive() }).safeParse(await c.req.json());
+  const p = z.object({ month: monthKey, from: z.string().nullable(), to: z.string().nullable(), amount: z.number().int().positive(), how: z.enum(["move", "release"]).optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad request" }, 400);
-  const id = await move(db, c.get("user").id, p.data.month, p.data.from, p.data.to, p.data.amount);
+  const id = await move(db, c.get("user").id, p.data.month, p.data.from, p.data.to, p.data.amount, p.data.how ?? "move");
   return c.json({ moveId: id });
 });
 app.post("/move/undo", async (c) => {
@@ -119,6 +119,42 @@ app.post("/auto-assign", async (c) => {
   return c.json({ moveIds: ids });
 });
 app.get("/category/:id/history/:month", async (c) => c.json(await categoryHistory(db, c.req.param("id"), c.req.param("month"))));
+
+// ---------- goals (append-only by month) and categories ----------
+const goalBody = z.object({ validFrom: monthKey, type: z.enum(["refill_to", "set_aside"]), amount: z.number().int().min(0), frequencyMonths: z.number().int().min(1).max(60).nullable(), targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() });
+app.get("/category/:id/goals", async (c) => {
+  const rows = await db.select().from(t.goals).where(eq(t.goals.categoryId, c.req.param("id")));
+  return c.json(rows.sort((a, b) => (a.validFrom < b.validFrom ? 1 : -1)).map((g) => ({ validFrom: g.validFrom, type: g.type, amount: g.amount, frequencyMonths: g.frequencyMonths, targetDate: g.targetDate })));
+});
+app.put("/category/:id/goal", async (c) => {
+  const p = goalBody.safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: p.error.issues.map((i) => i.message).join("; ") }, 400);
+  const me = c.get("user").id, categoryId = c.req.param("id");
+  const row = { id: `goal-${categoryId}-${p.data.validFrom}`, categoryId, validFrom: p.data.validFrom, type: p.data.type, amount: p.data.amount, frequencyMonths: p.data.targetDate ? null : p.data.frequencyMonths ?? 1, targetDate: p.data.targetDate, updatedBy: me, updatedAt: new Date() };
+  await db.insert(t.goals).values(row).onConflictDoUpdate({ target: [t.goals.categoryId, t.goals.validFrom], set: { type: row.type, amount: row.amount, frequencyMonths: row.frequencyMonths, targetDate: row.targetDate, updatedBy: me, updatedAt: row.updatedAt } });
+  return c.json({ ok: true });
+});
+app.delete("/category/:id/goal/:validFrom", async (c) => {
+  await db.delete(t.goals).where(and(eq(t.goals.categoryId, c.req.param("id")), eq(t.goals.validFrom, c.req.param("validFrom"))));
+  return c.json({ ok: true });
+});
+app.post("/categories", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60), emoji: z.string().trim().max(8).nullable(), groupId: z.string(), goal: goalBody.optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "A category needs a name and a group" }, 400);
+  const me = c.get("user").id;
+  const existing = await db.select().from(t.categories);
+  if (existing.some((x) => x.name.toLowerCase() === p.data.name.toLowerCase())) return c.json({ error: `There is already a category called ${p.data.name}` }, 400);
+  const id = `cat-${Date.now().toString(36)}`;
+  await db.insert(t.categories).values({ id, groupId: p.data.groupId, name: p.data.name, emoji: p.data.emoji || null, kind: "normal", sortOrder: existing.filter((x) => x.groupId === p.data.groupId).length, updatedBy: me });
+  if (p.data.goal && p.data.goal.amount > 0) await db.insert(t.goals).values({ id: `goal-${id}-${p.data.goal.validFrom}`, categoryId: id, validFrom: p.data.goal.validFrom, type: p.data.goal.type, amount: p.data.goal.amount, frequencyMonths: p.data.goal.targetDate ? null : p.data.goal.frequencyMonths ?? 1, targetDate: p.data.goal.targetDate, updatedBy: me });
+  return c.json({ id });
+});
+app.put("/categories/:id", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60).optional(), emoji: z.string().trim().max(8).nullable().optional(), groupId: z.string().optional(), hiddenInBudget: z.boolean().optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await db.update(t.categories).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.categories.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
 
 // ---------- category order (drag and drop on the Budget screen) ----------
 app.put("/categories/reorder", async (c) => {

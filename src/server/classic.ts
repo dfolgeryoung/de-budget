@@ -12,7 +12,7 @@ export interface ClassicPayload extends ClassicView {
   layout: ClassicLineDef[];
   keywords: string[];
   typed: Record<string, number>;
-  check: { ok: boolean; diffs: string[] } | null; // against the exported sheet, only for the month it was exported on
+  check: { ok: boolean; diffs: string[]; source: string } | null; // against the exported sheet, only for the month it was exported on
 }
 
 async function setting<T>(db: Db, key: string, fallback: T): Promise<T> {
@@ -62,7 +62,7 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
 
   // acceptance check against the sheet's own Classic figures for the exported month
   let check: ClassicPayload["check"] = null;
-  const expected = await setting<{ month: string; layout: { name: string; column: string; section: string; budget: number; actual: number }[] } | null>(db, "classic_expected", null);
+  const expected = await setting<{ month: string; layout: { name: string; column: string; section: string; budget: number; actual: number }[]; source?: string } | null>(db, "classic_expected", null);
   if (expected && expected.month === month) {
     const diffs: string[] = [];
     for (const l of expected.layout) {
@@ -72,7 +72,7 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
       if (got.budget !== b) diffs.push(`${l.column} ${l.name} budget: app ${(got.budget / 100).toFixed(2)} vs sheet ${l.budget.toFixed(2)}`);
       if (got.actual !== a) diffs.push(`${l.column} ${l.name} actual: app ${(got.actual / 100).toFixed(2)} vs sheet ${l.actual.toFixed(2)}`);
     }
-    check = { ok: diffs.length === 0, diffs };
+    check = { ok: diffs.length === 0, diffs, source: expected.source ?? "the export that was imported" };
   }
   return { ...result, layout: ci.layout, keywords: ci.keywords, typed: ci.typed, check };
 }

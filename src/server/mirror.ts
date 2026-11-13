@@ -7,6 +7,7 @@
  * Settings keys: sheet_id (or SHEET_ID env), mirror_last (status), live_months.
  */
 import { eq, and, isNull, desc } from "drizzle-orm";
+import { parseClassic } from "../budget/parseExport.js";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { sheets, driveCopy, serviceAccount } from "./google.js";
@@ -241,6 +242,13 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
     if (vals.length) await sheets.batchUpdate(id, [{ range: `'Money moves'!A2:F${vals.length + 1}`, values: vals }]);
     moves = vals.length;
   }
+
+  // 3b. read the Classic tab back so the Classic screen checks itself against the sheet's live figures, not the import's
+  try {
+    const grid = await sheets.get(id, "'Classic'!A1:Z200", true);
+    const c = parseClassic(grid);
+    if (c.layout.length) await putSetting(db, "classic_expected", { month: c.month, layout: c.layout, totals: c.totals ?? {}, source: `sheet read at ${new Date().toISOString()}` });
+  } catch (e) { warnings.push(`Couldn't read the Classic tab for the check: ${(e as Error).message}`); }
 
   // 4. optional Drive backup
   let backup: string | undefined;

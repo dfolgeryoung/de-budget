@@ -154,7 +154,7 @@ export function Classic({ refreshKey, openEntry }: { refreshKey: number; openEnt
       </div>
       {data.check && (
         <div className="rounded-xl p-3 text-sm" style={{ background: data.check.ok ? "var(--green-bg)" : "var(--red-bg)", color: data.check.ok ? "var(--green-text)" : "var(--red-text)" }}>
-          {data.check.ok ? <>✓ Every line matches the spreadsheet's Classic tab to the cent.</> : <><div className="font-semibold">Differs from the spreadsheet's Classic tab (expected while testing entries here):</div><ul className="list-disc ml-5">{data.check.diffs.slice(0, 8).map((d) => <li key={d}>{d}</li>)}{data.check.diffs.length > 8 && <li>… and {data.check.diffs.length - 8} more</li>}</ul></>}
+          {data.check.ok ? <>✓ Every line matches the spreadsheet's Classic tab to the cent ({data.check.source.replace(/T(\d\d:\d\d).*/, " $1")}).</> : <><div className="font-semibold">Differs from the spreadsheet's Classic tab as of {data.check.source.replace(/T(\d\d:\d\d).*/, " $1")} — the sheet is refreshed by each mirror; the app's Classic rules (Settings › Categories) aren't written to the sheet, so a rule changed here shows as a difference until the sheet's mapping table is changed too:</div><ul className="list-disc ml-5">{data.check.diffs.slice(0, 8).map((d) => <li key={d}>{d}</li>)}{data.check.diffs.length > 8 && <li>… and {data.check.diffs.length - 8} more</li>}</ul></>}
         </div>
       )}
       <div className="grid gap-4 items-start" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "./api";
 
 export function Settings() {
   const [busy, setBusy] = useState(false);
@@ -43,7 +44,44 @@ export function Settings() {
           </p>
         )}
       </section>
+      <MirrorSection />
       <p className="text-xs" style={{ color: "var(--muted)" }}>Accounts, categories, goals, recurring bills, tags, notifications and the rest arrive in later phases.</p>
     </div>
+  );
+}
+
+interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; backup?: string; warnings: string[]; by?: string } | null }
+
+/** The bridge to the spreadsheet: which sheet, when it last ran, and buttons to run it now. */
+function MirrorSection() {
+  const [st, setSt] = useState<MirrorStatus | null>(null);
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const load = () => api<MirrorStatus>("/mirror/status").then(setSt).catch(() => setSt(null));
+  useEffect(() => { load(); }, []);
+  async function run(label: string, fn: () => Promise<string>) {
+    setBusy(label); setMsg(null);
+    try { setMsg({ ok: true, text: await fn() }); load(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setBusy(null); }
+  }
+  const when = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return (
+    <section className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <h2 className="font-bold">Sheet mirror</h2>
+      <p className="text-sm" style={{ color: "var(--muted)" }}>
+        Every night the app writes its entries into the spreadsheet's Ledger, each month's Assigned column and the Money moves log, and picks up anything typed into the sheet's Inbox tab, so the sheet keeps working while you both use the app.
+      </p>
+      {st && !st.configured && <p className="text-sm rounded-lg p-3" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)" }}>Not connected yet: the Google service account key (GOOGLE_SERVICE_ACCOUNT_B64) isn't set on the server.</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <input value={link} onChange={(e) => setLink(e.target.value)} placeholder={st?.sheetId ? `Spreadsheet: …${st.sheetId.slice(-8)} (paste a link to change)` : "Paste the spreadsheet link"} className="fld rounded-lg px-3 text-sm flex-1 min-w-[16rem] outline-none" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }} />
+        <button disabled={!link.trim() || !!busy} onClick={() => run("save", async () => { const r = await api<{ sheetId: string }>("/mirror/sheet", { method: "PUT", json: { sheetId: link.trim() } }); setLink(""); return `Spreadsheet saved (…${r.sheetId.slice(-8)}).`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, background: "var(--navy)", color: "var(--navy-text)" }}>Save</button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("mirror", async () => { const r = await api<NonNullable<MirrorStatus["last"]>>("/mirror/run", { method: "POST" }); return `Wrote ${r.ledgerRows} ledger rows, Assigned for ${r.months.join(", ") || "no months"}, ${r.moves} money moves.${r.warnings.length ? " " + r.warnings.join(" · ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "mirror" ? "Writing…" : "Mirror to the sheet now"}</button>
+        <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("inbox", async () => { const r = await api<{ added: number; skipped: string[] }>("/mirror/inbox", { method: "POST" }); return `Picked up ${r.added} Inbox ${r.added === 1 ? "entry" : "entries"}.${r.skipped.length ? " Skipped: " + r.skipped.join("; ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "inbox" ? "Reading…" : "Pick up the Inbox now"}</button>
+      </div>
+      {st?.last && <p className="text-xs" style={{ color: "var(--muted)" }}>Last mirrored {when(st.last.at)}: {st.last.ledgerRows} ledger rows, {st.last.months.join(", ") || "no month tabs"}, {st.last.moves} money moves{st.last.backup ? ", backup copied to Drive" : ""}.{st.last.warnings.length ? ` Warnings: ${st.last.warnings.join(" · ")}` : ""}</p>}
+      {msg && <p className="text-sm rounded-lg p-3" style={{ background: msg.ok ? "var(--green-bg)" : "var(--red-bg)", color: msg.ok ? "var(--green-text)" : "var(--red-text)" }}>{msg.text}</p>}
+    </section>
   );
 }

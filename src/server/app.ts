@@ -9,6 +9,7 @@ import { monthPayload } from "./month.js";
 import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
+import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
@@ -166,8 +167,34 @@ app.put("/classic/:month", async (c) => {
 app.get("/cron/daily", async (c) => {
   const auth = c.req.header("authorization");
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) return c.text("forbidden", 403);
-  // phase 5: create due recurring entries; phase 3: mirror; phase 6: summaries
-  return c.json({ ok: true, ran: [] });
+  const ran: Record<string, unknown> = {};
+  if (mirrorConfigured() && (await sheetId(db))) {
+    const system = (await db.select().from(t.users))[0]?.id ?? "system";
+    try { ran.inbox = await pickUpInbox(db, system); } catch (e) { ran.inboxError = (e as Error).message; }
+    try { ran.mirror = await mirrorToSheet(db, system, { backup: true }); } catch (e) { ran.mirrorError = (e as Error).message; }
+  }
+  // phase 5: create due recurring entries; phase 6: summaries
+  return c.json({ ok: true, ran });
+});
+
+// ---------- sheet mirror (manual runs from Settings) ----------
+app.get("/mirror/status", async (c) => {
+  const last = await db.select().from(t.settings).where(eq(t.settings.key, "mirror_last"));
+  return c.json({ configured: mirrorConfigured(), sheetId: await sheetId(db), last: last[0]?.value ?? null, backupFolder: !!process.env.BACKUP_FOLDER_ID });
+});
+app.put("/mirror/sheet", async (c) => {
+  const p = z.object({ sheetId: z.string().trim().min(10) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Paste the spreadsheet's id or link" }, 400);
+  const m = p.data.sheetId.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const idv = m ? m[1]! : p.data.sheetId;
+  await db.insert(t.settings).values({ key: "sheet_id", value: idv as unknown as object, updatedAt: new Date() }).onConflictDoUpdate({ target: t.settings.key, set: { value: idv as unknown as object, updatedAt: new Date() } });
+  return c.json({ ok: true, sheetId: idv });
+});
+app.post("/mirror/run", async (c) => {
+  try { return c.json(await mirrorToSheet(db, c.get("user").id, { backup: false })); } catch (e) { return c.json({ error: (e as Error).message }, 500); }
+});
+app.post("/mirror/inbox", async (c) => {
+  try { return c.json(await pickUpInbox(db, c.get("user").id)); } catch (e) { return c.json({ error: (e as Error).message }, 500); }
 });
 
 export type App = typeof app;

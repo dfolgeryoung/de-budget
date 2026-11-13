@@ -47,3 +47,14 @@ npm test                 # budget engine tests
 
 `npm run build` on Vercel runs `drizzle-kit migrate` against `DATABASE_URL` before building the client,
 so a schema change is live as soon as its deploy finishes. Locally use `npm run build:local`.
+
+## Sheet mirror (phase 3)
+
+1. Google Cloud console → create (or reuse) a project → **APIs & Services → Enable APIs**: enable *Google Sheets API* and *Google Drive API*.
+2. **IAM & Admin → Service accounts → Create**: any name (e.g. `de-budget-mirror`), no roles needed. Open it → **Keys → Add key → JSON**; a key file downloads.
+3. Share the budget spreadsheet (and the backup folder, if you want backups) with the service account's email (`…@….iam.gserviceaccount.com`) as **Editor**.
+4. Base64 the key file in one line and put it in Vercel as `GOOGLE_SERVICE_ACCOUNT_B64`:
+   `base64 -i key.json | tr -d '\n'` (macOS). Add `SHEET_ID` (from the sheet's URL) or paste the link under Settings › Sheet mirror. Optional: `BACKUP_FOLDER_ID`.
+5. Redeploy. Settings › Sheet mirror shows "connected"; "Mirror to the sheet now" writes immediately; the daily cron (07:00 UTC) mirrors, picks up the Inbox and takes a backup.
+
+Turn off the sheet's own Inbox-moving script once the app picks the Inbox up, or entries will land twice.

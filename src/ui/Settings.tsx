@@ -42,7 +42,7 @@ export function Settings() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
       <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
-        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
+        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["appearance", "Appearance & profile"], ["backup", "Backup & restore"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />
       <CategoriesSection />
@@ -70,6 +70,8 @@ export function Settings() {
       </section>
       <div id="s-mirror" />
       <MirrorSection />
+      <div id="s-backup" />
+      <BackupSection />
       <p className="text-xs" style={{ color: "var(--muted)" }}>Tags management, tracked amounts, payees, notifications and the home-screen layout arrive in later phases.</p>
     </div>
   );
@@ -78,6 +80,75 @@ export function Settings() {
 interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; reconciled?: number; backup?: string; warnings: string[]; by?: string } | null }
 
 /** The bridge to the spreadsheet: which sheet, when it last ran, and buttons to run it now. */
+function BackupSection() {
+  const [st, setSt] = useState<{ last: { at: string; name: string; bytes: number } | null; driveConfigured: boolean } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, setPending] = useState<{ snapshot: unknown; takenAt: string; counts: Record<string, number>; file: string } | null>(null);
+  const [confirm, setConfirm] = useState("");
+  const load = () => api<typeof st>("/backup/status").then(setSt).catch(() => setSt(null));
+  useEffect(() => { load(); }, []);
+  const when = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const phone = usePhone();
+  async function pick(f: File) {
+    setMsg(null); setPending(null); setConfirm("");
+    let snapshot: unknown;
+    try { snapshot = JSON.parse(await f.text()); } catch { return setMsg({ ok: false, text: "That file isn't valid JSON" }); }
+    const d = await api<{ ok: true; takenAt: string; counts: Record<string, number> } | { ok: false; error: string }>("/backup/inspect", { method: "POST", json: snapshot });
+    if (!d.ok) return setMsg({ ok: false, text: d.error });
+    setPending({ snapshot, takenAt: d.takenAt, counts: d.counts, file: f.name });
+  }
+  async function restore() {
+    if (!pending) return;
+    setBusy("restore"); setMsg(null);
+    try {
+      const r = await api<{ restored: Record<string, number> }>("/backup/restore", { method: "POST", json: { confirm, snapshot: pending.snapshot } });
+      setMsg({ ok: true, text: `Restored ${r.restored.transactions} entries, ${r.restored.categories} categories, ${r.restored.accounts} accounts from the backup taken ${when(pending.takenAt)}. Reloading…` });
+      setPending(null); setConfirm("");
+      setTimeout(() => location.reload(), 1500);
+    } catch (e) { setMsg({ ok: false, text: `Restore failed: ${(e as Error).message}. Nothing is lost — run it again with the same file to finish.` }); } finally { setBusy(null); }
+  }
+  async function runNow() {
+    setBusy("run"); setMsg(null);
+    try { const r = await api<{ uploaded?: string; bytes?: number; pruned?: number; skipped?: string }>("/backup/run", { method: "POST" }); setMsg(r.skipped ? { ok: false, text: r.skipped } : { ok: true, text: `Saved ${r.uploaded} (${Math.round((r.bytes ?? 0) / 1024)} KB) to Drive; pruned ${r.pruned} old file${r.pruned === 1 ? "" : "s"}` }); load(); }
+    catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setBusy(null); }
+  }
+  const btn = "rounded-lg px-4 text-[13px] font-semibold tb-btn";
+  return (
+    <section aria-labelledby="backup-h" className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div><h2 id="backup-h" className="font-bold">Backup & restore</h2>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>A backup is one file with everything in the app: accounts, categories and goals, every entry, assigned amounts, recurring bills, tracked amounts, settings and both of your preferences. Each night a copy goes to the Drive backup folder, keeping the last 30 nights and the first backup of every month; the spreadsheet copies the mirror makes are pruned the same way.</p></div>
+      <div className="flex flex-wrap gap-2">
+        <a href="/api/backup.json" download className={btn + " inline-flex items-center"} style={{ height: 38, background: "var(--navy)", color: "var(--navy-text)" }}>Download a backup</a>
+        <a href="/api/backup.csv" download className={btn + " inline-flex items-center"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>Ledger as CSV</a>
+        <button onClick={runNow} disabled={busy !== null || !st?.driveConfigured} title={st?.driveConfigured ? undefined : "Set BACKUP_FOLDER_ID and the service account on the server first"} className={btn + " disabled:opacity-50"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "run" ? "Backing up…" : "Back up to Drive now"}</button>
+      </div>
+      <p className="text-xs m-0" style={{ color: "var(--muted)" }}>
+        {st === null ? "" : !st.driveConfigured ? "Nightly Drive backups are off: the backup folder isn't configured on the server." : st.last ? `Last Drive backup ${when(st.last.at)} · ${st.last.name} · ${Math.round(st.last.bytes / 1024)} KB` : "No Drive backup yet — the first one lands tonight, or press the button."}
+      </p>
+      <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
+        <div className="text-[13px] font-semibold">Restore from a backup</div>
+        <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Replaces everything in the app with the contents of a backup file. Take a fresh backup first if there's anything here you might want back.</p>
+        <label className="inline-flex items-center gap-3 text-sm font-semibold rounded-lg px-4 cursor-pointer w-fit" style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)", opacity: busy ? 0.6 : 1 }}>
+          Choose a backup file
+          <input type="file" accept=".json,application/json" className="hidden" disabled={busy !== null} onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+        </label>
+        {pending && (
+          <div className="rounded-lg p-3 flex flex-col gap-2 text-sm" style={{ background: "var(--yellow-row)", border: "1px solid var(--yellow-bg)" }}>
+            <div><strong>{pending.file}</strong> — taken {when(pending.takenAt)}: {pending.counts.transactions} entries, {pending.counts.categories} categories, {pending.counts.accounts} accounts, {pending.counts.recurring} recurring bills, {pending.counts.trackedAmounts} tracked amounts.</div>
+            <div className={phone ? "flex flex-col gap-2" : "flex items-center gap-2"}>
+              <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Type RESTORE to confirm" className="fld rounded-md px-3 text-[13px] outline-none" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)", width: phone ? "100%" : 220 }} />
+              <button onClick={restore} disabled={confirm !== "RESTORE" || busy !== null} className={btn + " disabled:opacity-50"} style={{ height: 36, background: "var(--red)", color: "#fff" }}>{busy === "restore" ? "Restoring…" : "Replace everything with this backup"}</button>
+              <button onClick={() => { setPending(null); setConfirm(""); }} className="text-xs underline" style={{ color: "var(--muted)" }}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+      {msg && <p className="text-sm rounded-lg p-3 m-0" style={{ background: msg.ok ? "var(--green-bg)" : "var(--red-bg)", color: msg.ok ? "var(--green-text)" : "var(--red-text)" }}>{msg.text}</p>}
+    </section>
+  );
+}
+
 function MirrorSection() {
   const [st, setSt] = useState<MirrorStatus | null>(null);
   const [link, setLink] = useState("");

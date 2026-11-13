@@ -67,3 +67,10 @@ Push (web push, works on iPhone once the app is added to the home screen):
 3. Each person turns push on per device under Settings › Notifications ("Send a test" confirms it).
 
 Email (optional, for the Monday summary): create a Resend account, verify a sending domain (or use their onboarding sender for tests), add `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `D&E Budget <budget@yourdomain.com>`), redeploy, then tick "Email me the Monday summary".
+
+## Backups
+
+- **Settings › Backup & restore › Download a backup** saves one JSON file with every table; **Ledger as CSV** is the same ledger for a spreadsheet.
+- **Nightly Drive backup**: with `BACKUP_FOLDER_ID` and the service account set (see Sheet mirror), the daily cron uploads `de-budget-backup-YYYY-MM-DD.json` to that folder and prunes to the last 30 nights plus the first backup of each month. The nightly spreadsheet copies (`DE Budget backup YYYY-MM-DD`) are pruned by the same rule. "Back up to Drive now" runs the same step on demand.
+- **Restore**: choose a backup file in the same section, check the summary, type RESTORE. It replaces the database contents table by table (the Neon HTTP driver has no transactions); if it stops part way, run it again with the same file.
+- Also worth doing: in the Neon console raise the project's history retention as far as the plan allows, and keep the GitHub, Neon, Vercel and Google logins in a password manager with recovery set up.

@@ -67,3 +67,36 @@ export async function driveCopy(fileId: string, name: string, folderId: string):
   if (!r.ok) throw new Error(`Drive copy ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return ((await r.json()) as { id: string }).id;
 }
+
+/** Upload a small file (multipart) into a Drive folder; returns the new file id. */
+export async function driveUpload(name: string, mime: string, body: string, folderId: string): Promise<string> {
+  const token = await accessToken();
+  const boundary = "de-budget-" + Date.now().toString(36);
+  const meta = JSON.stringify({ name, parents: [folderId] });
+  const payload = `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\ncontent-type: ${mime}\r\n\r\n${body}\r\n--${boundary}--`;
+  const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": `multipart/related; boundary=${boundary}` }, body: payload });
+  if (!r.ok) throw new Error(`Drive upload ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return ((await r.json()) as { id: string }).id;
+}
+
+/** Files in a folder whose names start with `prefix` (not trashed). */
+export async function driveList(folderId: string, prefix: string): Promise<{ id: string; name: string; createdTime: string }[]> {
+  const token = await accessToken();
+  const q = encodeURIComponent(`'${folderId}' in parents and name contains '${prefix.replace(/'/g, "\\'")}' and trashed = false`);
+  const out: { id: string; name: string; createdTime: string }[] = [];
+  let pageToken = "";
+  do {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,createdTime)&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken ? `&pageToken=${pageToken}` : ""}`, { headers: { authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error(`Drive list ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    const j = (await r.json()) as { nextPageToken?: string; files: { id: string; name: string; createdTime: string }[] };
+    out.push(...j.files.filter((f) => f.name.startsWith(prefix)));
+    pageToken = j.nextPageToken ?? "";
+  } while (pageToken);
+  return out;
+}
+
+export async function driveDelete(fileId: string): Promise<void> {
+  const token = await accessToken();
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, { method: "DELETE", headers: { authorization: `Bearer ${token}` } });
+  if (!r.ok && r.status !== 404) throw new Error(`Drive delete ${r.status}: ${(await r.text()).slice(0, 300)}`);
+}

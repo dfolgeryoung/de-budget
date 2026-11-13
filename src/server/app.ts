@@ -10,6 +10,7 @@ import { entrySchema, listTransactions, createTransaction, updateTransaction, de
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
+import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
@@ -278,6 +279,26 @@ app.put("/tracked/:id", async (c) => {
 });
 app.delete("/tracked/:id", async (c) => c.json({ result: await deleteTracked(db, c.req.param("id")) }));
 
+// ---------- backups ----------
+app.get("/backup/status", async (c) => c.json({ last: await lastBackup(db), driveConfigured: !!process.env.BACKUP_FOLDER_ID && !!process.env.GOOGLE_SERVICE_ACCOUNT_B64 }));
+app.get("/backup.json", async (c) => {
+  const snap = await exportSnapshot(db);
+  c.header("content-disposition", `attachment; filename="de-budget-backup-${today()}.json"`);
+  return c.json(snap);
+});
+app.get("/backup.csv", async (c) => {
+  c.header("content-type", "text/csv; charset=utf-8");
+  c.header("content-disposition", `attachment; filename="de-budget-ledger-${today()}.csv"`);
+  return c.body(await exportLedgerCsv(db));
+});
+app.post("/backup/inspect", async (c) => c.json(describeSnapshot(await c.req.json())));
+app.post("/backup/restore", async (c) => {
+  const body = await c.req.json() as { confirm?: string; snapshot?: unknown };
+  if (body.confirm !== "RESTORE") return c.json({ error: "Type RESTORE to confirm" }, 400);
+  try { return c.json(await restoreSnapshot(db, body.snapshot)); } catch (e) { return c.json({ error: (e as Error).message }, 400); }
+});
+app.post("/backup/run", async (c) => { try { return c.json(await nightlyBackup(db, today())); } catch (e) { return c.json({ error: (e as Error).message }, 500); } });
+
 // ---------- reports ----------
 app.get("/reports/:month", async (c) => {
   const m = validMonth(c.req.param("month"));
@@ -311,6 +332,7 @@ app.get("/cron/daily", async (c) => {
     if (r.created.length) for (const u of await db.select().from(t.users)) if (u.pushRecurring) await pushToUser(db, u.id, { title: `${r.created.length} ${r.created.length === 1 ? "bill" : "bills"} to confirm`, body: r.created.join(", "), url: "/#home", tag: "recurring" });
   } catch (e) { ran.recurringError = (e as Error).message; }
   if (new Date(today()).getUTCDay() === 1) { try { ran.weekly = await weeklySummary(db, today()); } catch (e) { ran.weeklyError = (e as Error).message; } }
+  try { ran.backup = await nightlyBackup(db, today()); } catch (e) { ran.backupError = (e as Error).message; }
   return c.json({ ok: true, ran });
 });
 

@@ -8,7 +8,7 @@ import { computeMonth, incomeToRTA, type BudgetInput } from "./engine.js";
 import type { Cents } from "./money.js";
 
 export interface ReportCategoryMeta { id: string; name: string; emoji: string | null; kind: string; hidden?: boolean }
-export interface ReportRecurring { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null }
+export interface ReportRecurring { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; accountId?: string }
 export interface ReportsInput {
   input: BudgetInput;
   categories: ReportCategoryMeta[];
@@ -26,7 +26,7 @@ export interface ExplainBox { title: string; rows: ExplainRow[]; note?: string }
 export interface CategorySpend { id: string; name: string; emoji: string | null; spent: Cents; budget: Cents; assigned: Cents; carriedIn: Cents; available: Cents }
 export interface OwnerSpend { who: "shared" | "D" | "E"; spent: Cents; share: number; parts?: { name: string; amount: Cents }[] }
 export interface Mover { id: string; name: string; emoji: string | null; now: Cents; before: Cents; delta: Cents }
-export interface BillToCome { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; overdue: boolean }
+export interface BillToCome { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; accountId: string | null; overdue: boolean }
 export interface ProjectedCategory { id: string; name: string; emoji: string | null; spent: Cents; billsLeft: Cents; avgDaily: number; projected: Cents; available: Cents; budget: Cents; over: Cents; isBills: boolean; how: "bills" | "daily" | "one-off" }
 
 export interface ReportsView {
@@ -148,8 +148,8 @@ export function computeReports(r: ReportsInput): ReportsView {
   const payeesThisMonth = new Set(input.transactions.filter((x) => monthOf(x.date) === month && x.confirmed !== false).map((x) => (x.payee ?? "").trim().toLowerCase()));
   const billsToCome: BillToCome[] = r.recurring
     .filter((b) => !payeesThisMonth.has(b.payee.trim().toLowerCase()))
-    .map((b) => ({ id: b.id, payee: b.payee, amount: Math.abs(b.amount), day: b.day, categoryId: b.categoryId, overdue: isCurrent && b.day !== null && b.day < daysElapsed }))
-    .sort((a, b) => (a.day ?? 99) - (b.day ?? 99));
+    .map((b) => ({ id: b.id, payee: b.payee, amount: Math.abs(b.amount), day: b.day, categoryId: b.categoryId, accountId: b.accountId ?? null, overdue: isCurrent && b.day !== null && b.day < daysElapsed }))
+    .sort((a, b) => (a.day ?? 99) - (b.day ?? 99) || a.payee.localeCompare(b.payee));
   const billsTotal = sum(billsToCome.map((b) => b.amount));
 
   // on pace: spent so far + bills still to come + everyday spending at its average daily rate for the days left

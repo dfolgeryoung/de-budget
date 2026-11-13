@@ -11,6 +11,7 @@ import type { MonthKey } from "../budget/dates.js";
 
 export interface ReportsPayload extends ReportsView {
   people: { D: string; E: string };
+  accountNames: Record<string, string>;
 }
 
 export async function reportsPayload(db: Db, month: MonthKey, today: string, me = ""): Promise<ReportsPayload> {
@@ -32,9 +33,11 @@ export async function reportsPayload(db: Db, month: MonthKey, today: string, me 
     categories: cats.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: c.kind, hidden: c.hiddenInBudget })),
     recurring: recurring
       .filter((r) => !r.everyDays || dueDatesInMonth({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month).length)
-      .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId })),
+      .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId, accountId: r.accountId })),
     month, today,
   });
   const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;
-  return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") } };
+  const accountNames: Record<string, string> = {};
+  for (const a of await db.select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)) accountNames[a.id] = a.name;
+  return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, accountNames };
 }

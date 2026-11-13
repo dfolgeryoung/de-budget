@@ -14,6 +14,7 @@ export function MonthPanel({ data, onPick, onRelease }: { data: MonthPayload; on
   const under = cats.filter((c) => c.status === "underfunded" || c.status === "not_enough").sort((a, b) => b.short - a.short);
   const funded = cats.filter((c) => c.goal && c.status === "funded").length;
   const bills = data.billsToCome;
+  const acctName = new Map(data.accounts.map((a) => [a.id, a.name]));
   const name = (id: string) => `${data.categories[id]?.emoji ?? ""} ${data.categories[id]?.name ?? ""}`.trim();
   const row = (l: string, val: string, strong = false, color?: string) => (
     <div className="flex justify-between text-[13px]" style={strong ? { fontWeight: 700 } : undefined}><span style={{ color: strong ? undefined : "var(--muted)" }}>{l}</span><span style={{ color }}>{val}</span></div>
@@ -61,7 +62,11 @@ export function MonthPanel({ data, onPick, onRelease }: { data: MonthPayload; on
       <Box title="Bills still to come">
         {bills.length === 0 && <span className="text-[13px]" style={{ color: "var(--muted)" }}>All recurring bills are in.</span>}
         {bills.slice(0, 8).map((b) => (
-          <div key={b.id} className="flex justify-between text-[13px]"><span style={{ color: "var(--text-2)" }}>{b.day ? `${ord(b.day)} · ` : ""}{b.payee}</span><span className="font-semibold">{formatMoney(-b.amount)}</span></div>
+          <div key={b.id} className="grid items-center gap-2 text-[13px]" style={{ gridTemplateColumns: "34px minmax(0,1fr) auto" }}>
+            <span className="tabular-nums" style={{ color: "var(--muted)" }}>{b.day ? ord(b.day) : "—"}</span>
+            <span className="min-w-0 truncate" style={{ color: "var(--text-2)" }}>{b.payee}<span style={{ color: "var(--faint)" }}> · {acctName.get(b.accountId) ?? ""}</span></span>
+            <span className="font-semibold tabular-nums">{formatMoney(-b.amount)}</span>
+          </div>
         ))}
         {bills.length > 0 && <div className="pt-1" style={{ borderTop: "1px solid var(--border-soft)" }}>{row("Total", formatMoney(-bills.reduce((s, b) => s + b.amount, 0)), true)}</div>}
       </Box>

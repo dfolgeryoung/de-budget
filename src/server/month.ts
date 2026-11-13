@@ -50,7 +50,7 @@ export interface MonthPayload {
   categories: Record<string, { name: string; emoji: string | null; kind: string; hidden: boolean }>;
   accounts: { id: string; name: string; type: string; onBudget: boolean; balance: number }[];
   daysOfBuffer: number;
-  billsToCome: { id: string; payee: string; amount: number; day: number | null; categoryId: string | null }[];
+  billsToCome: { id: string; payee: string; amount: number; day: number | null; categoryId: string | null; accountId: string }[];
   check: { ok: boolean; diffs: string[]; source: string | null } | null;
 }
 
@@ -68,7 +68,8 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
   const txnsThisMonth = input.transactions.filter((x) => x.date.slice(0, 7) === month.slice(0, 7));
   const payeesThisMonth = new Set((await db.select({ id: t.transactions.id, payee: t.transactions.payee }).from(t.transactions)).filter((r) => txnsThisMonth.some((x) => x.id === r.id)).map((r) => (r.payee ?? "").toLowerCase()));
   const billsToCome = recurring.filter((r) => !payeesThisMonth.has(r.payee.toLowerCase()) && (!r.everyDays || dueDatesInMonth({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month).length))
-    .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId }));
+    .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId, accountId: r.accountId }))
+    .sort((a, b) => (a.day ?? 99) - (b.day ?? 99) || a.payee.localeCompare(b.payee));
 
   // acceptance check against the sheet's own figures, when an import recorded them
   const expRow = await db.select().from(t.settings).where(eq(t.settings.key, "sheet_expected"));

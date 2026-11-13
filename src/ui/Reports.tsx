@@ -188,7 +188,13 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     <Card title="Bills still to come">
       {tm.billsToCome.length === 0 ? <p className="text-sm m-0" style={{ color: "var(--muted)" }}>Every recurring bill is in for {mon(d.month)}.</p> : (
         <div className="flex flex-col gap-1 text-[13px]">
-          {tm.billsToCome.map((b) => <div key={b.id} className="flex justify-between gap-3"><span className="truncate" style={{ color: b.overdue ? "var(--yellow-text)" : undefined }}>{b.day ? `${mon(d.month)} ${b.day}` : "Sometime"} · {b.payee}{b.overdue ? " · not entered yet" : ""}</span><span className="tabular-nums shrink-0">{formatMoney(b.amount)}</span></div>)}
+          {tm.billsToCome.map((b) => (
+            <div key={b.id + (b.day ?? "")} className="grid items-center gap-3" style={{ gridTemplateColumns: "52px minmax(0,1fr) auto" }}>
+              <span className="font-semibold tabular-nums" style={{ color: b.overdue ? "var(--yellow-text)" : "var(--muted)" }}>{b.day ? `${mon(d.month)} ${b.day}` : "Any day"}</span>
+              <span className="min-w-0 flex flex-col"><span className="truncate">{b.payee}{b.overdue ? <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "var(--yellow-text)" }}>not entered yet</span> : null}</span><span className="truncate text-[11px]" style={{ color: "var(--faint)" }}>{b.accountId ? d.accountNames[b.accountId] ?? "" : ""}</span></span>
+              <span className="tabular-nums shrink-0">{formatMoney(b.amount)}</span>
+            </div>
+          ))}
           <div className="flex justify-between gap-3 font-bold pt-1.5 mt-0.5" style={{ borderTop: "1px solid var(--border-soft)" }}><span>Total</span><span className="tabular-nums">{formatMoney(tm.billsTotal)}</span></div>
         </div>
       )}

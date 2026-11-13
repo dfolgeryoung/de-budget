@@ -1,4 +1,5 @@
 /** Load the budget from the database, run the engine, and shape the month for the client. */
+import { dueDatesInMonth, dayStillToCome } from "../budget/recurringDates.js";
 import { eq, isNull } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
@@ -66,7 +67,8 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
   const recurring = await db.select().from(t.recurring).where(eq(t.recurring.active, true));
   const txnsThisMonth = input.transactions.filter((x) => x.date.slice(0, 7) === month.slice(0, 7));
   const payeesThisMonth = new Set((await db.select({ id: t.transactions.id, payee: t.transactions.payee }).from(t.transactions)).filter((r) => txnsThisMonth.some((x) => x.id === r.id)).map((r) => (r.payee ?? "").toLowerCase()));
-  const billsToCome = recurring.filter((r) => !payeesThisMonth.has(r.payee.toLowerCase())).map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.dayOfMonth, categoryId: r.categoryId }));
+  const billsToCome = recurring.filter((r) => !payeesThisMonth.has(r.payee.toLowerCase()) && (!r.everyDays || dueDatesInMonth({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month).length))
+    .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId }));
 
   // acceptance check against the sheet's own figures, when an import recorded them
   const expRow = await db.select().from(t.settings).where(eq(t.settings.key, "sheet_expected"));

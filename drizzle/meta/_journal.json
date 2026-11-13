@@ -43,6 +43,13 @@
       "when": 1794567860554,
       "tag": "0005_text_size",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794571128908,
+      "tag": "0006_recurring_interval",
+      "breakpoints": true
     }
   ]
 }

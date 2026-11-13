@@ -13,6 +13,7 @@ import { reportsPayload } from "./reports.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending } from "./recurring.js";
+import { nextDue, dueDatesInMonth } from "../budget/recurringDates.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
 import { pushConfigured, emailConfigured, pushToUser, vapidPublic } from "./notify.js";
 import webpush from "web-push";
@@ -314,8 +315,8 @@ app.get("/cron/daily", async (c) => {
 });
 
 // ---------- recurring bills and pending entries ----------
-const recurringBody = z.object({ payee: z.string().trim().min(1).max(80), accountId: z.string(), categoryId: z.string().nullable(), memo: z.string().max(200).nullable(), amount: z.number().int(), dayOfMonth: z.number().int().min(1).max(31).nullable(), active: z.boolean() });
-app.get("/recurring", async (c) => c.json((await db.select().from(t.recurring)).sort((a, b) => (a.dayOfMonth ?? 99) - (b.dayOfMonth ?? 99) || a.sortOrder - b.sortOrder).map((r) => ({ id: r.id, payee: r.payee, accountId: r.accountId, categoryId: r.categoryId, memo: r.memo, amount: r.amount, dayOfMonth: r.dayOfMonth, active: r.active, lastCreatedMonth: r.lastCreatedMonth }))));
+const recurringBody = z.object({ payee: z.string().trim().min(1).max(80), accountId: z.string(), categoryId: z.string().nullable(), memo: z.string().max(200).nullable(), amount: z.number().int(), dayOfMonth: z.number().int().min(1).max(31).nullable(), everyDays: z.number().int().min(1).max(366).nullable().optional(), anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), active: z.boolean() });
+app.get("/recurring", async (c) => c.json((await db.select().from(t.recurring)).sort((a, b) => (a.dayOfMonth ?? 99) - (b.dayOfMonth ?? 99) || a.sortOrder - b.sortOrder).map((r) => ({ id: r.id, payee: r.payee, accountId: r.accountId, categoryId: r.categoryId, memo: r.memo, amount: r.amount, dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate, active: r.active, lastCreatedMonth: r.lastCreatedMonth, nextDue: nextDue({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, today()) }))));
 app.post("/recurring", async (c) => {
   const p = recurringBody.safeParse(await c.req.json());
   if (!p.success) return c.json({ error: p.error.issues.map((i) => i.message).join("; ") }, 400);
@@ -327,7 +328,7 @@ app.put("/recurring/:id", async (c) => {
   const p = recurringBody.partial().safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await db.update(t.recurring).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.recurring.id, c.req.param("id")));
-  if (p.data.dayOfMonth !== undefined) await realignPending(db, c.req.param("id"), today());
+  if (p.data.dayOfMonth !== undefined || p.data.everyDays !== undefined || p.data.anchorDate !== undefined) await realignPending(db, c.req.param("id"), today());
   return c.json({ ok: true });
 });
 app.delete("/recurring/:id", async (c) => { await db.delete(t.recurring).where(eq(t.recurring.id, c.req.param("id"))); return c.json({ ok: true }); });

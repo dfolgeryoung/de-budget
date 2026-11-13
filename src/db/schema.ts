@@ -201,8 +201,11 @@ export const recurring = pgTable("recurring", {
   memo: text("memo"),
   amount: bigint("amount", { mode: "number" }).notNull(), // cents, signed
   dayOfMonth: integer("day_of_month"), // null = "sometime this month"
+  everyDays: integer("every_days"), // set = repeats every N days from anchorDate instead of monthly (a 4-week subscription, a bi-weekly paycheck)
+  anchorDate: date("anchor_date"), // a date it was charged; later charges are anchorDate + k × everyDays
   active: boolean("active").notNull().default(true),
   lastCreatedMonth: date("last_created_month"),
+  lastCreatedDate: date("last_created_date"), // interval bills: the last due date that was landed
   sortOrder: integer("sort_order").notNull().default(0),
   ...audit,
 });

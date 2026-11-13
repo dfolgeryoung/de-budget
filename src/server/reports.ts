@@ -4,6 +4,7 @@ import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { computeReports, type ReportsView } from "../budget/reports.js";
 import { loadBudget } from "./month.js";
+import { dueDatesInMonth, dayStillToCome } from "../budget/recurringDates.js";
 import type { MonthKey } from "../budget/dates.js";
 
 export interface ReportsPayload extends ReportsView {
@@ -19,7 +20,9 @@ export async function reportsPayload(db: Db, month: MonthKey, today: string): Pr
   const view = computeReports({
     input,
     categories: cats.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: c.kind, hidden: c.hiddenInBudget })),
-    recurring: recurring.map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.dayOfMonth, categoryId: r.categoryId })),
+    recurring: recurring
+      .filter((r) => !r.everyDays || dueDatesInMonth({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month).length)
+      .map((r) => ({ id: r.id, payee: r.payee, amount: r.amount, day: r.everyDays ? dayStillToCome({ dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate }, month, today) : r.dayOfMonth, categoryId: r.categoryId })),
     month, today,
   });
   const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;

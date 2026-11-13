@@ -28,7 +28,7 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl">
+    <div className="flex flex-col gap-4 max-w-4xl min-w-0">
       <div>
         <h1 className="text-xl font-bold">Settings</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
@@ -106,10 +106,11 @@ interface SettingsAll {
   categories: { id: string; name: string; emoji: string | null; groupId: string; kind: string; hidden: boolean; classicBucket: string | null; classicRule: "none" | "by_account" | "utilities_split" | "phone_split" | "drive_split"; favourite: number | null }[];
   classicLines: { name: string; column: string; section: string }[];
 }
-const sec = "rounded-xl p-5 flex flex-col gap-3";
+const sec = "rounded-xl p-4 md:p-5 flex flex-col gap-3 min-w-0";
 const secStyle = { background: "var(--card)", border: "1px solid var(--border)" } as const;
 const fieldStyle = { height: 32, border: "1px solid var(--field)", background: "var(--card)", color: "var(--text)" } as const;
 const refreshApp = () => dispatchEvent(new Event("lists-changed"));
+const usePhone = () => typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
 
 /** A text field that saves on blur or Enter and shows nothing while unchanged. */
 function TextCell({ value, onSave, className = "", placeholder, width }: { value: string; onSave: (v: string) => Promise<void> | void; className?: string; placeholder?: string; width?: number | string }) {
@@ -133,6 +134,7 @@ function AccountsSection() {
   const [n, setN] = useState({ name: "", type: "checking" as "checking" | "savings" | "credit_card", owner: "shared" as "D" | "E" | "shared", onBudget: true, startingBalance: "", startingDate: new Date().toISOString().slice(0, 10) });
   const put = async (id: string, body: object) => { try { await api(`/accounts/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   const grid = "minmax(140px,1.4fr) 130px 118px 90px 110px 70px";
+  const phone = usePhone();
   return (
     <section id="s-accounts" className={sec} style={secStyle}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -141,7 +143,7 @@ function AccountsSection() {
       </div>
       {adding && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg p-3" style={{ background: "var(--card-alt)", border: "1px solid var(--border-soft)" }}>
-          <input value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} placeholder="Account name" className="fld rounded-md px-2 text-[13px] outline-none w-44" style={fieldStyle} />
+          <input value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} placeholder="Account name" className="fld rounded-md px-2 text-[13px] outline-none w-full md:w-44" style={fieldStyle} />
           <Select ariaLabel="Type" value={n.type} onChange={(v) => setN({ ...n, type: (v as typeof n.type) ?? "checking" })} options={[{ value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "credit_card", label: "Credit card" }]} style={{ height: 32 }} />
           <Select ariaLabel="Owner" value={n.owner} onChange={(v) => setN({ ...n, owner: (v as typeof n.owner) ?? "shared" })} options={[{ value: "D", label: "David" }, { value: "E", label: "Elizabeth" }, { value: "shared", label: "Shared" }]} style={{ height: 32 }} />
           <label className="flex items-center gap-1.5 text-[13px]"><input type="checkbox" checked={n.onBudget} onChange={(e) => setN({ ...n, onBudget: e.target.checked })} /> On budget</label>
@@ -150,7 +152,23 @@ function AccountsSection() {
           <button onClick={async () => { try { await api("/accounts", { method: "POST", json: { ...n, startingBalance: parseMoney(n.startingBalance) ?? 0 } }); setAdding(false); setN({ ...n, name: "", startingBalance: "" }); load(); refreshApp(); toast(`Added ${n.name}`); } catch (e) { toast((e as Error).message); } }} disabled={!n.name.trim()} className="rounded-md px-3 h-8 text-[13px] font-semibold disabled:opacity-50" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>Add</button>
         </div>
       )}
-      {!all ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : (
+      {!all ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : phone ? (
+        <div className="flex flex-col gap-2">
+          {all.accounts.map((a) => (
+            <div key={a.id} className="rounded-lg p-3 flex flex-col gap-2" style={{ border: "1px solid var(--border)", opacity: a.closed ? 0.55 : 1 }}>
+              <div className="flex items-center gap-2"><TextCell value={a.name} onSave={(name) => put(a.id, { name })} className="flex-1" /><span className="text-[13px] shrink-0" title={`starting ${a.startingDate}`}>{formatMoney(a.startingBalance)}</span></div>
+              <div className="flex gap-2">
+                <Select ariaLabel="Type" value={a.type} onChange={(v) => v && put(a.id, { type: v })} options={[{ value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "credit_card", label: "Credit card" }]} style={{ height: 32 }} className="flex-1" />
+                <Select ariaLabel="Owner" value={a.owner} onChange={(v) => v && put(a.id, { owner: v })} options={[{ value: "D", label: "David" }, { value: "E", label: "Elizabeth" }, { value: "shared", label: "Shared" }]} style={{ height: 32 }} className="flex-1" />
+              </div>
+              <div className="flex gap-4 text-[13px]">
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={a.onBudget} onChange={(e) => put(a.id, { onBudget: e.target.checked })} /> On budget</label>
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={a.closed} onChange={(e) => put(a.id, { closed: e.target.checked })} /> Closed</label>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
         <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
           <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 700 }}><span>Account</span><span>Type</span><span>Owner</span><span>On budget</span><span className="text-right">Starting</span><span>Closed</span></div>
           {all.accounts.map((a) => (
@@ -178,6 +196,7 @@ function CategoriesSection() {
   const RULES: Record<string, string> = { by_account: "By account", utilities_split: "Utilities split", phone_split: "Phone split", drive_split: "Drive split" };
   const colName = (c: string) => (c === "D" ? "David" : c === "E" ? "Elizabeth" : "Shared");
   const grid = "44px minmax(150px,1.5fr) 150px 190px 100px 44px 56px";
+  const phone = usePhone();
   if (!all) return <section id="s-categories" className={sec} style={secStyle}><h2 className="font-bold">Categories & groups</h2><p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p></section>;
   const lineOptions = [
     ...all.classicLines.filter((l, i, arr) => arr.findIndex((x) => x.name === l.name) === i).map((l) => ({ value: `line:${l.name}`, label: l.name, group: "Classic line", hint: l.name === "Fun Money" ? "by owner" : colName(l.column) })),
@@ -214,6 +233,38 @@ function CategoriesSection() {
           <button onClick={async () => { if (!newGroup.trim()) return; await api("/groups", { method: "POST", json: { name: newGroup.trim() } }); setNewGroup(null); load(); refreshApp(); }} className="rounded-md px-3 h-8 text-[13px] font-semibold" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>Add group</button>
         </div>
       )}
+      {phone ? (
+        <div className="flex flex-col gap-3">
+          {all.groups.map((g) => {
+            const rows = all.categories.filter((c) => c.groupId === g.id && (showHidden || !c.hidden));
+            if (!rows.length && g.system) return null;
+            return (
+              <div key={g.id} className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                <div className="px-3 py-2 text-[13px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{g.name}{g.system && <span className="text-[11px] font-normal" style={{ color: "var(--muted)" }}> · system</span>}</div>
+                {rows.map((c) => (
+                  <div key={c.id} className="flex flex-col gap-2 px-3 py-2.5" style={{ borderTop: "1px solid var(--border-soft)", opacity: c.hidden ? 0.55 : 1 }}>
+                    <div className="flex items-center gap-2">
+                      <TextCell value={c.emoji ?? ""} onSave={(emoji) => put(c.id, { emoji })} className="text-center" placeholder="🙂" width={44} />
+                      <TextCell value={c.name} onSave={(name) => put(c.id, { name })} className="flex-1" />
+                      <button aria-label={c.favourite !== null ? "Unpin" : "Pin"} aria-pressed={c.favourite !== null} onClick={() => put(c.id, { favourite: c.favourite === null })} className="text-xl leading-none px-1" style={{ color: c.favourite !== null ? "var(--yellow)" : "var(--faint)" }}>{c.favourite !== null ? "★" : "☆"}</button>
+                    </div>
+                    {c.kind === "normal" && (
+                      <div className="flex gap-2">
+                        <Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 32 }} className="flex-1 min-w-0" />
+                        <Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 32 }} className="flex-1 min-w-0" menuWidth={240} />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-[12px]" style={{ color: "var(--muted)" }}>
+                      <span>Classic: {classicColumn(c)}</span>
+                      <label className="flex items-center gap-1.5"><input type="checkbox" checked={c.hidden} onChange={(e) => put(c.id, { hiddenInBudget: e.target.checked })} /> Hidden</label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
         <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 760 }}><span /><span>Category</span><span>Group</span><span>Classic line / rule</span><span>Column</span><span title="Pinned to the top of pickers (per person)">Pin</span><span>Hidden</span></div>
         {all.groups.map((g) => {
@@ -239,6 +290,7 @@ function CategoriesSection() {
           );
         })}
       </div>
+      )}
       <p className="text-xs" style={{ color: "var(--muted)" }}>Hidden categories stay out of the budget and auto-assign but keep their history. Classic rules: By account (payer's Fun Money, shared account → Misc shared), Utilities split (Power / Utilities by payer), Phone split (Internet keyword → Internet, else Cell Phone), Drive split (by payer).</p>
     </section>
   );

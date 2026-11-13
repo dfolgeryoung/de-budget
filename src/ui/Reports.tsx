@@ -31,6 +31,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const [tab, setTab] = useState<Tab>("month");
   const [explain, setExplain] = useState<ExplainBox | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [hot, setHot] = useState<string | null>(null); // legend row under the pointer → its donut slice stands out
   const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
   useEffect(() => { setErr(null); api<ReportsPayload>(month ? `/reports/${month}` : "/reports").then(setData).catch((e) => setErr(String(e))); }, [month, refreshKey]);
 
@@ -126,40 +127,48 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const shared = tm.byOwner.find((o) => o.who === "shared");
   const sharedParts = shared?.parts ?? [];
   const shade = (i: number, n: number) => `color-mix(in srgb, var(--classic-shared) ${Math.round(100 - (i / Math.max(1, n)) * 60)}%, var(--card))`;
-  const slices: { key: string; amount: number; color: string }[] = [
-    ...(sharedParts.length ? sharedParts.map((p, i) => ({ key: "s:" + p.name, amount: p.amount, color: shade(i, sharedParts.length) })) : shared?.spent ? [{ key: "s:all", amount: shared.spent, color: WHO.shared.color }] : []),
-    ...tm.byOwner.filter((o) => o.who !== "shared" && o.spent > 0).map((o) => ({ key: o.who, amount: o.spent, color: WHO[o.who].color })),
+  const slices: { key: string; label: string; amount: number; color: string }[] = [
+    ...(sharedParts.length ? sharedParts.map((p, i) => ({ key: "s:" + p.name, label: p.name, amount: p.amount, color: shade(i, sharedParts.length) })) : shared?.spent ? [{ key: "shared", label: "Shared", amount: shared.spent, color: WHO.shared.color }] : []),
+    ...tm.byOwner.filter((o) => o.who !== "shared" && o.spent > 0).map((o) => ({ key: o.who, label: people[o.who], amount: o.spent, color: WHO[o.who].color })),
   ];
+  // hovering the Shared row lights every shared sub-slice
+  const sliceHot = (k: string) => hot === k || (hot === "shared" && k.startsWith("s:"));
   const donut = (() => {
-    const r = 34, cx = 44, cy = 44, C = 2 * Math.PI * r;
+    const size = ph ? 220 : 260, sw = size * 0.17, r = size / 2 - sw / 2 - 6, cx = size / 2, cy = size / 2, C = 2 * Math.PI * r;
     let off = 0;
+    const hotSlice = hot === "shared" && shared ? { label: "Shared", amount: shared.spent } : slices.find((sl) => sl.key === hot);
     return (
-      <svg aria-hidden="true" width={88} height={88} viewBox="0 0 88 88" className="shrink-0">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={14} />
+      <svg aria-hidden="true" width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={sw} />
         {total > 0 && slices.map((sl) => {
-          const len = (sl.amount / total) * C, gap = slices.length > 1 ? 1.5 : 0;
-          const el = <circle key={sl.key} cx={cx} cy={cy} r={r} fill="none" stroke={sl.color} strokeWidth={14} strokeDasharray={`${Math.max(0, len - gap)} ${C - Math.max(0, len - gap)}`} strokeDashoffset={-off} transform={`rotate(-90 ${cx} ${cy})`} />;
+          const len = (sl.amount / total) * C, gap = slices.length > 1 ? 2 : 0;
+          const dim = hot !== null && !sliceHot(sl.key);
+          const el = <circle key={sl.key} cx={cx} cy={cy} r={r} fill="none" stroke={sl.color} strokeWidth={sliceHot(sl.key) ? sw + 8 : sw} opacity={dim ? 0.3 : 1} strokeDasharray={`${Math.max(0, len - gap)} ${C - Math.max(0, len - gap)}`} strokeDashoffset={-off} transform={`rotate(-90 ${cx} ${cy})`} style={{ transition: "opacity 150ms, stroke-width 150ms" }} />;
           off += len; return el;
         })}
+        <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--muted)" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>{hotSlice ? hotSlice.label.toUpperCase() : "SPENT"}</text>
+        <text x={cx} y={cy + 16} textAnchor="middle" fill="var(--text)" style={{ fontSize: 22, fontWeight: 700 }}>{money(hotSlice ? hotSlice.amount : total, true)}</text>
+        {hotSlice && total > 0 && <text x={cx} y={cy + 34} textAnchor="middle" fill="var(--muted)" style={{ fontSize: 12 }}>{Math.round((hotSlice.amount / total) * 100)}%</text>}
       </svg>
     );
   })();
-  const Row = ({ color, label, amount, sub, bold }: { color: string; label: string; amount: number; sub?: boolean; bold?: boolean }) => (
-    <div className="grid items-center gap-2" style={{ gridTemplateColumns: "10px minmax(0,1fr) auto 38px", paddingLeft: sub ? 14 : 0 }}>
+  const Row = ({ k, color, label, amount, sub, bold }: { k: string; color: string; label: string; amount: number; sub?: boolean; bold?: boolean }) => (
+    <div onMouseEnter={() => setHot(k)} onMouseLeave={() => setHot(null)} onTouchStart={() => setHot(hot === k ? null : k)} className="grid items-center gap-2 rounded-md -mx-1 px-1" style={{ gridTemplateColumns: "10px minmax(0,1fr) auto 38px", paddingLeft: sub ? 14 : 4, minHeight: 24, background: hot === k ? "var(--selected)" : undefined, opacity: hot !== null && hot !== k && !(k === "shared" && hot.startsWith("s:")) ? 0.55 : 1, transition: "opacity 150ms" }}>
       <span className={sub ? "rounded-sm" : "rounded-full"} style={{ width: 10, height: 10, background: color }} /><span className={"truncate" + (sub ? " text-[12px]" : "")} style={sub ? { color: "var(--text-2)" } : undefined}>{label}</span><span className={(bold ? "font-semibold " : "") + "tabular-nums" + (sub ? " text-[12px]" : "")}>{money(amount, ph)}</span><span className="text-right" style={{ color: "var(--muted)" }}>{total ? Math.round((amount / total) * 100) : 0}%</span>
     </div>
   );
   const whoCard = (
-    <Card title={ph ? "Whose spending" : `Shared vs ${people.D} vs ${people.E}`} sub="by Classic line" box={tm.explain.who}>
-      <div className="flex items-start gap-4">
+    <Card title={ph ? "Whose spending" : `Shared vs ${people.D} vs ${people.E}`} sub="by Classic line · hover a row" box={tm.explain.who}>
+      <div className="flex flex-col items-center gap-3">
         {donut}
-        <div className="flex-1 flex flex-col gap-1 text-[13px] min-w-0">
-          {tm.byOwner.map((o) => (
-            <Fragment key={o.who}>
-              <Row color={WHO[o.who].color} label={people[o.who]} amount={o.spent} bold />
-              {o.who === "shared" && sharedParts.map((p, i) => <Row key={p.name} color={shade(i, sharedParts.length)} label={p.name} amount={p.amount} sub />)}
-            </Fragment>
-          ))}
+        <div className={"w-full grid gap-x-6 gap-y-0.5 text-[13px]" + (ph ? "" : " grid-cols-2")}>
+          <div className="flex flex-col gap-0.5">
+            {shared && <Row k="shared" color={WHO.shared.color} label={people.shared} amount={shared.spent} bold />}
+            {sharedParts.map((p, i) => <Row key={p.name} k={"s:" + p.name} color={shade(i, sharedParts.length)} label={p.name} amount={p.amount} sub />)}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {tm.byOwner.filter((o) => o.who !== "shared").map((o) => <Row key={o.who} k={o.who} color={WHO[o.who].color} label={people[o.who]} amount={o.spent} bold />)}
+          </div>
         </div>
       </div>
     </Card>

@@ -254,7 +254,7 @@ function AppearanceSection() {
       <h2 className="font-bold">Appearance & profile <span className="text-xs font-normal" style={{ color: "var(--muted)" }}>· per person</span></h2>
       {!me ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px]">
-          <label className="flex items-center gap-2">Avatar <TextCell value={me.avatarEmoji ?? "🙂"} onSave={(avatarEmoji) => save({ avatarEmoji })} className="text-center text-lg" width={52} /></label>
+          <span className="flex items-center gap-2">Avatar <span className="text-xs" style={{ color: "var(--muted)" }}>— click your picture at the top of the rail (or on More on the phone) to change it</span></span>
           <label className="flex items-center gap-2">Theme <Select ariaLabel="Theme" value={me.appearance ?? "system"} onChange={(v) => save({ appearance: v ?? "system" })} options={[{ value: "system", label: "Match the device" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} style={{ height: 32 }} /></label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={me.showBars ?? true} onChange={(e) => save({ showBars: e.target.checked })} /> Show progress bars by default</label>
         </div>

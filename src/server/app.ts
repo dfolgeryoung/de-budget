@@ -42,11 +42,11 @@ app.get("/me", async (c) => {
   const initial = order.indexOf(u.email.toLowerCase()) === 1 ? "E" : "D";
   await db.insert(t.users).values({ id: u.id, email: u.email, displayName: u.name, initial }).onConflictDoNothing();
   const row = (await db.select().from(t.users).where(eq(t.users.id, u.id)))[0];
-  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂" });
+  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null });
 });
 
 app.put("/me", async (c) => {
-  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional() }).safeParse(await c.req.json());
+  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await db.update(t.users).set({ ...p.data, updatedAt: new Date() }).where(eq(t.users.id, c.get("user").id));
   return c.json({ ok: true });

@@ -8,6 +8,7 @@ import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
 import { Classic } from "./Classic";
+import { Avatar, ProfilePicker } from "./ProfilePicker";
 import { NavIcon } from "./icons";
 
 const screens = [
@@ -21,7 +22,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string };
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null };
 
 export function Shell({ me }: { me: Me }) {
   return (
@@ -35,6 +36,7 @@ function ShellInner({ me }: { me: Me }) {
   const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
   const [screen, setScreen] = useState<string>(location.hash.slice(1) || (isPhone ? "home" : "budget"));
   const [lists, setLists] = useState<Lists | null>(null);
+  const [picker, setPicker] = useState(false);
   const [draft, setDraft] = useState<EntryDraft | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [account, setAccount] = useState<string | null>(null);
@@ -63,7 +65,7 @@ function ShellInner({ me }: { me: Me }) {
         style={{ background: "var(--rail)", color: "var(--rail-text)" }}
       >
         <div className="flex items-center gap-2 px-2 pb-4 pt-1">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</div>
+          <button aria-label="Change profile picture" title="Choose an emoji or upload a picture" onClick={() => setPicker(true)} className="rail-link rounded-lg"><Avatar emoji={me.avatarEmoji} url={me.avatarUrl} /></button>
           <div className="min-w-0">
             <div className="font-bold text-white truncate">{me.name}</div>
             <div className="text-xs opacity-70">D&amp;E Budget</div>
@@ -96,7 +98,7 @@ function ShellInner({ me }: { me: Me }) {
           <>
             {isPhone && (
               <div className="flex items-center gap-3 rounded-xl p-4 mb-4" style={{ background: "var(--rail)", color: "#fff" }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)" }}>{me.avatarEmoji ?? "🙂"}</div>
+                <button aria-label="Change profile picture" onClick={() => setPicker(true)}><Avatar emoji={me.avatarEmoji} url={me.avatarUrl} size={48} radius={12} /></button>
                 <div className="min-w-0"><div className="font-bold truncate">{me.name}</div><div className="text-xs opacity-75 truncate">{me.email}</div></div>
               </div>
             )}
@@ -115,6 +117,7 @@ function ShellInner({ me }: { me: Me }) {
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
+      {picker && <ProfilePicker me={me} onClose={() => setPicker(false)} />}
       {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} onDeleted={() => setRefreshKey((k) => k + 1)} />}
 
       {/* Phone bottom bar */}

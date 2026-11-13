@@ -249,6 +249,26 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           </button>
         </div>
 
+        {/* toolbar: the desktop's actions as icon pills */}
+        <div className="no-bar flex items-center gap-2 px-3 overflow-x-auto">
+          {[
+            { label: "Category", title: "Add a category", on: () => setAddOpen(true), icon: <svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> },
+            { label: "Undo", title: "Undo the last move", on: undo, icon: <svg {...ic}><polyline points="9 14 4 9 9 4" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg> },
+            { label: "Redo", title: "Redo", on: redo, icon: <svg {...ic}><polyline points="15 14 20 9 15 4" /><path d="M20 9H10a6 6 0 0 0 0 12h3" /></svg> },
+            { label: "Moves", title: "Recent moves", on: async () => setRecent(recent ? null : await api(`/moves/${data.month}`)), active: !!recent, icon: <svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg> },
+            { label: bars ? "Bars" : "Bars", title: bars ? "Hide progress bars" : "Show progress bars", on: () => setBars((b) => !b), active: bars, icon: <svg {...ic}><rect x="3" y="6" width="18" height="4" rx="2" /><rect x="3" y="14" width="11" height="4" rx="2" /></svg> },
+          ].map((b) => (
+            <button key={b.label} title={b.title} aria-pressed={b.active} onClick={b.on} className={"pill" + (b.active ? " on" : "")} style={{ padding: "0 12px", gap: 6, background: b.active ? "var(--navy)" : "var(--card)", color: b.active ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${b.active ? "var(--navy)" : "var(--field)"}` }}>{b.icon}<span className="tb">{b.label}</span></button>
+          ))}
+        </div>
+        {recent && (
+          <div className="mx-3 rounded-xl px-3 py-2 text-xs flex flex-col gap-1" style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-2)" }}>
+            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent moves</div>
+            {recent.length === 0 && <span>No moves this month yet.</span>}
+            {recent.slice(0, 12).map((m) => <span key={m.id} style={{ textDecoration: m.undone ? "line-through" : undefined }}>{m.at.slice(5, 16).replace("T", " ")} · {formatMoney(m.amount)} {catName(m.fromCategoryId)} → {catName(m.toCategoryId)} <em style={{ color: "var(--muted)" }}>({m.how})</em></span>)}
+          </div>
+        )}
+        {addOpen && <Sheet onClose={() => setAddOpen(false)}><AddCategory data={data} onDone={() => { setAddOpen(false); load(); onChanged(); }} /></Sheet>}
         {data.check && !data.check.ok && (
           <div className="mx-3 rounded-xl p-3 text-xs" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>Differs from the spreadsheet in {data.check.diffs.length} place{data.check.diffs.length === 1 ? "" : "s"} (expected while testing entries here).</div>
         )}

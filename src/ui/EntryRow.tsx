@@ -5,7 +5,8 @@ import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
 import { emptyDraft, type EntryDraft } from "./EntryForm";
 import { Select, Popover, type SelectOption } from "./Select";
-import { ArrowRight, Calendar, Check } from "./icons";
+import { ArrowRight, Check } from "./icons";
+import { DatePicker } from "./DatePicker";
 
 /** Column template shared by the ledger header, ledger rows and the entry rows, so everything lines up. */
 export const LEDGER_COLS = "86px minmax(100px,1.2fr) minmax(84px,0.8fr) minmax(110px,1fr) minmax(50px,0.8fr) minmax(70px,0.7fr) 82px 82px 86px 28px";
@@ -129,10 +130,7 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
       <div className="grid items-center px-4 py-2" style={{ gridTemplateColumns: LEDGER_COLS, gap: 10 }}>
         <span className="fld flex items-center rounded-md min-w-0" style={fs}>
           <input aria-label="Date" value={dateText} onChange={(e) => setDateText(e.target.value)} onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") commitDate(); else enterSaves(e); }} className="w-full min-w-0 px-2.5 text-[13px] bg-transparent outline-none h-full" />
-          <label aria-label="Pick a date" title="Pick a date" className="relative w-7 h-full inline-flex items-center justify-center cursor-pointer shrink-0" style={{ color: "var(--muted)" }}>
-            <Calendar />
-            <input type="date" tabIndex={-1} value={d.date} onChange={(e) => { if (e.target.value) { set({ date: e.target.value }); setDateText(pretty(e.target.value)); } }} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-          </label>
+          <DatePicker value={d.date} today={todayISO()} onChange={(v) => { set({ date: v }); setDateText(pretty(v)); }} />
         </span>
 
         <span className="relative min-w-0">

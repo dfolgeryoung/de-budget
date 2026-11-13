@@ -50,7 +50,7 @@ export function Settings() {
   );
 }
 
-interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; backup?: string; warnings: string[]; by?: string } | null }
+interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; reconciled?: number; backup?: string; warnings: string[]; by?: string } | null }
 
 /** The bridge to the spreadsheet: which sheet, when it last ran, and buttons to run it now. */
 function MirrorSection() {
@@ -69,7 +69,7 @@ function MirrorSection() {
     <section className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
       <h2 className="font-bold">Sheet mirror</h2>
       <p className="text-sm" style={{ color: "var(--muted)" }}>
-        Every night the app writes its entries into the spreadsheet's Ledger, each month's Assigned column and the Money moves log, and picks up anything typed into the sheet's Inbox tab, so the sheet keeps working while you both use the app.
+        Every night the app first takes in anything new in the spreadsheet (rows typed into its Ledger, rows the AppSheet form left in the Inbox), then writes its own entries back into the Ledger, each month's Assigned column and the Money moves log. Entering in the sheet, in AppSheet or here all end up in the same place; if the same entry is edited in both, the app's version wins.
       </p>
       {st && !st.configured && <p className="text-sm rounded-lg p-3" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)" }}>Not connected yet: the Google service account key (GOOGLE_SERVICE_ACCOUNT_B64) isn't set on the server.</p>}
       <div className="flex flex-wrap items-center gap-2">
@@ -77,10 +77,10 @@ function MirrorSection() {
         <button disabled={!link.trim() || !!busy} onClick={() => run("save", async () => { const r = await api<{ sheetId: string }>("/mirror/sheet", { method: "PUT", json: { sheetId: link.trim() } }); setLink(""); return `Spreadsheet saved (…${r.sheetId.slice(-8)}).`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, background: "var(--navy)", color: "var(--navy-text)" }}>Save</button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("mirror", async () => { const r = await api<NonNullable<MirrorStatus["last"]>>("/mirror/run", { method: "POST" }); return `Wrote ${r.ledgerRows} ledger rows, Assigned for ${r.months.join(", ") || "no months"}, ${r.moves} money moves.${r.warnings.length ? " " + r.warnings.join(" · ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "mirror" ? "Writing…" : "Mirror to the sheet now"}</button>
+        <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("mirror", async () => { const r = await api<NonNullable<MirrorStatus["last"]>>("/mirror/run", { method: "POST" }); return `${r.reconciled ? `Took ${r.reconciled} new ${r.reconciled === 1 ? "entry" : "entries"} from the sheet. ` : ""}Wrote ${r.ledgerRows} ledger rows, Assigned for ${r.months.join(", ") || "no months"}, ${r.moves} money moves.${r.warnings.length ? " " + r.warnings.join(" · ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "mirror" ? "Writing…" : "Mirror to the sheet now"}</button>
         <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("inbox", async () => { const r = await api<{ added: number; skipped: string[] }>("/mirror/inbox", { method: "POST" }); return `Picked up ${r.added} Inbox ${r.added === 1 ? "entry" : "entries"}.${r.skipped.length ? " Skipped: " + r.skipped.join("; ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "inbox" ? "Reading…" : "Pick up the Inbox now"}</button>
       </div>
-      {st?.last && <p className="text-xs" style={{ color: "var(--muted)" }}>Last mirrored {when(st.last.at)}: {st.last.ledgerRows} ledger rows, {st.last.months.join(", ") || "no month tabs"}, {st.last.moves} money moves{st.last.backup ? ", backup copied to Drive" : ""}.{st.last.warnings.length ? ` Warnings: ${st.last.warnings.join(" · ")}` : ""}</p>}
+      {st?.last && <p className="text-xs" style={{ color: "var(--muted)" }}>Last mirrored {when(st.last.at)}: {st.last.reconciled ? `${st.last.reconciled} taken from the sheet, ` : ""}{st.last.ledgerRows} ledger rows, {st.last.months.join(", ") || "no month tabs"}, {st.last.moves} money moves{st.last.backup ? ", backup copied to Drive" : ""}.{st.last.warnings.length ? ` Warnings: ${st.last.warnings.join(" · ")}` : ""}</p>}
       {msg && <p className="text-sm rounded-lg p-3" style={{ background: msg.ok ? "var(--green-bg)" : "var(--red-bg)", color: msg.ok ? "var(--green-text)" : "var(--red-text)" }}>{msg.text}</p>}
     </section>
   );

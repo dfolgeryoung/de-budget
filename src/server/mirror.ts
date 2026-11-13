@@ -20,7 +20,7 @@ const tabName = (month: string) => `${MON[Number(month.slice(5, 7)) - 1]} ${mont
 const usDate = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}/${iso.slice(0, 4)}`;
 const dollars = (cents: number) => Math.round(cents) / 100;
 
-export interface MirrorResult { ledgerRows: number; months: string[]; moves: number; inboxAdded: number; backup?: string; warnings: string[]; at: string }
+export interface MirrorResult { ledgerRows: number; months: string[]; moves: number; inboxAdded: number; reconciled: number; backup?: string; warnings: string[]; at: string }
 
 async function setting<T>(db: Db, key: string): Promise<T | null> {
   const r = await db.select().from(t.settings).where(eq(t.settings.key, key));
@@ -40,9 +40,16 @@ export interface LedgerTxn { id: string; date: string; accountId: string; payee:
 
 /** Transactions as Ledger rows F..M: [hidden, date, account, payee, category, memo, outflow, inflow] — the sheet's own encoding. */
 export function encodeLedger(txns: LedgerTxn[], acct: Map<string, string>, cat: Map<string, string>): (string | number | boolean | null)[][] {
-  const out: (string | number | boolean | null)[][] = [];
+  return encodeLedgerGroups(txns, acct, cat).flatMap((g) => g.rows);
+}
+export type LedgerCell = string | number | boolean | null;
+/** The same, one group of rows per transaction (a split is its parent row plus its ↳ children). */
+export function encodeLedgerGroups(txns: LedgerTxn[], acct: Map<string, string>, cat: Map<string, string>): { txn: LedgerTxn; rows: LedgerCell[][] }[] {
+  const groups: { txn: LedgerTxn; rows: LedgerCell[][] }[] = [];
   const money = (amount: number): [number | null, number | null] => (amount < 0 ? [dollars(-amount), null] : amount > 0 ? [null, dollars(amount)] : [null, null]);
   for (const x of txns) {
+    const out: LedgerCell[][] = [];
+    groups.push({ txn: x, rows: out });
     const hidden = x.hidden ? true : null;
     const payee = x.payee ?? "";
     if (x.transferToAccountId) {
@@ -61,6 +68,61 @@ export function encodeLedger(txns: LedgerTxn[], acct: Map<string, string>, cat: 
     const [o, i] = money(x.amount);
     const c = x.lines[0]?.categoryId ? cat.get(x.lines[0].categoryId) ?? "" : "Ready to Assign";
     out.push([hidden, usDate(x.date), account, payee, c, x.memo ?? "", o, i]);
+  }
+  return groups;
+}
+
+/** A Ledger row as read back from the sheet (formatted values). */
+export type SheetLedgerRow = [hidden: string, date: string, account: string, payee: string, category: string, memo: string, outflow: string, inflow: string];
+export interface ParsedEntry { date: string; account: string; payee: string; memo: string; hidden: boolean; split: boolean; transferTo: string | null; amount: number; lines: { category: string; amount: number }[] }
+
+/** Read the sheet's Ledger rows back into entries (splits regrouped with their ↳ children). Rows without a date are skipped. */
+export function parseLedgerRows(rows: SheetLedgerRow[]): ParsedEntry[] {
+  const out: ParsedEntry[] = [];
+  const amt = (o: string, i: string) => Math.round(((num(i) ?? 0) - (num(o) ?? 0)) * 100);
+  for (let k = 0; k < rows.length; k++) {
+    const r = rows[k]!;
+    const date = dt(r[1]);
+    if (!date || (r[3] ?? "").startsWith("↳ ")) continue; // children are taken with their parent
+    const rawAccount = (r[2] ?? "").trim();
+    const split = / \(split\)$/i.test(rawAccount);
+    const account = rawAccount.replace(/ \(split\)$/i, "");
+    const category = (r[4] ?? "").trim();
+    const e: ParsedEntry = { date, account, payee: (r[3] ?? "").trim(), memo: (r[5] ?? "").trim(), hidden: (r[0] ?? "").trim().toUpperCase() === "TRUE", split, transferTo: null, amount: amt(r[6] ?? "", r[7] ?? ""), lines: [] };
+    if (/^transfer: /i.test(category)) {
+      // the sheet lists a transfer from its source; an inflow written on the target side reads as the reverse
+      e.transferTo = category.slice(10).trim();
+      if (e.amount > 0) { const target = e.account; e.account = e.transferTo; e.transferTo = target; e.amount = -e.amount; }
+    }
+    else if (category === "Split across categories") {
+      for (let j = k + 1; j < rows.length && (rows[j]![3] ?? "").startsWith("↳ ") && !(rows[j]![2] ?? "").trim(); j++) e.lines.push({ category: (rows[j]![4] ?? "").trim(), amount: amt(rows[j]![6] ?? "", rows[j]![7] ?? "") });
+    } else e.lines.push({ category, amount: e.amount });
+    out.push(e);
+  }
+  return out;
+}
+
+/** Entries that are in the sheet's Ledger but not in the app (a multiset difference on the sheet's own row encoding). */
+export function newInSheet(sheet: ParsedEntry[], appGroups: { rows: LedgerCell[][] }[], acctIdByName: Map<string, string>, catIdByName: Map<string, string>, acct: Map<string, string>, cat: Map<string, string>): { entry: ParsedEntry; key: string }[] {
+  const key = (rows: LedgerCell[][]) => JSON.stringify(rows.map((r) => r.map((v) => (v === "" ? null : v))));
+  const have = new Map<string, number>();
+  for (const g of appGroups) { const k = key(g.rows); have.set(k, (have.get(k) ?? 0) + 1); }
+  const out: { entry: ParsedEntry; key: string }[] = [];
+  for (const e of sheet) {
+    // encode the sheet entry the way the app would, so the two sides compare like for like
+    const accountId = acctIdByName.get(e.account.toLowerCase());
+    const asTxn: LedgerTxn = {
+      id: "", date: e.date, accountId: accountId ?? `?${e.account}`, payee: e.payee || null, memo: e.memo || null, amount: e.transferTo ? -Math.abs(e.amount) : e.amount,
+      transferToAccountId: e.transferTo ? acctIdByName.get(e.transferTo.toLowerCase()) ?? `?${e.transferTo}` : null, sharedFiftyFifty: e.split, hidden: e.hidden,
+      lines: e.transferTo ? [] : e.lines.map((l) => ({ categoryId: l.category.toLowerCase() === "ready to assign" ? null : catIdByName.get(l.category.toLowerCase()) ?? `?${l.category}`, amount: l.amount })),
+    };
+    const acct2 = new Map(acct); const cat2 = new Map(cat);
+    for (const id of [asTxn.accountId, asTxn.transferToAccountId]) if (id?.startsWith("?")) acct2.set(id, id.slice(1));
+    for (const l of asTxn.lines) if (l.categoryId?.startsWith("?")) cat2.set(l.categoryId, l.categoryId.slice(1));
+    const k = key(encodeLedgerGroups([asTxn], acct2, cat2)[0]!.rows);
+    const n = have.get(k) ?? 0;
+    if (n > 0) { have.set(k, n - 1); continue; }
+    out.push({ entry: e, key: k });
   }
   return out;
 }
@@ -84,6 +146,36 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
   const id = await sheetId(db);
   if (!id) throw new Error("No spreadsheet id: set SHEET_ID or save it under Settings › Sheet mirror");
   const warnings: string[] = [];
+
+  // 0. reconcile: entries typed into the sheet's Ledger since the last mirror become app entries first
+  let reconciled = 0;
+  try {
+    const back = await sheets.get(id, `Ledger!F${LEDGER_FIRST}:M${LEDGER_LAST}`, true);
+    const parsed = parseLedgerRows(back.map((r) => Array.from({ length: 8 }, (_, i) => r[i] ?? "") as SheetLedgerRow));
+    const [txns, lines, accts, cats] = await Promise.all([
+      db.select().from(t.transactions).where(isNull(t.transactions.deletedAt)), db.select().from(t.transactionLines), db.select().from(t.accounts), db.select().from(t.categories),
+    ]);
+    const byTxn = new Map<string, { categoryId: string | null; amount: number; sortOrder: number }[]>();
+    for (const l of lines) { const a = byTxn.get(l.transactionId) ?? []; a.push(l); byTxn.set(l.transactionId, a); }
+    const acct = new Map(accts.map((a) => [a.id, a.name])), cat = new Map(cats.map((c) => [c.id, c.name]));
+    const acctId = new Map(accts.map((a) => [a.name.trim().toLowerCase(), a.id])), catId = new Map(cats.map((c) => [c.name.trim().toLowerCase(), c.id]));
+    const appGroups = encodeLedgerGroups(txns.map((x) => ({ ...x, lines: (byTxn.get(x.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder) })), acct, cat);
+    for (const { entry: e } of newInSheet(parsed, appGroups, acctId, catId, acct, cat)) {
+      const accountId = acctId.get(e.account.toLowerCase());
+      if (!accountId) { warnings.push(`Sheet row ${usDate(e.date)} ${e.payee || "—"}: unknown account "${e.account}"`); continue; }
+      let transferToAccountId: string | null = null;
+      const ls: { categoryId: string | null; amount: number }[] = [];
+      if (e.transferTo) { transferToAccountId = acctId.get(e.transferTo.toLowerCase()) ?? null; if (!transferToAccountId) { warnings.push(`Sheet row ${usDate(e.date)}: unknown transfer target "${e.transferTo}"`); continue; } }
+      else {
+        let bad: string | null = null;
+        for (const l of e.lines) { const cid = l.category.toLowerCase() === "ready to assign" ? null : catId.get(l.category.toLowerCase()); if (cid === undefined) { bad = l.category; break; } ls.push({ categoryId: cid, amount: l.amount }); }
+        if (bad) { warnings.push(`Sheet row ${usDate(e.date)} ${e.payee || "—"}: unknown category "${bad}"`); continue; }
+      }
+      if (!e.amount && !ls.length) continue;
+      await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [] });
+      reconciled++;
+    }
+  } catch (e) { warnings.push(`Couldn't read the sheet's Ledger back (nothing was overwritten): ${(e as Error).message}`); throw e; }
 
   // 1. Ledger
   const rows = await ledgerRows(db);
@@ -133,7 +225,7 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
     catch (e) { warnings.push(`Backup failed: ${(e as Error).message}`); }
   }
 
-  const result: MirrorResult = { ledgerRows: fit.length, months, moves, inboxAdded: 0, backup, warnings, at: new Date().toISOString() };
+  const result: MirrorResult = { ledgerRows: fit.length, months, moves, inboxAdded: 0, reconciled, backup, warnings, at: new Date().toISOString() };
   await putSetting(db, "mirror_last", { ...result, by: me });
   return result;
 }

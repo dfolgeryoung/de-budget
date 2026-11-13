@@ -71,6 +71,7 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
   // acceptance check against the sheet's own figures, when an import recorded them
   const expRow = await db.select().from(t.settings).where(eq(t.settings.key, "sheet_expected"));
   const importAt = await db.select().from(t.settings).where(eq(t.settings.key, "import_at"));
+  const expSrc = await db.select().from(t.settings).where(eq(t.settings.key, "expected_source"));
   let check: MonthPayload["check"] = null;
   const expected = (expRow[0]?.value as Record<string, { rta: number; available: Record<string, number>; activity: Record<string, number>; accounts: Record<string, number> }> | undefined)?.[month];
   if (expected) {
@@ -87,7 +88,7 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
       const got = accountBalance(input, id, lastDay);
       if (got !== v) diffs.push(`${names.accounts.get(id)} ${money(got)} vs sheet ${money(v)}`);
     }
-    check = { ok: diffs.length === 0, diffs, source: (importAt[0]?.value as string | undefined) ?? null };
+    check = { ok: diffs.length === 0, diffs, source: (expSrc[0]?.value as string | undefined) ?? (importAt[0]?.value ? `export imported ${importAt[0].value as string}` : null) };
   }
 
   return {

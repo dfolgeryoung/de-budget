@@ -343,7 +343,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
 
       {data.check && (
         <div className="rounded-xl p-3 text-sm" style={{ background: data.check.ok ? "var(--green-bg)" : "var(--red-bg)", color: data.check.ok ? "var(--green-text)" : "var(--red-text)" }}>
-          {data.check.ok ? <>✓ Matches the spreadsheet to the cent — Ready to Assign, every category, every account (export imported {data.check.source?.slice(0, 16).replace("T", " ")}).</> : (
+          {data.check.ok ? <>✓ Matches the spreadsheet to the cent — Ready to Assign, every category, every account ({data.check.source?.replace(/T(\d\d:\d\d).*/, " $1")}).</> : (
             <><div className="font-semibold">Differs from the spreadsheet (expected while testing entries here):</div><ul className="list-disc ml-5">{data.check.diffs.slice(0, 8).map((d) => <li key={d}>{d}</li>)}{data.check.diffs.length > 8 && <li>… and {data.check.diffs.length - 8} more</li>}</ul></>
           )}
         </div>

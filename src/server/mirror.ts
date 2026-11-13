@@ -192,6 +192,7 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
   const tabs = new Set(await sheets.tabs(id));
   const live = (await setting<string[]>(db, "live_months")) ?? [];
   const cats = await db.select().from(t.categories);
+  const accts = await db.select().from(t.accounts);
   const asgs = await db.select().from(t.assignments);
   const months: string[] = [];
   for (const month of live) {
@@ -207,6 +208,26 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
     }
     await sheets.batchUpdate(id, data);
     months.push(tab);
+    // 2b. read the tab back: the sheet's own Activity / Available / Ready to Assign / account balances, freshly recomputed,
+    // become the figures the Budget screen checks itself against (until now those were frozen at import time)
+    try {
+      const grid = await sheets.get(id, `'${tab}'!A1:H200`);
+      const cell = (r: number, c: number) => (grid[r]?.[c] ?? "").toString().trim();
+      const cents = (v: string) => { const n = Number(v.replace(/[$,\s]/g, "")); return Number.isFinite(n) && v !== "" ? Math.round(n * 100) : null; };
+      const available: Record<string, number> = {}, activity: Record<string, number> = {}, accounts: Record<string, number> = {};
+      for (let r = 5; r < grid.length; r++) {
+        const c = cats.find((x) => x.name === cell(r, 3));
+        if (c) { const av = cents(cell(r, 7)), ac = cents(cell(r, 6)); if (av !== null) available[c.id] = av; if (ac !== null) activity[c.id] = ac; }
+        const a = cell(r, 0), v = cents(cell(r, 1));
+        if (a && v !== null) { const acc = accts.find((x) => x.name === a); if (acc) accounts[acc.id] = v; }
+      }
+      const rta = cents(cell(2, 3));
+      if (rta !== null && Object.keys(available).length) {
+        const all = (await setting<Record<string, unknown>>(db, "sheet_expected")) ?? {};
+        await putSetting(db, "sheet_expected", { ...all, [month]: { rta, available, activity, accounts } });
+        await putSetting(db, "expected_source", `sheet read at ${new Date().toISOString()}`);
+      }
+    } catch (e) { warnings.push(`Couldn't read "${tab}" back for the check: ${(e as Error).message}`); }
   }
 
   // 3. Money moves: rewrite the log from the app's moves (newest first), keeping the header row

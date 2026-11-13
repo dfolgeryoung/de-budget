@@ -128,7 +128,9 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const total = tm.byOwner.reduce((s, o) => s + o.spent, 0);
   const shared = tm.byOwner.find((o) => o.who === "shared");
   const sharedParts = shared?.parts ?? [];
-  const shade = (i: number, n: number) => `color-mix(in srgb, var(--classic-shared) ${Math.round(100 - (i / Math.max(1, n)) * 60)}%, var(--card))`;
+  // shared sub-slices: a family of blues and teals that stay "shared" at a glance but tell apart (biggest first)
+  const SHARED_HUES = ["#2456A6", "#4FA3E0", "#1A9C9C", "#7D87DC", "#8ECAE6", "#2F6F8F", "#A9B8F0"];
+  const shade = (i: number, _n: number) => SHARED_HUES[i % SHARED_HUES.length]!;
   const slices: { key: string; label: string; amount: number; color: string }[] = [
     ...(sharedParts.length ? sharedParts.map((p, i) => ({ key: "s:" + p.name, label: p.name, amount: p.amount, color: shade(i, sharedParts.length) })) : shared?.spent ? [{ key: "shared", label: "Shared", amount: shared.spent, color: WHO.shared.color }] : []),
     ...tm.byOwner.filter((o) => o.who !== "shared" && o.spent > 0).map((o) => ({ key: o.who, label: people[o.who], amount: o.spent, color: WHO[o.who].color })),

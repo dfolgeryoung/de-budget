@@ -90,11 +90,14 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   // ----- spend by category
   const cats = showAll ? tm.byCategory : tm.byCategory.slice(0, ph ? 6 : 9);
   const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
+  // each row is its own grid, so the amount column is sized once to the widest figure to keep every bar the same length
+  const colFor = (labels: string[]) => `${Math.max(3, ...labels.map((l) => l.length)) * 7.4 + 4}px`;
+  const catAmtCol = colFor(cats.map((c) => money(c.spent, ph)));
   const CatBar = ({ c }: { c: CategorySpend }) => {
     const w = Math.max(0, Math.min(100, (c.spent / scale) * 100)), tick = Math.min(100, (c.budget / scale) * 100);
     const over = c.budget > 0 && c.spent > c.budget;
     return (
-      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted — open its entries`} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? "112px minmax(0,1fr) auto" : "150px minmax(0,1fr) 80px", height: 28 }}>
+      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted — open its entries`} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? `112px minmax(0,1fr) ${catAmtCol}` : "150px minmax(0,1fr) 80px", height: 28 }}>
         <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}</span>
         <span className="relative block rounded" style={{ height: 16, background: "var(--track)" }}>
           <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${w}%`, background: over ? "var(--red)" : BAR, transition: "width 400ms ease-out" }} />
@@ -232,8 +235,9 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const projectionView = (() => {
     const short = pr.totalProjected - pr.totalBudgeted;
     const pmax = Math.max(1, ...pr.categories.map((c) => Math.max(c.projected, c.budget)));
+    const projAmtCol = colFor(pr.categories.map((c) => money(c.projected, ph)));
     const PRow = ({ c }: { c: ProjectedCategory }) => (
-      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? "112px minmax(0,1fr) auto" : "150px minmax(0,1fr) 90px 90px", height: 28 }} title={`${c.name}: spent ${formatMoney(c.spent)} so far${c.billsLeft ? `, bills to come ${formatMoney(c.billsLeft)}` : ""}${c.how === "daily" ? `, about ${formatMoney(Math.round(c.avgDaily))} a day` : c.how === "one-off" ? ", one-off (not extrapolated)" : ""} → ${formatMoney(c.projected)} of ${formatMoney(c.available)} available`}>
+      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} className={"row-hover grid items-center text-[13px] rounded-md text-left -mx-1 px-1 " + (ph ? "gap-2" : "gap-3")} style={{ gridTemplateColumns: ph ? `112px minmax(0,1fr) ${projAmtCol}` : "150px minmax(0,1fr) 90px 90px", height: 28 }} title={`${c.name}: spent ${formatMoney(c.spent)} so far${c.billsLeft ? `, bills to come ${formatMoney(c.billsLeft)}` : ""}${c.how === "daily" ? `, about ${formatMoney(Math.round(c.avgDaily))} a day` : c.how === "one-off" ? ", one-off (not extrapolated)" : ""} → ${formatMoney(c.projected)} of ${formatMoney(c.available)} available`}>
         <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}{c.how === "one-off" && !ph && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>one-off</span>}</span>
         <span className="relative block rounded" style={{ height: 16, background: "var(--track)" }}>
           <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${Math.min(100, (c.spent / pmax) * 100)}%`, background: c.over ? "var(--red)" : BAR }} />

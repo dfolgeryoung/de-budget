@@ -47,6 +47,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   // per-person settings
   homeLayout: jsonb("home_layout").$type<{ order: string[]; hidden: string[] }>(),
+  phoneNav: jsonb("phone_nav").$type<string[]>(), // the four screens on the phone's bottom bar (More is always last)
   appearance: text("appearance").notNull().default("system"), // system | light | dark
   showBars: boolean("show_bars").notNull().default(true),
   sounds: boolean("sounds").notNull().default(false),

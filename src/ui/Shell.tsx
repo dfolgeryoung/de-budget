@@ -5,7 +5,7 @@ import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
 import { draftFromRow } from "./EntryForm";
 import type { LedgerRow } from "../server/transactions";
 import type { EntryDraft } from "./EntryForm";
-import { api, type Lists } from "./api";
+import { PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, api, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
@@ -26,7 +26,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null };
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null; phoneNav?: string[] | null };
 
 export function Shell({ me }: { me: Me }) {
   return (
@@ -112,7 +112,7 @@ function ShellInner({ me }: { me: Me }) {
             )}
             {isPhone && (
               <div className="flex flex-col gap-2 mb-4">
-                {([["reports", "Reports"], ["tracked", "Tracked amounts"]] as const).map(([id, label]) => (
+                {PHONE_NAV_OPTIONS.filter(([id]) => !(me.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV).includes(id)).map(([id, label]) => (
                   <a key={id} href={`#${id}`} className="flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                     <span className="inline-flex items-center gap-2.5"><NavIcon id={id} size={20} />{label}</span><span style={{ color: "var(--muted)" }}>›</span>
                   </a>
@@ -143,17 +143,17 @@ function ShellInner({ me }: { me: Me }) {
         className="md:hidden fixed bottom-0 inset-x-0 flex justify-around items-start pt-2.5"
         style={{ background: "var(--card)", borderTop: "1px solid var(--border)", height: "calc(78px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {screens.filter((s) => !("desktopOnly" in s)).map((s) => (
-          <a
-            key={s.id}
-            href={`#${s.id}`}
-            className="flex flex-col items-center gap-[3px] text-[11px] w-16 text-center"
-            style={{ color: screen === s.id || (s.id === "more" && (screen === "reports" || screen === "tracked")) ? "var(--accent-text)" : "var(--muted)", fontWeight: screen === s.id || (s.id === "more" && (screen === "reports" || screen === "tracked")) ? 600 : 500 }}
-          >
-            <NavIcon id={s.id} />
-            {s.label}
-          </a>
-        ))}
+        {[...(me.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV), "more"].map((id) => {
+          const label = id === "more" ? "More" : PHONE_NAV_OPTIONS.find((o) => o[0] === id)?.[1].replace("Tracked amounts", "Tracked") ?? id;
+          const picked = me.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV;
+          const active = screen === id || (id === "more" && !picked.includes(screen));
+          return (
+            <a key={id} href={`#${id}`} className="flex flex-col items-center gap-[3px] text-[11px] w-16 text-center" style={{ color: active ? "var(--accent-text)" : "var(--muted)", fontWeight: active ? 600 : 500 }}>
+              <NavIcon id={id} />
+              {label}
+            </a>
+          );
+        })}
       </nav>
     </div>
   );

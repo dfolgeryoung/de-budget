@@ -42,3 +42,7 @@ export async function createTag(name: string): Promise<{ id: string; name: strin
   dispatchEvent(new Event("lists-changed"));
   return r.tag;
 }
+
+/** The phone's bottom bar: four screens of the person's choosing (Settings › Phone menu), then More. */
+export const PHONE_NAV_OPTIONS = [["home", "Home"], ["budget", "Budget"], ["transactions", "Transactions"], ["classic", "Classic"], ["reports", "Reports"], ["tracked", "Tracked amounts"]] as const;
+export const DEFAULT_PHONE_NAV = ["home", "budget", "transactions", "classic"];

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, categoryOptions, type Lists } from "./api";
+import { api, categoryOptions, PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, type Lists } from "./api";
 import { Select } from "./Select";
 import { EmojiButton } from "./EmojiPicker";
 import { formatMoney, parseMoney } from "../budget/money";
@@ -302,8 +302,16 @@ function CategoriesSection() {
 
 function AppearanceSection() {
   const toast = useToast();
-  const [me, setMe] = useState<{ avatarEmoji?: string; appearance?: string; showBars?: boolean } | null>(null);
-  useEffect(() => { api<{ avatarEmoji?: string; appearance?: string; showBars?: boolean }>("/me").then(setMe).catch(() => setMe(null)); }, []);
+  const [me, setMe] = useState<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null } | null>(null);
+  useEffect(() => { api<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null }>("/me").then(setMe).catch(() => setMe(null)); }, []);
+  const nav = me?.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV;
+  const setSlot = (i: number, id: string) => {
+    const next = [...nav];
+    const dup = next.indexOf(id);
+    if (dup >= 0 && dup !== i) next[dup] = next[i]!; // swap with the slot that already had it
+    next[i] = id;
+    save({ phoneNav: next });
+  };
   const save = async (body: object) => { try { await api("/me", { method: "PUT", json: body }); setMe((m) => ({ ...m, ...body })); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   return (
     <section id="s-appearance" className={sec} style={secStyle}>
@@ -313,6 +321,16 @@ function AppearanceSection() {
           <span className="flex items-center gap-2">Avatar <span className="text-xs" style={{ color: "var(--muted)" }}>— click your picture at the top of the rail (or on More on the phone) to change it</span></span>
           <label className="flex items-center gap-2">Theme <Select ariaLabel="Theme" value={me.appearance ?? "system"} onChange={(v) => save({ appearance: v ?? "system" })} options={[{ value: "system", label: "Match the device" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} style={{ height: 32 }} /></label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={me.showBars ?? true} onChange={(e) => save({ showBars: e.target.checked })} /> Show progress bars by default</label>
+        </div>
+      )}
+      {me && (
+        <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
+          <div className="text-[13px] font-semibold">Phone menu <span className="text-xs font-normal" style={{ color: "var(--muted)" }}>— the four screens on the bar at the bottom of the phone; everything else lives under More</span></div>
+          <div className="flex flex-wrap gap-2">
+            {nav.map((id, i) => <Select key={i} ariaLabel={`Slot ${i + 1}`} value={id} onChange={(v) => v && setSlot(i, v)} options={PHONE_NAV_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} style={{ height: 36, minWidth: 150 }} />)}
+            <span className="pill" style={{ background: "var(--group)", color: "var(--muted)" }}><span className="tb">More</span></span>
+            {me.phoneNav && <button onClick={() => save({ phoneNav: null })} className="text-xs underline" style={{ color: "var(--muted)" }}>Reset</button>}
+          </div>
         </div>
       )}
     </section>

@@ -5,6 +5,7 @@ import { weeklyAllowance } from "../budget/engine";
 import { useToast } from "./Toast";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
+import type { TrackedSummary } from "../server/tracked";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -13,12 +14,14 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
+  const [tracked, setTracked] = useState<TrackedSummary[]>([]);
   const [bump, setBump] = useState(0);
   const toast = useToast();
   useEffect(() => {
     api<MonthPayload>("/month").then(setM).catch(() => setM(null));
     api<LedgerRow[]>("/transactions?limit=4").then(setRecent).catch(() => setRecent([]));
     api<typeof pend>("/pending").then((p) => setPend(Array.isArray(p) ? p : [])).catch(() => setPend([]));
+    api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(r.tracked)).catch(() => setTracked([]));
   }, [refreshKey, bump]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
     try {
@@ -43,6 +46,9 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const card = "rounded-xl p-3.5 flex flex-col gap-2";
   const cs = { background: "var(--card)", border: "1px solid var(--border)" } as const;
   const week = fun ? weeklyAllowance(fun.available, todayISO()) : null;
+  // open tracked amounts that are mine or shared get a card each
+  const myTracked = tracked.filter((x) => !x.closed && (x.owner === initial || x.owner === "shared"));
+  const openTracked = (id: string) => { try { sessionStorage.setItem("tracked-select", id); } catch { /* private mode */ } location.hash = "tracked"; };
 
   return (
     <div className="flex flex-col gap-3 -mx-4 md:mx-0">
@@ -95,6 +101,21 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             </div>
           </button>
         )}
+
+        {myTracked.map((x) => (
+          <button key={x.id} onClick={() => openTracked(x.id)} className="block w-full text-left rounded-xl" style={{ ...cs, padding: "12px 14px" }}>
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              <div className="flex justify-between items-baseline gap-3"><span className="text-sm font-bold truncate">{x.emoji ? x.emoji + " " : ""}{x.name}</span><span className="text-xl font-bold shrink-0" style={{ color: x.left < 0 ? "var(--red-text)" : "var(--text)" }}>{formatMoney(x.left)}</span></div>
+              <div className="rounded-full overflow-hidden flex w-full" style={{ height: 6, background: "var(--track)" }}>
+                <div className="h-full" style={{ width: `${x.amount ? Math.min(100, Math.max(0, (x.spent / x.amount) * 100)) : 0}%`, background: x.left < 0 ? "var(--red)" : "var(--classic-shared-2)" }} />
+              </div>
+              <div className="flex justify-between items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                <span className="truncate">Spent {formatMoney(x.spent)} of {formatMoney(x.amount)} · {x.entries} {x.entries === 1 ? "entry" : "entries"}</span>
+                <span className="shrink-0">{x.left > 0 ? `${Math.round((x.spent / x.amount) * 100)}% used ›` : x.left === 0 ? "Fully used ›" : `Over by ${formatMoney(-x.left)} ›`}</span>
+              </div>
+            </div>
+          </button>
+        ))}
 
         {m && (
           <a href="#budget" className={card} style={cs}>

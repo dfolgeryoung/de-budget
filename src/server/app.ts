@@ -49,12 +49,14 @@ app.get("/me", async (c) => {
   const initial = order.indexOf(u.email.toLowerCase()) === 1 ? "E" : "D";
   await db.insert(t.users).values({ id: u.id, email: u.email, displayName: u.name, initial }).onConflictDoNothing();
   const row = (await db.select().from(t.users).where(eq(t.users.id, u.id)))[0];
-  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null, pushRecurring: row?.pushRecurring ?? true, weeklyEmail: row?.weeklyEmail ?? false });
+  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null, pushRecurring: row?.pushRecurring ?? true, weeklyEmail: row?.weeklyEmail ?? false, phoneNav: row?.phoneNav ?? null });
 });
 
+const PHONE_NAV_SCREENS = ["home", "budget", "transactions", "classic", "reports", "tracked"] as const;
 app.put("/me", async (c) => {
-  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional(), pushRecurring: z.boolean().optional(), weeklyEmail: z.boolean().optional() }).safeParse(await c.req.json());
+  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional(), pushRecurring: z.boolean().optional(), weeklyEmail: z.boolean().optional(), phoneNav: z.array(z.enum(PHONE_NAV_SCREENS)).length(4).nullable().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
+  if (p.data.phoneNav && new Set(p.data.phoneNav).size !== 4) return c.json({ error: "Pick four different screens" }, 400);
   await db.update(t.users).set({ ...p.data, updatedAt: new Date() }).where(eq(t.users.id, c.get("user").id));
   return c.json({ ok: true });
 });

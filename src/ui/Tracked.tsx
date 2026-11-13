@@ -23,7 +23,12 @@ export function Tracked({ lists, me, refreshKey, openEntry }: { lists: Lists; me
   const toast = useToast();
   const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
 
-  useEffect(() => { api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => { setRows(r.tracked); setSelected((s) => s ?? r.tracked.find((x) => !x.closed)?.id ?? r.tracked[0]?.id ?? null); setEntries({}); }); }, [refreshKey, tick]);
+  useEffect(() => {
+    // Home hands over the amount to open
+    let handed: string | null = null;
+    try { handed = sessionStorage.getItem("tracked-select"); if (handed) sessionStorage.removeItem("tracked-select"); } catch { /* private mode */ }
+    api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => { setRows(r.tracked); setSelected((s) => handed ?? s ?? r.tracked.find((x) => !x.closed)?.id ?? r.tracked[0]?.id ?? null); setEntries({}); });
+  }, [refreshKey, tick]);
   useEffect(() => { if (selected && !entries[selected]) api<{ entries: TrackedEntry[] }>(`/tracked/${selected}/entries`).then((r) => setEntries((e) => ({ ...e, [selected]: r.entries }))); }, [selected, entries]);
 
   const changed = () => { setTick((k) => k + 1); dispatchEvent(new Event("lists-changed")); };

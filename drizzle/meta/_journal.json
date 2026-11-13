@@ -29,6 +29,13 @@
       "when": 1794511384114,
       "tag": "0003_classic_income_actual",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794567224694,
+      "tag": "0004_phone_nav",
+      "breakpoints": true
     }
   ]
 }

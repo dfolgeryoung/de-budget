@@ -12,6 +12,8 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
+import { pushConfigured, emailConfigured, pushToUser } from "./notify.js";
+import { weeklySummary } from "./summary.js";
 import { z } from "zod";
 
 type Env = { Variables: { user: SessionUser } };
@@ -44,11 +46,11 @@ app.get("/me", async (c) => {
   const initial = order.indexOf(u.email.toLowerCase()) === 1 ? "E" : "D";
   await db.insert(t.users).values({ id: u.id, email: u.email, displayName: u.name, initial }).onConflictDoNothing();
   const row = (await db.select().from(t.users).where(eq(t.users.id, u.id)))[0];
-  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null });
+  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null, pushRecurring: row?.pushRecurring ?? true, weeklyEmail: row?.weeklyEmail ?? false });
 });
 
 app.put("/me", async (c) => {
-  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional() }).safeParse(await c.req.json());
+  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional(), pushRecurring: z.boolean().optional(), weeklyEmail: z.boolean().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await db.update(t.users).set({ ...p.data, updatedAt: new Date() }).where(eq(t.users.id, c.get("user").id));
   return c.json({ ok: true });
@@ -272,8 +274,12 @@ app.get("/cron/daily", async (c) => {
     try { ran.inbox = await pickUpInbox(db, system); } catch (e) { ran.inboxError = (e as Error).message; }
     try { ran.mirror = await mirrorToSheet(db, system, { backup: true }); } catch (e) { ran.mirrorError = (e as Error).message; }
   }
-  try { const system = (await db.select().from(t.users))[0]?.id ?? "system"; ran.recurring = await createDueRecurring(db, today(), system); } catch (e) { ran.recurringError = (e as Error).message; }
-  // phase 6: summaries
+  try {
+    const system = (await db.select().from(t.users))[0]?.id ?? "system";
+    const r = await createDueRecurring(db, today(), system); ran.recurring = r;
+    if (r.created.length) for (const u of await db.select().from(t.users)) if (u.pushRecurring) await pushToUser(db, u.id, { title: `${r.created.length} ${r.created.length === 1 ? "bill" : "bills"} to confirm`, body: r.created.join(", "), url: "/#home", tag: "recurring" });
+  } catch (e) { ran.recurringError = (e as Error).message; }
+  if (new Date(today()).getUTCDay() === 1) { try { ran.weekly = await weeklySummary(db, today()); } catch (e) { ran.weeklyError = (e as Error).message; } }
   return c.json({ ok: true, ran });
 });
 
@@ -302,6 +308,28 @@ app.post("/transactions/:id/confirm", async (c) => {
   await confirmEntry(db, c.get("user").id, c.req.param("id"), p.data);
   return c.json({ ok: true });
 });
+
+// ---------- notifications ----------
+app.get("/push/config", async (c) => {
+  const me = c.get("user").id;
+  const subs = await db.select().from(t.pushSubscriptions).where(eq(t.pushSubscriptions.userId, me));
+  return c.json({ push: pushConfigured(), email: emailConfigured(), publicKey: process.env.VAPID_PUBLIC_KEY ?? null, devices: subs.map((s) => ({ id: s.id, label: s.deviceLabel, endpoint: s.endpoint })) });
+});
+app.post("/push/subscribe", async (c) => {
+  const p = z.object({ endpoint: z.string().url(), keys: z.object({ p256dh: z.string(), auth: z.string() }), label: z.string().max(80).optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad subscription" }, 400);
+  const me = c.get("user").id;
+  await db.insert(t.pushSubscriptions).values({ id: `sub-${Date.now().toString(36)}`, userId: me, endpoint: p.data.endpoint, keys: p.data.keys, deviceLabel: p.data.label ?? null })
+    .onConflictDoUpdate({ target: t.pushSubscriptions.endpoint, set: { userId: me, keys: p.data.keys, deviceLabel: p.data.label ?? null } });
+  return c.json({ ok: true });
+});
+app.delete("/push/subscribe", async (c) => {
+  const p = z.object({ endpoint: z.string() }).safeParse(await c.req.json());
+  if (p.success) await db.delete(t.pushSubscriptions).where(eq(t.pushSubscriptions.endpoint, p.data.endpoint));
+  return c.json({ ok: true });
+});
+app.post("/push/test", async (c) => c.json({ sent: await pushToUser(db, c.get("user").id, { title: "D&E Budget", body: "Notifications are working on this device.", url: "/#home", tag: "test" }) }));
+app.post("/summary/weekly", async (c) => c.json(await weeklySummary(db, today())));
 
 // ---------- bank CSV reconciliation ----------
 app.post("/reconcile/preview", async (c) => {

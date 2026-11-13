@@ -35,12 +35,13 @@ export function Settings() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
       <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
-        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
+        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["appearance", "Appearance & profile"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />
       <CategoriesSection />
       <RecurringSection />
       <CsvSection />
+      <NotificationsSection />
       <AppearanceSection />
       <div id="s-import" />
       <section className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -488,6 +489,72 @@ function CsvSection() {
             <button onClick={apply} disabled={busy} className="rounded-lg px-4 h-9 text-[13px] font-semibold disabled:opacity-60" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>Apply: mark {preview.matched.length} matched, add {preview.newRows.filter((n) => add[n.key]?.on).length}, flag {preview.missing.filter((m) => flag[m.id]).length}</button>
             <button onClick={() => setPreview(null)} className="rounded-lg px-3 h-9 text-[13px]" style={{ border: "1px solid var(--field)" }}>Cancel</button>
           </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Push on this device (needs the app installed to the home screen on iPhone), what to be told about, and the weekly email. */
+function NotificationsSection() {
+  const toast = useToast();
+  const [cfg, setCfg] = useState<{ push: boolean; email: boolean; publicKey: string | null; devices: { id: string; label: string | null; endpoint: string }[] } | null>(null);
+  const [me, setMe] = useState<{ email: string; pushRecurring?: boolean; weeklyEmail?: boolean } | null>(null);
+  const [here, setHere] = useState<string | null>(null); // this browser's subscription endpoint, if any
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    api<typeof cfg>("/push/config").then(setCfg).catch(() => setCfg(null));
+    api<typeof me>("/me").then(setMe).catch(() => {});
+    try { const reg = await navigator.serviceWorker?.getRegistration(); const sub = await reg?.pushManager.getSubscription(); setHere(sub?.endpoint ?? null); } catch { setHere(null); }
+  };
+  useEffect(() => { load(); }, []);
+  const supported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+  const standalone = typeof window !== "undefined" && (matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true);
+  const isIOS = typeof navigator !== "undefined" && /iPhone|iPad/.test(navigator.userAgent);
+  async function enable() {
+    if (!cfg?.publicKey) return;
+    setBusy(true);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { toast("Notifications were not allowed"); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const key = Uint8Array.from(atob(cfg.publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(cfg.publicKey.length + ((4 - (cfg.publicKey.length % 4)) % 4), "=")), (c) => c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const j = sub.toJSON();
+      const label = isIOS ? "iPhone" : /Android/.test(navigator.userAgent) ? "Android" : /Mac/.test(navigator.userAgent) ? "Mac" : "Computer";
+      await api("/push/subscribe", { method: "POST", json: { endpoint: sub.endpoint, keys: j.keys, label } });
+      toast("Notifications on for this device"); load();
+    } catch (e) { toast(`Couldn't turn on notifications: ${(e as Error).message}`); } finally { setBusy(false); }
+  }
+  async function disable() {
+    setBusy(true);
+    try { const reg = await navigator.serviceWorker.getRegistration(); const sub = await reg?.pushManager.getSubscription(); if (sub) { await api("/push/subscribe", { method: "DELETE", json: { endpoint: sub.endpoint } }); await sub.unsubscribe(); } toast("Notifications off for this device"); load(); }
+    finally { setBusy(false); }
+  }
+  const pref = async (body: object) => { await api("/me", { method: "PUT", json: body }); setMe((m) => (m ? { ...m, ...body } : m)); };
+  return (
+    <section id="s-notifications" className={sec} style={secStyle}>
+      <h2 className="font-bold">Notifications <span className="text-xs font-normal" style={{ color: "var(--muted)" }}>· per person</span></h2>
+      {!cfg ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : !cfg.push ? (
+        <p className="text-sm rounded-lg p-3" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)" }}>Push isn't set up on the server yet (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY). See DEPLOY.md.</p>
+      ) : (
+        <div className="flex flex-col gap-3 text-[13px]">
+          <div className="flex flex-wrap items-center gap-2">
+            {here ? (
+              <><span className="pill on" style={{ background: "var(--green-bg)", color: "var(--green-text)", border: "1px solid var(--green)" }}><span className="tb">✓ On for this device</span></span>
+                <button onClick={() => api<{ sent: number }>("/push/test", { method: "POST" }).then((r) => toast(r.sent ? "Sent a test notification" : "No device received it"))} className="rounded-lg px-3 h-8 font-semibold" style={{ border: "1px solid var(--field)" }}>Send a test</button>
+                <button onClick={disable} disabled={busy} className="rounded-lg px-3 h-8" style={{ color: "var(--muted)" }}>Turn off here</button></>
+            ) : supported ? (
+              <button onClick={enable} disabled={busy} className="rounded-lg px-3 h-8 font-semibold" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>{busy ? "Asking…" : "Turn on notifications on this device"}</button>
+            ) : (
+              <span style={{ color: "var(--muted)" }}>This browser can't receive push.</span>
+            )}
+          </div>
+          {isIOS && !standalone && <p className="rounded-lg p-3" style={{ background: "var(--card-alt)", border: "1px solid var(--border-soft)", color: "var(--text-2)" }}>On iPhone, push only works once the app is on the home screen: in Safari tap Share → <strong>Add to Home Screen</strong>, open it from there, then come back to this switch.</p>}
+          {cfg.devices.length > 0 && <p style={{ color: "var(--muted)" }}>Devices receiving push: {cfg.devices.map((d) => d.label ?? "device").join(", ")}.</p>}
+          <label className="flex items-center gap-2"><input type="checkbox" checked={me?.pushRecurring ?? true} onChange={(e) => pref({ pushRecurring: e.target.checked })} /> Tell me when recurring bills land and need confirming</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={me?.weeklyEmail ?? false} onChange={(e) => pref({ weeklyEmail: e.target.checked })} disabled={!cfg.email} /> Email me the Monday summary{me?.email ? ` (${me.email})` : ""}{!cfg.email && <span style={{ color: "var(--muted)" }}> — email isn't set up on the server (RESEND_API_KEY)</span>}</label>
+          <p style={{ color: "var(--muted)" }}>The Monday summary also arrives as a push: Ready to Assign, what's overspent or underfunded, fun money left, bills to confirm and bills still to come.</p>
         </div>
       )}
     </section>

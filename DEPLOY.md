@@ -58,3 +58,12 @@ so a schema change is live as soon as its deploy finishes. Locally use `npm run 
 5. Redeploy. Settings › Sheet mirror shows "connected"; "Mirror to the sheet now" writes immediately; the daily cron (07:00 UTC) mirrors, picks up the Inbox and takes a backup.
 
 The sheet's own script can stay on: before each rewrite the app reads the Ledger back and adopts any entries it doesn't have (matched on the sheet's own row encoding), so rows typed in the sheet, via AppSheet, or in the app all converge. An entry edited in both places keeps the app's version.
+
+## Notifications (phase 5)
+
+Push (web push, works on iPhone once the app is added to the home screen):
+1. Generate a key pair once, on your Mac: `npx web-push generate-vapid-keys`.
+2. In Vercel add `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (`mailto:you@example.com`). Redeploy.
+3. Each person turns push on per device under Settings › Notifications ("Send a test" confirms it).
+
+Email (optional, for the Monday summary): create a Resend account, verify a sending domain (or use their onboarding sender for tests), add `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `D&E Budget <budget@yourdomain.com>`), redeploy, then tick "Email me the Monday summary".

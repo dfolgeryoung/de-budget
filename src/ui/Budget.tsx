@@ -247,7 +247,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
 
   if (isPhone) {
     const [summaryOpen, setSummaryOpen] = [open === "summary", (v: boolean) => setOpen(v ? "summary" : null)];
-    const pill = rta === 0 ? { text: "All money assigned", bg: "rgba(255,255,255,0.14)", fg: "rgba(255,255,255,0.8)" } : rta > 0 ? { text: `${formatMoney(rta)} to assign`, bg: "var(--yellow-bg)", fg: "var(--yellow-text)" } : { text: `Over by ${formatMoney(-rta)}`, bg: "var(--red-bg)", fg: "var(--red-text)" };
+    const pill = rta === 0 ? { text: "Nothing to assign", bg: "rgba(255,255,255,0.14)", fg: "rgba(255,255,255,0.8)" } : rta > 0 ? { text: `${formatMoney(rta)} to assign`, bg: "var(--yellow-bg)", fg: "var(--yellow-text)" } : { text: `Over by ${formatMoney(-rta)}`, bg: "var(--red-bg)", fg: "var(--red-text)" };
     return (
       <div className="flex flex-col -mx-4" style={{ gap: 10 }}>
         <div className="relative px-5 pb-4 flex flex-col" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))", gap: 14 }}>
@@ -258,7 +258,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           </div>
           <div className="flex items-end justify-between">
             <button onClick={() => setOpen("rta")} className="flex flex-col text-left" style={{ gap: 2 }}>
-              <span className="text-xs font-medium uppercase opacity-80" style={{ letterSpacing: "0.08em" }}>Ready to Assign</span>
+              <span className="text-xs font-medium uppercase" style={{ letterSpacing: "0.08em", opacity: rta === 0 ? 0.6 : 0.8 }}>{rta === 0 ? "All money assigned" : "Ready to Assign"}</span>
               <span className="font-bold" style={{ fontSize: "calc(34px * var(--fs))", lineHeight: 1.1, opacity: rta === 0 ? 0.6 : 1 }}>{formatMoney(rta)}</span>
             </button>
             <button onClick={() => setOpen("rta")} className="text-xs font-semibold rounded-full" style={{ background: pill.bg, color: pill.fg, padding: "6px 10px" }}>{pill.text}</button>
@@ -352,8 +352,8 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
         </div>
         <div className="flex items-center gap-3 relative">
           <button onClick={() => setOpen("rta")} className="flex items-center gap-3 rounded-xl px-4 py-2" style={{ background: rtaColor.bg, color: rtaColor.fg, boxShadow: rtaColor.glow }} title="Move money from Ready to Assign">
-            <span className="text-xs font-semibold uppercase tracking-wider">Ready to Assign</span>
-            <span className="text-2xl font-bold">{rta === 0 ? "All money assigned" : formatMoney(rta)}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{rta === 0 ? "All money assigned" : "Ready to Assign"}</span>
+            <span className="text-2xl font-bold">{formatMoney(rta)}</span>
           </button>
           <div ref={autoRef} className="contents">
           <button onClick={() => setAutoOpen((o) => !o)} className="hidden md:inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] font-medium" style={{ border: "1px solid var(--field)", background: "var(--card)" }}>Auto-assign <Chevron size={12} /></button>

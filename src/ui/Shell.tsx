@@ -26,7 +26,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null; phoneNav?: string[] | null; textSize?: string };
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null; phoneNav?: string[] | null; textSize?: string; homeLayout?: { order: string[]; hidden: string[] } | null };
 
 export function Shell({ me }: { me: Me }) {
   return (

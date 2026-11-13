@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { api, todayISO, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
 import { useToast } from "./Toast";
+import { Sheet } from "./Sheet";
+import { Chevron } from "./icons";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
 import type { TrackedSummary } from "../server/tracked";
@@ -11,12 +13,15 @@ import type { UpcomingBill } from "../server/recurring";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
+export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
   const [tracked, setTracked] = useState<TrackedSummary[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingBill[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [layout, setLayout] = useState<{ order: string[]; hidden: string[] }>(() => ({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }));
+  useEffect(() => { setLayout({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }); }, [me.homeLayout]);
   const [bump, setBump] = useState(0);
   const toast = useToast();
   useEffect(() => {
@@ -53,31 +58,15 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   // open tracked amounts that are mine or shared get a card each
   const myTracked = tracked.filter((x) => !x.closed && (x.owner === initial || x.owner === "shared"));
   const todayIso = todayISO();
-  const dayLabel = (iso: string) => { const d = Math.round((Date.parse(iso) - Date.parse(todayIso)) / 86_400_000); return d === 0 ? "Today" : d === 1 ? "Tomorrow" : d < 7 ? DAYS[new Date(iso + "T12:00:00").getDay()]!.slice(0, 3) + ` ${Number(iso.slice(8, 10))}` : `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`; };
+  const dayLabel = (iso: string) => { const d = Math.round((Date.parse(iso) - Date.parse(todayIso)) / 86_400_000); return d === 0 ? "Today" : d === 1 ? "Tomorrow" : d < 7 ? `${DAYS[new Date(iso + "T12:00:00").getDay()]!.slice(0, 3)}, ${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}` : `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`; };
   const upcomingTotal = upcoming.reduce((s, b) => s + Math.min(0, b.amount), 0);
   const goRecurring = () => { try { sessionStorage.setItem("settings-section", "recurring"); } catch { /* private mode */ } location.hash = "more"; };
   const goCategory = (id: string) => { try { sessionStorage.setItem("budget-select", id); } catch { /* private mode */ } location.hash = "budget"; };
   const openTracked = (id: string) => { try { sessionStorage.setItem("tracked-select", id); } catch { /* private mode */ } location.hash = "tracked"; };
 
-  return (
-    <div className="flex flex-col gap-3 -mx-4 md:mx-0">
-      <div className="px-5 pb-4 flex flex-col gap-3 md:rounded-xl" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))" }}>
-        <div>
-          <div className="text-[13px] opacity-75">{DAYS[today.getDay()]}, {MON[today.getMonth()]} {today.getDate()}</div>
-          <div className="text-[22px] font-bold">{greet}, {me.name.split(" ")[0]}</div>
-        </div>
-        {mine && (
-          <button onClick={() => goTransactions(mine.id)} className="flex items-center justify-between rounded-xl px-3.5 py-3 text-left" style={{ background: "rgba(255,255,255,0.12)" }}>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold uppercase tracking-wider opacity-75">{mine.name}</span>
-              <span className="text-[28px] font-bold leading-tight">{formatMoney(mine.balance)}</span>
-            </div>
-            <span className="text-xs opacity-85">Open ledger ›</span>
-          </button>
-        )}
-      </div>
-
-      <div className="px-3 flex flex-col gap-3 md:px-0">
+  const CARDS: Record<string, { label: string; node: ReactNode }> = {
+    pending: { label: "To confirm", node: (
+      <>
         {pend.length > 0 && (
           <div className="rounded-xl overflow-hidden" style={{ ...cs, borderColor: "var(--yellow)" }}>
             <div className="flex justify-between items-center px-3.5 py-2.5" style={{ background: "var(--yellow-row)", borderBottom: "1px solid var(--border-soft)" }}>
@@ -94,6 +83,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             ))}
           </div>
         )}
+      </>
+    ) },
+    fun: { label: "Fun money", node: (
+      <>
         {fun && (
           <button onClick={() => goTransactions(null)} className="block w-full text-left rounded-xl" style={{ ...cs, padding: "12px 14px" }}>
             {/* layout lives in a div: iOS Safari won't lay out a <button> itself as a flex column */}
@@ -110,7 +103,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             </div>
           </button>
         )}
-
+      </>
+    ) },
+    tracked: { label: "Tracked amounts", node: (
+      <>
         {myTracked.map((x) => (
           <button key={x.id} onClick={() => openTracked(x.id)} className="block w-full text-left rounded-xl" style={{ ...cs, padding: "12px 14px" }}>
             <div className="flex flex-col" style={{ gap: 8 }}>
@@ -125,23 +121,29 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             </div>
           </button>
         ))}
-
+      </>
+    ) },
+    upcoming: { label: "Upcoming bills", node: (
+      <>
         {upcoming.length > 0 && (
-          <button onClick={goRecurring} className={card + " w-full text-left"} style={cs}>
-            <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Upcoming bills</span><span className="text-xs" style={{ color: "var(--muted)" }}>next 3 weeks · {formatMoney(-upcomingTotal)} ›</span></div>
-            <div className="flex flex-col gap-1">
-              {upcoming.slice(0, 6).map((b, i) => (
-                <div key={b.id + b.date + i} className="flex items-center gap-2 text-xs">
-                  <span className="w-14 shrink-0 font-semibold" style={{ color: b.date === todayIso ? "var(--yellow-text)" : "var(--muted)" }}>{dayLabel(b.date)}</span>
-                  <span className="flex-1 min-w-0 truncate" style={{ color: "var(--text-2)" }}>{b.payee}{b.pending ? " · to confirm" : ""}<span style={{ color: "var(--faint)" }}> · {acctName(b.accountId)}</span></span>
-                  <span className="font-semibold tabular-nums shrink-0" style={{ color: b.amount > 0 ? "var(--green-text)" : undefined }}>{formatMoney(Math.abs(b.amount))}</span>
-                </div>
-              ))}
-              {upcoming.length > 6 && <span className="text-xs" style={{ color: "var(--muted)" }}>+ {upcoming.length - 6} more</span>}
-            </div>
-          </button>
+          <div className="rounded-xl overflow-hidden" style={cs}>
+            <button onClick={goRecurring} className="w-full flex justify-between items-center px-3.5 py-2.5 text-left gap-3" style={{ borderBottom: "1px solid var(--border-soft)" }}>
+              <span className="text-sm font-bold">Upcoming bills</span>
+              <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>next 3 weeks · {formatMoney(-upcomingTotal)} ›</span>
+            </button>
+            {upcoming.slice(0, 6).map((b, i) => (
+              <div key={b.id + b.date + i} className="grid items-center px-3.5 py-2" style={{ gridTemplateColumns: "1fr 84px", borderBottom: i < Math.min(upcoming.length, 6) - 1 || upcoming.length > 6 ? "1px solid var(--border-soft)" : undefined }}>
+                <span className="flex flex-col min-w-0"><span className="text-sm font-medium truncate">{b.payee}{b.pending && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "var(--yellow-text)" }}>to confirm</span>}</span><span className="text-[11px] truncate" style={{ color: b.date === todayIso ? "var(--yellow-text)" : "var(--muted)" }}>{dayLabel(b.date)} · {acctName(b.accountId)}</span></span>
+                <span className="text-right text-sm font-semibold tabular-nums" style={{ color: b.amount > 0 ? "var(--green-text)" : undefined }}>{formatMoney(Math.abs(b.amount))}</span>
+              </div>
+            ))}
+            {upcoming.length > 6 && <button onClick={goRecurring} className="w-full text-left px-3.5 py-2 text-xs" style={{ color: "var(--muted)" }}>+ {upcoming.length - 6} more ›</button>}
+          </div>
         )}
-
+      </>
+    ) },
+    check: { label: "Budget check", node: (
+      <>
         {m && (
           <a href="#budget" className={card} style={cs}>
             <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Budget check</span><span className="text-xs" style={{ color: "var(--muted)" }}>{overspent.length + under.length} of {cats.length} need attention ›</span></div>
@@ -155,7 +157,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}><span>Ready to Assign <strong style={{ color: m.view.readyToAssign === 0 ? "var(--green-text)" : "var(--yellow-text)" }}>{formatMoney(m.view.readyToAssign)}</strong></span><span>{cats.filter((c) => c.goal && c.status === "funded").length} funded ✓</span></div>
           </a>
         )}
-
+      </>
+    ) },
+    recent: { label: "Recent entries", node: (
+      <>
         <div className="rounded-xl overflow-hidden" style={cs}>
           <div className="flex justify-between items-center px-3.5 py-2.5" style={{ borderBottom: "1px solid var(--border-soft)" }}>
             <span className="text-sm font-bold">Recent · all accounts</span>
@@ -169,7 +174,63 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             </div>
           ))}
         </div>
+      </>
+    ) },
+  };
+  const DEFAULT_ORDER = ["pending", "fun", "tracked", "upcoming", "check", "recent"];
+  const order = [...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k))];
+  async function saveLayout(next: { order: string[]; hidden: string[] }) {
+    setLayout(next);
+    try { await api("/me", { method: "PUT", json: { homeLayout: next } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
+  }
+  const move = (k: string, dir: -1 | 1) => { const o = [...order]; const i = o.indexOf(k), j = i + dir; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j]!, o[i]!]; saveLayout({ ...layout, order: o }); };
+  const toggle = (k: string) => saveLayout({ ...layout, hidden: layout.hidden.includes(k) ? layout.hidden.filter((x) => x !== k) : [...layout.hidden, k] });
+
+  return (
+    <div className="flex flex-col gap-3 -mx-4 md:mx-0">
+      <div className="px-5 pb-4 flex flex-col gap-3 md:rounded-xl" style={{ background: "var(--rail)", color: "#fff", paddingTop: "calc(1rem + env(safe-area-inset-top))" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[13px] opacity-75">{DAYS[today.getDay()]}, {MON[today.getMonth()]} {today.getDate()}</div>
+            <div className="text-[22px] font-bold">{greet}, {me.name.split(" ")[0]}</div>
+          </div>
+          <button onClick={() => setEditing(true)} className="rounded-full px-3 text-[12px] font-semibold shrink-0 mt-1" style={{ height: 30, background: "rgba(255,255,255,0.14)", color: "#fff" }}>Edit Home</button>
+        </div>
+        {mine && (
+          <button onClick={() => goTransactions(mine.id)} className="flex items-center justify-between rounded-xl px-3.5 py-3 text-left" style={{ background: "rgba(255,255,255,0.12)" }}>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-wider opacity-75">{mine.name}</span>
+              <span className="text-[28px] font-bold leading-tight">{formatMoney(mine.balance)}</span>
+            </div>
+            <span className="text-xs opacity-85">Open ledger ›</span>
+          </button>
+        )}
       </div>
+
+      <div className="px-3 flex flex-col gap-3 md:px-0">
+        {order.filter((k) => !layout.hidden.includes(k)).map((k) => <Fragment key={k}>{CARDS[k]!.node}</Fragment>)}
+      </div>
+      {editing && (
+        <Sheet onClose={() => setEditing(false)}>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between"><h2 className="font-bold text-base m-0">Edit Home</h2><button onClick={() => setEditing(false)} className="text-sm font-semibold" style={{ color: "var(--accent-text)" }}>Done</button></div>
+            <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Choose which cards show on your Home and in what order. Just yours — Elizabeth's Home is separate.</p>
+            <div className="rounded-xl overflow-hidden" style={cs}>
+              {order.map((k, i) => {
+                const hidden = layout.hidden.includes(k);
+                return (
+                  <div key={k} className="flex items-center gap-2 px-3 py-2" style={{ borderTop: i ? "1px solid var(--border-soft)" : undefined, opacity: hidden ? 0.55 : 1 }}>
+                    <label className="flex-1 inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 40 }}><input type="checkbox" checked={!hidden} onChange={() => toggle(k)} style={{ width: 20, height: 20 }} /> {CARDS[k]!.label}</label>
+                    <button aria-label="Move up" disabled={i === 0} onClick={() => move(k, -1)} className="w-10 h-10 rounded-lg inline-flex items-center justify-center disabled:opacity-30" style={{ border: "1px solid var(--field)" }}><Chevron dir="up" size={14} /></button>
+                    <button aria-label="Move down" disabled={i === order.length - 1} onClick={() => move(k, 1)} className="w-10 h-10 rounded-lg inline-flex items-center justify-center disabled:opacity-30" style={{ border: "1px solid var(--field)" }}><Chevron dir="down" size={14} /></button>
+                  </div>
+                );
+              })}
+            </div>
+            {(layout.order.length || layout.hidden.length) ? <button onClick={() => saveLayout({ order: [], hidden: [] })} className="text-xs underline text-left" style={{ color: "var(--muted)" }}>Reset to the default layout</button> : null}
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

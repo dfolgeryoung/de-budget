@@ -12,7 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
-import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
+import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
 import { pushConfigured, emailConfigured, pushToUser, vapidPublic } from "./notify.js";
 import webpush from "web-push";
@@ -145,8 +145,9 @@ app.put("/transactions/:id", async (c) => {
   return c.json({ ok: true });
 });
 app.delete("/transactions/:id", async (c) => {
+  const again = c.req.query("undo") === "1" ? { landsAgainOn: null } : await skippedPending(db, c.req.param("id"), today());
   await deleteTransaction(db, c.get("user").id, c.req.param("id"), c.req.query("undo") === "1");
-  return c.json({ ok: true });
+  return c.json({ ok: true, ...again });
 });
 
 // ---- phase 2: assigning money ----
@@ -326,6 +327,7 @@ app.put("/recurring/:id", async (c) => {
   const p = recurringBody.partial().safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await db.update(t.recurring).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.recurring.id, c.req.param("id")));
+  if (p.data.dayOfMonth !== undefined) await realignPending(db, c.req.param("id"), today());
   return c.json({ ok: true });
 });
 app.delete("/recurring/:id", async (c) => { await db.delete(t.recurring).where(eq(t.recurring.id, c.req.param("id"))); return c.json({ ok: true }); });

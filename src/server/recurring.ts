@@ -51,3 +51,37 @@ export async function confirmEntry(db: Db, me: string, id: string, patch: { amou
     if (ls.length === 1) await db.update(t.transactionLines).set({ amount }).where(eq(t.transactionLines.id, ls[0]!.id));
   }
 }
+
+/**
+ * A bill's day changed: move this month's pending entry to the new day, or, when the new day is still to come,
+ * drop the pending entry and let the bill land again on that day. Confirmed entries are left alone.
+ */
+export async function realignPending(db: Db, recurringId: string, today: string) {
+  const r = (await db.select().from(t.recurring).where(eq(t.recurring.id, recurringId)))[0];
+  if (!r) return;
+  const month = today.slice(0, 7) + "-01";
+  const due = Math.min(r.dayOfMonth ?? 1, daysInMonth(month));
+  const pendingNow = (await db.select().from(t.transactions).where(and(eq(t.transactions.recurringId, recurringId), eq(t.transactions.confirmed, false), isNull(t.transactions.deletedAt))))
+    .filter((x) => x.date.startsWith(month.slice(0, 7)));
+  if (!pendingNow.length) return;
+  if (due > Number(today.slice(8, 10))) {
+    for (const x of pendingNow) { await db.delete(t.transactionLines).where(eq(t.transactionLines.transactionId, x.id)); await db.delete(t.transactions).where(eq(t.transactions.id, x.id)); }
+    await db.update(t.recurring).set({ lastCreatedMonth: null }).where(eq(t.recurring.id, recurringId));
+  } else {
+    const date = `${month.slice(0, 7)}-${String(due).padStart(2, "0")}`;
+    for (const x of pendingNow) await db.update(t.transactions).set({ date }).where(eq(t.transactions.id, x.id));
+  }
+}
+
+/** Skipping a pending entry whose bill is still ahead this month lets the bill land again on its day. */
+export async function skippedPending(db: Db, transactionId: string, today: string): Promise<{ landsAgainOn: number | null }> {
+  const x = (await db.select().from(t.transactions).where(eq(t.transactions.id, transactionId)))[0];
+  if (!x || x.confirmed || !x.recurringId) return { landsAgainOn: null };
+  const r = (await db.select().from(t.recurring).where(eq(t.recurring.id, x.recurringId)))[0];
+  if (!r || r.dayOfMonth === null) return { landsAgainOn: null };
+  const month = today.slice(0, 7) + "-01";
+  const due = Math.min(r.dayOfMonth, daysInMonth(month));
+  if (due <= Number(today.slice(8, 10))) return { landsAgainOn: null };
+  await db.update(t.recurring).set({ lastCreatedMonth: null }).where(eq(t.recurring.id, r.id));
+  return { landsAgainOn: due };
+}

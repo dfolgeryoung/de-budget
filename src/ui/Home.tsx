@@ -25,8 +25,9 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   }, [refreshKey, bump]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
     try {
-      if (what === "confirm") await api(`/transactions/${id}/confirm`, { method: "POST", json: {} }); else await api(`/transactions/${id}`, { method: "DELETE" });
-      toast(what === "confirm" ? `Confirmed ${label}` : `Skipped ${label} this month`, what === "skip" ? async () => { await api(`/transactions/${id}?undo=1`, { method: "DELETE" }); setBump((b) => b + 1); } : undefined);
+      let again: number | null = null;
+      if (what === "confirm") await api(`/transactions/${id}/confirm`, { method: "POST", json: {} }); else again = (await api<{ landsAgainOn: number | null }>(`/transactions/${id}`, { method: "DELETE" })).landsAgainOn;
+      toast(what === "confirm" ? `Confirmed ${label}` : again ? `Removed ${label} — it lands again on the ${again}${again === 1 || again === 21 || again === 31 ? "st" : again === 2 || again === 22 ? "nd" : again === 3 || again === 23 ? "rd" : "th"}` : `Skipped ${label} this month`, what === "skip" ? async () => { await api(`/transactions/${id}?undo=1`, { method: "DELETE" }); setBump((b) => b + 1); } : undefined);
       setBump((b) => b + 1); dispatchEvent(new Event("lists-changed"));
     } catch (e) { toast((e as Error).message); }
   }

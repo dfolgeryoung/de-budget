@@ -29,7 +29,7 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl min-w-0">
+    <div className="flex flex-col gap-4 max-w-5xl min-w-0">
       <div>
         <h1 className="text-xl font-bold">Settings</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
@@ -354,21 +354,21 @@ function RecurringSection() {
   const put = async (id: string, body: object) => { try { await api(`/recurring/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   const cats = lists ? categoryOptions(lists, { income: true }) : [];
   const acctOpts = lists ? lists.accounts.map((a) => ({ value: a.id, label: a.name })) : [];
-  const AmountCell = ({ r }: { r: Rec }) => <TextCell value={(Math.abs(r.amount) / 100).toFixed(2)} onSave={(v) => { const c = parseMoney(v); if (c !== null) put(r.id, { amount: r.amount > 0 ? Math.abs(c) : -Math.abs(c) }); }} className="text-right" width={96} />;
+  const AmountCell = ({ r }: { r: Rec }) => <TextCell value={(Math.abs(r.amount) / 100).toFixed(2)} onSave={(v) => { const c = parseMoney(v); if (c !== null) put(r.id, { amount: r.amount > 0 ? Math.abs(c) : -Math.abs(c) }); }} className="text-right" width={80} />;
   const DayCell = ({ r }: { r: Rec }) => <TextCell value={r.dayOfMonth ? String(r.dayOfMonth) : ""} onSave={(v) => put(r.id, { dayOfMonth: /^\d+$/.test(v) ? Math.min(31, Math.max(1, Number(v))) : null })} className="text-center" placeholder="any" width={56} />;
-  const REPEATS = [{ value: "month", label: "Monthly" }, { value: "7", label: "Weekly" }, { value: "14", label: "Every 2 weeks" }, { value: "28", label: "Every 4 weeks" }, { value: "30", label: "Every 30 days" }];
+  const REPEATS = [{ value: "month", label: "Monthly" }, { value: "7", label: "Weekly" }, { value: "14", label: "2 weeks" }, { value: "28", label: "4 weeks" }, { value: "30", label: "30 days" }];
   const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const shortDate = (iso: string) => `${MONS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
   // monthly: "day N"; interval: "every N days from <a date it was charged>"; both show when it lands next
   const ScheduleCell = ({ r }: { r: Rec }) => (
     <span className="flex items-center gap-1.5 flex-wrap text-[13px]">
       <Select ariaLabel="Repeats" value={r.everyDays ? String(r.everyDays) : "month"} onChange={(v) => { if (!v || v === "month") put(r.id, { everyDays: null, anchorDate: null }); else put(r.id, { everyDays: Number(v), anchorDate: r.anchorDate ?? todayISO() }); }} options={REPEATS} style={{ height: 32 }} />
-      {r.everyDays ? <span className="flex items-center gap-1" style={{ color: "var(--muted)" }}>from <TextCell value={r.anchorDate ?? ""} onSave={(v) => { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) put(r.id, { anchorDate: v }); else toast("Date as YYYY-MM-DD"); }} placeholder="YYYY-MM-DD" width={104} /></span>
+      {r.everyDays ? <span className="flex items-center gap-1" style={{ color: "var(--muted)" }}>from <TextCell value={r.anchorDate ?? ""} onSave={(v) => { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) put(r.id, { anchorDate: v }); else toast("Date as YYYY-MM-DD"); }} placeholder="YYYY-MM-DD" width={94} /></span>
         : <span className="flex items-center gap-1" style={{ color: "var(--muted)" }}>day <DayCell r={r} /></span>}
       {r.nextDue && r.active && <span className="text-[11px]" style={{ color: "var(--faint)" }}>next {shortDate(r.nextDue)}</span>}
     </span>
   );
-  const grid = "minmax(140px,1.3fr) 140px minmax(150px,1.2fr) 100px minmax(340px,1.4fr) 50px 60px";
+  const grid = "minmax(120px,1.2fr) 118px minmax(130px,1.1fr) 84px minmax(290px,1.3fr) 36px 48px";
   return (
     <section id="s-recurring" className={sec} style={secStyle}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -398,9 +398,9 @@ function RecurringSection() {
         </div>
       ) : (
         <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
-          <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 920 }}><span>Payee</span><span>Account</span><span>Category</span><span className="text-right">Amount</span><span>Repeats</span><span>Active</span><span /></div>
+          <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 860 }}><span>Payee</span><span>Account</span><span>Category</span><span className="text-right">Amount</span><span>Repeats</span><span>Active</span><span /></div>
           {rows.map((r) => (
-            <div key={r.id} className="row-hover grid gap-2 items-center px-3 py-1.5" style={{ gridTemplateColumns: grid, borderTop: "1px solid var(--border-soft)", opacity: r.active ? 1 : 0.55, minWidth: 920 }}>
+            <div key={r.id} className="row-hover grid gap-2 items-center px-3 py-1.5" style={{ gridTemplateColumns: grid, borderTop: "1px solid var(--border-soft)", opacity: r.active ? 1 : 0.55, minWidth: 860 }}>
               <TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} />
               <Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 32 }} className="w-full" />
               <Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 32 }} className="w-full" menuWidth={280} />

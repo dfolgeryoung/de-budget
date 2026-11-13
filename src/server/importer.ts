@@ -140,7 +140,7 @@ export async function importState(db: Db, state: SheetState, byUserId: string): 
   await put("current_month", monthOf(state.current_month));
   await put("sheet_expected", m.expected);
   await put("import_at", now.toISOString());
-  await put("expected_source", null);
+  await put("expected_source", ""); // back to the import as the baseline until the next mirror
   await put("live_months", liveMonths);
 
   // Classic: layout, Internet keywords, typed income per person per month and the typed line budgets of the exported month

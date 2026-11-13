@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, todayISO, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
@@ -183,6 +183,25 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
     setLayout(next);
     try { await api("/me", { method: "PUT", json: { homeLayout: next } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
   }
+  // drag to reorder in the Edit Home sheet: hold the grip, slide; rows swap as the lifted one crosses them
+  const [drag, setDrag] = useState<{ key: string; dy: number } | null>(null);
+  const dragRef = useRef<{ key: string; startY: number; fromIndex: number; order: string[]; h: number } | null>(null);
+  const onGripDown = (k: string, e: React.PointerEvent<HTMLElement>) => {
+    const row = (e.currentTarget as HTMLElement).closest("[data-row]") as HTMLElement | null;
+    const h = row?.getBoundingClientRect().height ?? 56;
+    dragRef.current = { key: k, startY: e.clientY, fromIndex: order.indexOf(k), order: [...order], h };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ key: k, dy: 0 });
+  };
+  const onGripMove = (e: React.PointerEvent<HTMLElement>) => {
+    const d = dragRef.current; if (!d) return;
+    const dy = e.clientY - d.startY;
+    const to = Math.max(0, Math.min(d.order.length - 1, d.fromIndex + Math.round(dy / d.h)));
+    const cur = d.order.indexOf(d.key);
+    if (to !== cur) { const o = d.order.filter((x) => x !== d.key); o.splice(to, 0, d.key); d.order = o; setLayout((l) => ({ ...l, order: o })); }
+    setDrag({ key: d.key, dy: dy - (to - d.fromIndex) * d.h });
+  };
+  const onGripUp = () => { const d = dragRef.current; dragRef.current = null; setDrag(null); if (d) saveLayout({ ...layout, order: d.order }); };
   const move = (k: string, dir: -1 | 1) => { const o = [...order]; const i = o.indexOf(k), j = i + dir; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j]!, o[i]!]; saveLayout({ ...layout, order: o }); };
   const toggle = (k: string) => saveLayout({ ...layout, hidden: layout.hidden.includes(k) ? layout.hidden.filter((x) => x !== k) : [...layout.hidden, k] });
 
@@ -214,12 +233,15 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
         <Sheet onClose={() => setEditing(false)}>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between"><h2 className="font-bold text-base m-0">Edit Home</h2><button onClick={() => setEditing(false)} className="text-sm font-semibold" style={{ color: "var(--accent-text)" }}>Done</button></div>
-            <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Choose which cards show on your Home and in what order. Just yours — Elizabeth's Home is separate.</p>
+            <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Choose which cards show on your Home and in what order — drag the grip or use the arrows. Just yours; Elizabeth's Home is separate.</p>
             <div className="rounded-xl overflow-hidden" style={cs}>
               {order.map((k, i) => {
                 const hidden = layout.hidden.includes(k);
                 return (
-                  <div key={k} className="flex items-center gap-2 px-3 py-2" style={{ borderTop: i ? "1px solid var(--border-soft)" : undefined, opacity: hidden ? 0.55 : 1 }}>
+                  <div key={k} data-row className="flex items-center gap-2 px-3 py-2" style={{ borderTop: i ? "1px solid var(--border-soft)" : undefined, opacity: hidden ? 0.55 : 1, transform: drag?.key === k ? `translateY(${drag.dy}px)` : undefined, transition: drag && drag.key !== k ? "transform 120ms" : undefined, position: "relative", zIndex: drag?.key === k ? 2 : undefined, background: drag?.key === k ? "var(--selected)" : "var(--card)", boxShadow: drag?.key === k ? "0 6px 18px rgba(0,0,0,0.18)" : undefined }}>
+                    <span aria-label="Drag to reorder" onPointerDown={(e) => onGripDown(k, e)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={onGripUp} className="inline-flex items-center justify-center w-9 h-10 rounded-lg shrink-0 cursor-grab active:cursor-grabbing" style={{ color: "var(--faint)", touchAction: "none" }}>
+                      <svg aria-hidden="true" width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="3" cy="3" r="1.4" /><circle cx="7" cy="3" r="1.4" /><circle cx="3" cy="8" r="1.4" /><circle cx="7" cy="8" r="1.4" /><circle cx="3" cy="13" r="1.4" /><circle cx="7" cy="13" r="1.4" /></svg>
+                    </span>
                     <label className="flex-1 inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 40 }}><input type="checkbox" checked={!hidden} onChange={() => toggle(k)} style={{ width: 20, height: 20 }} /> {CARDS[k]!.label}</label>
                     <button aria-label="Move up" disabled={i === 0} onClick={() => move(k, -1)} className="w-10 h-10 rounded-lg inline-flex items-center justify-center disabled:opacity-30" style={{ border: "1px solid var(--field)" }}><Chevron dir="up" size={14} /></button>
                     <button aria-label="Move down" disabled={i === order.length - 1} onClick={() => move(k, 1)} className="w-10 h-10 rounded-lg inline-flex items-center justify-center disabled:opacity-30" style={{ border: "1px solid var(--field)" }}><Chevron dir="down" size={14} /></button>

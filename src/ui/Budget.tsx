@@ -62,6 +62,15 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const [bars, setBars] = useState(showBarsDefault);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
+  const autoRef = useRef<HTMLDivElement>(null);
+  // the auto-assign menu closes on a click anywhere else, or Escape
+  useEffect(() => {
+    if (!autoOpen) return;
+    const down = (e: PointerEvent) => { if (!autoRef.current?.contains(e.target as Node)) setAutoOpen(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setAutoOpen(false); };
+    document.addEventListener("pointerdown", down); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", down); document.removeEventListener("keydown", key); };
+  }, [autoOpen]);
   // drag-to-reorder (desktop): the id being dragged and where it would land
   const [dragId, setDragIdState] = useState<string | null>(null);
   const [dropAt, setDropAtState] = useState<{ groupId: string; index: number } | null>(null);
@@ -346,6 +355,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             <span className="text-xs font-semibold uppercase tracking-wider">Ready to Assign</span>
             <span className="text-2xl font-bold">{formatMoney(rta)}</span>
           </button>
+          <div ref={autoRef} className="contents">
           <button onClick={() => setAutoOpen((o) => !o)} className="hidden md:inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] font-medium" style={{ border: "1px solid var(--field)", background: "var(--card)" }}>Auto-assign <Chevron size={12} /></button>
           {autoOpen && (
             <div className="absolute right-0 top-12 z-20 rounded-xl shadow-lg flex flex-col py-1 w-64" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -353,6 +363,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
               {AUTO.map(([k, l]) => <button key={k} onClick={() => runAuto(k)} className="text-left px-3 py-2 text-sm hover:opacity-80">{l}</button>)}
             </div>
           )}
+          </div>
         </div>
       </div>
 

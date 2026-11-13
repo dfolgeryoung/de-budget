@@ -9,6 +9,7 @@ import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
 import type { TrackedSummary } from "../server/tracked";
 import type { UpcomingBill } from "../server/recurring";
+import type { ReportsPayload } from "../server/reports";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -19,6 +20,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
   const [tracked, setTracked] = useState<TrackedSummary[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingBill[]>([]);
+  const [report, setReport] = useState<ReportsPayload | null>(null);
   const [editing, setEditing] = useState(false);
   const [layout, setLayout] = useState<{ order: string[]; hidden: string[] }>(() => ({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }));
   useEffect(() => { setLayout({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }); }, [me.homeLayout]);
@@ -31,6 +33,8 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
     api<{ bills: UpcomingBill[] }>("/recurring/upcoming").then((r) => setUpcoming(Array.isArray(r.bills) ? r.bills : [])).catch(() => setUpcoming([]));
     api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(Array.isArray(r.tracked) ? r.tracked : [])).catch(() => setTracked([]));
   }, [refreshKey, bump]);
+  const wantsReport = layout.order.includes("spend") && !layout.hidden.includes("spend");
+  useEffect(() => { if (wantsReport) api<ReportsPayload>("/reports").then(setReport).catch(() => setReport(null)); }, [wantsReport, refreshKey, bump]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
     try {
       let again: number | null = null;
@@ -159,6 +163,34 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
         )}
       </>
     ) },
+    spend: { label: "Spend by category (this month)", node: (
+      <>
+        {report && report.thisMonth.byCategory.length > 0 && (() => {
+          const cats = report.thisMonth.byCategory.filter((c) => c.spent > 0).slice(0, 5);
+          const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
+          return (
+            <a href="#reports" className={card} style={cs}>
+              <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Spend by category</span><span className="text-xs" style={{ color: "var(--muted)" }}>{formatMoney(report.thisMonth.spent)} so far · day {report.daysElapsed} ›</span></div>
+              <div className="flex flex-col gap-1.5">
+                {cats.map((c) => {
+                  const over = c.budget > 0 && c.spent > c.budget;
+                  return (
+                    <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: "110px minmax(0,1fr) 62px" }}>
+                      <span className="truncate" style={{ color: "var(--text-2)" }}>{c.emoji ? c.emoji + " " : ""}{c.name}</span>
+                      <span className="relative block rounded" style={{ height: 10, background: "var(--track)" }}>
+                        <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${Math.min(100, (c.spent / scale) * 100)}%`, background: over ? "var(--red)" : "var(--classic-shared-2)" }} />
+                        {c.budget > 0 && <span className="absolute" style={{ left: `calc(${Math.min(100, (c.budget / scale) * 100)}% - 1px)`, top: -2, width: 2, height: 14, background: "var(--text)" }} />}
+                      </span>
+                      <span className="text-right font-semibold tabular-nums">{formatMoney(c.spent)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </a>
+          );
+        })()}
+      </>
+    ) },
     recent: { label: "Recent entries", node: (
       <>
         <div className="rounded-xl overflow-hidden" style={cs}>
@@ -177,8 +209,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       </>
     ) },
   };
-  const DEFAULT_ORDER = ["pending", "fun", "tracked", "upcoming", "check", "recent"];
+  const DEFAULT_ORDER = ["pending", "fun", "tracked", "upcoming", "check", "spend", "recent"];
+  const DEFAULT_HIDDEN = ["spend"]; // optional cards start hidden until switched on in Edit Home
   const order = [...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k))];
+  const isHidden = (k: string) => layout.hidden.includes(k) || (DEFAULT_HIDDEN.includes(k) && !layout.order.includes(k));
   async function saveLayout(next: { order: string[]; hidden: string[] }) {
     setLayout(next);
     try { await api("/me", { method: "PUT", json: { homeLayout: next } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
@@ -203,7 +237,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   };
   const onGripUp = () => { const d = dragRef.current; dragRef.current = null; setDrag(null); if (d) saveLayout({ ...layout, order: d.order }); };
   const move = (k: string, dir: -1 | 1) => { const o = [...order]; const i = o.indexOf(k), j = i + dir; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j]!, o[i]!]; saveLayout({ ...layout, order: o }); };
-  const toggle = (k: string) => saveLayout({ ...layout, hidden: layout.hidden.includes(k) ? layout.hidden.filter((x) => x !== k) : [...layout.hidden, k] });
+  const toggle = (k: string) => saveLayout({ order, hidden: isHidden(k) ? layout.hidden.filter((x) => x !== k) : [...layout.hidden, k] });
 
   return (
     <div className="flex flex-col gap-3 -mx-4 md:mx-0">
@@ -227,7 +261,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       </div>
 
       <div className="px-3 flex flex-col gap-3 md:px-0">
-        {order.filter((k) => !layout.hidden.includes(k)).map((k) => <Fragment key={k}>{CARDS[k]!.node}</Fragment>)}
+        {order.filter((k) => !isHidden(k)).map((k) => <Fragment key={k}>{CARDS[k]!.node}</Fragment>)}
       </div>
       {editing && (
         <Sheet onClose={() => setEditing(false)}>
@@ -236,7 +270,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Choose which cards show on your Home and in what order — drag the grip or use the arrows. Just yours; Elizabeth's Home is separate.</p>
             <div className="rounded-xl overflow-hidden" style={cs}>
               {order.map((k, i) => {
-                const hidden = layout.hidden.includes(k);
+                const hidden = isHidden(k);
                 return (
                   <div key={k} data-row className="flex items-center gap-2 px-3 py-2" style={{ borderTop: i ? "1px solid var(--border-soft)" : undefined, opacity: hidden ? 0.55 : 1, transform: drag?.key === k ? `translateY(${drag.dy}px)` : undefined, transition: drag && drag.key !== k ? "transform 120ms" : undefined, position: "relative", zIndex: drag?.key === k ? 2 : undefined, background: drag?.key === k ? "var(--selected)" : "var(--card)", boxShadow: drag?.key === k ? "0 6px 18px rgba(0,0,0,0.18)" : undefined }}>
                     <span aria-label="Drag to reorder" onPointerDown={(e) => onGripDown(k, e)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={onGripUp} className="inline-flex items-center justify-center w-9 h-10 rounded-lg shrink-0 cursor-grab active:cursor-grabbing" style={{ color: "var(--faint)", touchAction: "none" }}>

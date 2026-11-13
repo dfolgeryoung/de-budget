@@ -117,7 +117,7 @@ export function mapState(state: SheetState): Mapped {
     const accountId = accountIds.get(accountName);
     if (!accountId) throw new Error(`row ${i}: unknown account "${accountRaw}"`);
     const id = `txn-${String(i + 1).padStart(4, "0")}`;
-    const t: TransactionIn = { id, date, accountId, amount, sharedFiftyFifty: shared, lines: [] };
+    const t: TransactionIn = { id, date, accountId, amount, sharedFiftyFifty: shared, payee, lines: [] };
     if (category.startsWith(TRANSFER_PREFIX)) {
       const to = accountIds.get(category.slice(TRANSFER_PREFIX.length));
       if (!to) throw new Error(`row ${i}: unknown transfer target "${category}"`);

@@ -10,6 +10,7 @@ import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
 import { Classic } from "./Classic";
+import { Reports } from "./Reports";
 import { Avatar, ProfilePicker } from "./ProfilePicker";
 import { NavIcon } from "./icons";
 
@@ -87,7 +88,7 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic") && isPhone ? { paddingTop: 0 } : undefined}>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic" || screen === "reports") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} openEdit={async (id) => { const rows = await api<LedgerRow[]>("/transactions?limit=500"); const r = rows.find((x) => x.id === id); if (r) setDraft(draftFromRow(r, lists)); }} />
         ) : screen === "budget" || screen === "home" ? (
@@ -96,6 +97,8 @@ function ShellInner({ me }: { me: Me }) {
           <Transactions me={me} lists={lists} openEntry={setDraft} refreshKey={refreshKey} account={account} setAccount={setAccount} />
         ) : screen === "classic" ? (
           <Classic refreshKey={refreshKey} openEntry={isPhone ? undefined : openNew} />
+        ) : screen === "reports" ? (
+          <Reports refreshKey={refreshKey} />
         ) : screen === "settings" || screen === "more" ? (
           <>
             {isPhone && (
@@ -103,6 +106,11 @@ function ShellInner({ me }: { me: Me }) {
                 <button aria-label="Change profile picture" onClick={() => setPicker(true)}><Avatar emoji={me.avatarEmoji} url={me.avatarUrl} size={48} radius={12} /></button>
                 <div className="min-w-0"><div className="font-bold truncate">{me.name}</div><div className="text-xs opacity-75 truncate">{me.email}</div></div>
               </div>
+            )}
+            {isPhone && (
+              <a href="#reports" className="flex items-center justify-between rounded-xl px-4 py-3.5 mb-4 text-[15px] font-semibold" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <span className="inline-flex items-center gap-2.5"><NavIcon id="reports" size={20} />Reports</span><span style={{ color: "var(--muted)" }}>›</span>
+              </a>
             )}
             <Settings />
             <form method="post" action="/api/auth/signout" className="mt-6">
@@ -133,7 +141,7 @@ function ShellInner({ me }: { me: Me }) {
             key={s.id}
             href={`#${s.id}`}
             className="flex flex-col items-center gap-[3px] text-[11px] w-16 text-center"
-            style={{ color: screen === s.id ? "var(--accent-text)" : "var(--muted)", fontWeight: screen === s.id ? 600 : 500 }}
+            style={{ color: screen === s.id || (s.id === "more" && screen === "reports") ? "var(--accent-text)" : "var(--muted)", fontWeight: screen === s.id || (s.id === "more" && screen === "reports") ? 600 : 500 }}
           >
             <NavIcon id={s.id} />
             {s.label}

@@ -35,6 +35,7 @@ export interface TransactionIn {
   sharedFiftyFifty?: boolean;
   lines: LineIn[];
   confirmed?: boolean;
+  payee?: string | null; // used by reports to tell recurring bills from everyday spending
 }
 export interface AssignmentIn {
   categoryId: string;

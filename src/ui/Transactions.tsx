@@ -20,8 +20,10 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
 }) {
   const [rows, setRows] = useState<LedgerRow[] | null>(null);
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [month, setMonth] = useState<string>("");
+  // a report can hand over a category + month to open (see goToTransactions in Reports)
+  const handed = (() => { try { const v = sessionStorage.getItem("txn-filter"); if (v) sessionStorage.removeItem("txn-filter"); return v ? (JSON.parse(v) as { category?: string | null; month?: string | null }) : null; } catch { return null; } })();
+  const [category, setCategory] = useState<string | null>(handed?.category ?? null);
+  const [month, setMonth] = useState<string>(handed?.month ?? "");
   const [tag, setTag] = useState<string | null>(null);
   const [onlyHidden, setOnlyHidden] = useState(false);
   const [onlyMismatch, setOnlyMismatch] = useState(false);

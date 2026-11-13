@@ -30,7 +30,7 @@ export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: {
     openingAvailable,
     accounts: accts.map((a) => ({ id: a.id, type: a.type, onBudget: a.onBudget, owner: a.owner, startingBalance: a.startingBalance, startingDate: a.startingDate })),
     categories: cats.map((c) => ({ id: c.id, groupId: c.groupId, kind: c.kind, accountId: c.accountId, hiddenInBudget: c.hiddenInBudget })),
-    transactions: txns.map((x) => ({ id: x.id, date: x.date, accountId: x.accountId, amount: x.amount, transferToAccountId: x.transferToAccountId, sharedFiftyFifty: x.sharedFiftyFifty, confirmed: x.confirmed, lines: linesByTxn.get(x.id) ?? [] })),
+    transactions: txns.map((x) => ({ id: x.id, date: x.date, accountId: x.accountId, amount: x.amount, transferToAccountId: x.transferToAccountId, sharedFiftyFifty: x.sharedFiftyFifty, confirmed: x.confirmed, payee: x.payee, lines: linesByTxn.get(x.id) ?? [] })),
     assignments: asgs.map((a) => ({ categoryId: a.categoryId, month: a.month, amount: a.amount })),
     goals: goals.map((g) => ({ categoryId: g.categoryId, validFrom: g.validFrom, type: g.type, amount: g.amount, frequencyMonths: g.frequencyMonths, targetDate: g.targetDate })),
   };

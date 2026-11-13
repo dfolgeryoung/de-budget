@@ -9,6 +9,7 @@ import { monthPayload } from "./month.js";
 import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
+import { reportsPayload } from "./reports.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry } from "./recurring.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
@@ -255,6 +256,14 @@ app.get("/classic/:month", async (c) => {
   return c.json(await classicPayload(db, m, today(), c.get("user").id));
 });
 app.get("/classic", async (c) => c.json(await classicPayload(db, today().slice(0, 7) + "-01", today(), c.get("user").id)));
+
+// ---------- reports ----------
+app.get("/reports/:month", async (c) => {
+  const m = validMonth(c.req.param("month"));
+  if (!m) return c.json({ error: "month must be YYYY-MM-01" }, 400);
+  return c.json(await reportsPayload(db, m, today()));
+});
+app.get("/reports", async (c) => c.json(await reportsPayload(db, today().slice(0, 7) + "-01", today())));
 const classicTypedSchema = z.object({ owner: z.enum(["D", "E", "shared"]), income: z.number().int().optional(), incomeActual: z.number().int().optional(), typed: z.record(z.string(), z.number().int()).optional() });
 app.put("/classic/:month", async (c) => {
   const m = validMonth(c.req.param("month"));

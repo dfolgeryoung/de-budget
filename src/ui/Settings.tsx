@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { api, categoryOptions, todayISO, PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, type Lists } from "./api";
 import { Select } from "./Select";
 import { Chevron } from "./icons";
@@ -118,6 +118,23 @@ const refreshApp = () => dispatchEvent(new Event("lists-changed"));
 const usePhone = () => typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
 
 /** A text field that saves on blur or Enter and shows nothing while unchanged. */
+
+/** Phone settings: a one-line summary that opens a stacked editor underneath; the open card is outlined and shaded. */
+function PhoneCard({ open, onToggle, title, sub, right, dim, children }: { open: boolean; onToggle: () => void; title: ReactNode; sub: ReactNode; right?: ReactNode; dim?: boolean; children: ReactNode }) {
+  return (
+    <div className="rounded-xl" style={{ border: `1px solid ${open ? "var(--navy)" : "var(--border)"}`, background: open ? "var(--selected)" : "var(--card)", opacity: dim && !open ? 0.6 : 1 }}>
+      <button onClick={onToggle} aria-expanded={open} className="w-full text-left flex items-center gap-3" style={{ padding: "12px 14px", minHeight: 56 }}>
+        <span className="flex-1 min-w-0 flex flex-col"><span className="font-semibold text-[15px] truncate">{title}</span><span className="text-xs truncate" style={{ color: "var(--muted)" }}>{sub}</span></span>
+        {right && <span className="font-semibold tabular-nums shrink-0">{right}</span>}
+        <Chevron dir={open ? "up" : "down"} size={14} />
+      </button>
+      {open && <div className="flex flex-col gap-3 px-3.5 pb-3.5">{children}</div>}
+    </div>
+  );
+}
+const lbl = "flex flex-col gap-1 text-xs font-semibold";
+const lblStyle = { color: "var(--muted)" } as const;
+
 function TextCell({ value, onSave, className = "", placeholder, width }: { value: string; onSave: (v: string) => Promise<void> | void; className?: string; placeholder?: string; width?: number | string }) {
   const [v, setV] = useState(value);
   useEffect(() => setV(value), [value]);
@@ -136,6 +153,7 @@ function AccountsSection() {
   const { all, load } = useSettingsAll();
   const toast = useToast();
   const [adding, setAdding] = useState(false);
+  const [openRow, setOpenRow] = useState<string | null>(null);
   const [n, setN] = useState({ name: "", type: "checking" as "checking" | "savings" | "credit_card", owner: "shared" as "D" | "E" | "shared", onBudget: true, startingBalance: "", startingDate: new Date().toISOString().slice(0, 10) });
   const put = async (id: string, body: object) => { try { await api(`/accounts/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   const grid = "minmax(140px,1.4fr) 130px 118px 90px 110px 70px";
@@ -160,17 +178,21 @@ function AccountsSection() {
       {!all ? <p className="text-sm" style={{ color: "var(--muted)" }}>Loading…</p> : phone ? (
         <div className="flex flex-col gap-2">
           {all.accounts.map((a) => (
-            <div key={a.id} className="rounded-lg p-3 flex flex-col gap-2" style={{ border: "1px solid var(--border)", opacity: a.closed ? 0.55 : 1 }}>
-              <div className="flex items-center gap-2"><TextCell value={a.name} onSave={(name) => put(a.id, { name })} className="flex-1" /><span className="text-[13px] shrink-0" title={`starting ${a.startingDate}`}>{formatMoney(a.startingBalance)}</span></div>
-              <div className="flex gap-2">
-                <Select ariaLabel="Type" value={a.type} onChange={(v) => v && put(a.id, { type: v })} options={[{ value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "credit_card", label: "Credit card" }]} style={{ height: 32 }} className="flex-1" />
-                <Select ariaLabel="Owner" value={a.owner} onChange={(v) => v && put(a.id, { owner: v })} options={[{ value: "D", label: "David" }, { value: "E", label: "Elizabeth" }, { value: "shared", label: "Shared" }]} style={{ height: 32 }} className="flex-1" />
+            <PhoneCard key={a.id} open={openRow === a.id} onToggle={() => setOpenRow(openRow === a.id ? null : a.id)} dim={a.closed}
+              title={<>{a.name}{a.closed && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>closed</span>}</>}
+              sub={`${{ checking: "Checking", savings: "Savings", credit_card: "Credit card" }[a.type] ?? a.type} · ${{ D: "David", E: "Elizabeth", shared: "Shared" }[a.owner] ?? a.owner}${a.onBudget ? "" : " · off budget"}`}
+              right={formatMoney(a.startingBalance)}>
+              <label className={lbl} style={lblStyle}>Name<TextCell value={a.name} onSave={(name) => put(a.id, { name })} className="w-full" /></label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className={lbl} style={lblStyle}>Type<Select ariaLabel="Type" value={a.type} onChange={(v) => v && put(a.id, { type: v })} options={[{ value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "credit_card", label: "Credit card" }]} style={{ height: 40 }} className="w-full" /></div>
+                <div className={lbl} style={lblStyle}>Owner<Select ariaLabel="Owner" value={a.owner} onChange={(v) => v && put(a.id, { owner: v })} options={[{ value: "D", label: "David" }, { value: "E", label: "Elizabeth" }, { value: "shared", label: "Shared" }]} style={{ height: 40 }} className="w-full" /></div>
               </div>
-              <div className="flex gap-4 text-[13px]">
-                <label className="flex items-center gap-1.5"><input type="checkbox" checked={a.onBudget} onChange={(e) => put(a.id, { onBudget: e.target.checked })} /> On budget</label>
-                <label className="flex items-center gap-1.5"><input type="checkbox" checked={a.closed} onChange={(e) => put(a.id, { closed: e.target.checked })} /> Closed</label>
+              <div className="text-xs" style={{ color: "var(--muted)" }}>Starting balance {formatMoney(a.startingBalance)} as of {a.startingDate}</div>
+              <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={a.onBudget} onChange={(e) => put(a.id, { onBudget: e.target.checked })} style={{ width: 20, height: 20 }} /> On budget</label>
+                <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={a.closed} onChange={(e) => put(a.id, { closed: e.target.checked })} style={{ width: 20, height: 20 }} /> Closed</label>
               </div>
-            </div>
+            </PhoneCard>
           ))}
         </div>
       ) : (
@@ -197,6 +219,7 @@ function CategoriesSection() {
   const toast = useToast();
   const [showHidden, setShowHidden] = useState(true);
   const [newGroup, setNewGroup] = useState<string | null>(null);
+  const [openCat, setOpenCat] = useState<string | null>(null);
   const put = async (id: string, body: object) => { try { await api(`/categories/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
   const RULES: Record<string, string> = { by_account: "By account", utilities_split: "Utilities split", phone_split: "Phone split", drive_split: "Drive split" };
   const colName = (c: string) => (c === "D" ? "David" : c === "E" ? "Elizabeth" : "Shared");
@@ -246,25 +269,28 @@ function CategoriesSection() {
             return (
               <div key={g.id} className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 <div className="px-3 py-2 text-[13px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{g.name}{g.system && <span className="text-[11px] font-normal" style={{ color: "var(--muted)" }}> · system</span>}</div>
-                {rows.map((c) => (
-                  <div key={c.id} className="flex flex-col gap-2 px-3 py-2.5" style={{ borderTop: "1px solid var(--border-soft)", opacity: c.hidden ? 0.55 : 1 }}>
-                    <div className="flex items-center gap-2">
-                      <EmojiButton value={c.emoji} onPick={(emoji) => put(c.id, { emoji })} size={36} />
-                      <TextCell value={c.name} onSave={(name) => put(c.id, { name })} className="flex-1" />
-                      <button aria-label={c.favourite !== null ? "Unpin" : "Pin"} aria-pressed={c.favourite !== null} onClick={() => put(c.id, { favourite: c.favourite === null })} className="text-xl leading-none px-1" style={{ color: c.favourite !== null ? "var(--yellow)" : "var(--faint)" }}>{c.favourite !== null ? "★" : "☆"}</button>
-                    </div>
-                    {c.kind === "normal" && (
-                      <div className="flex gap-2">
-                        <Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 32 }} className="flex-1 min-w-0" />
-                        <Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 32 }} className="flex-1 min-w-0" menuWidth={240} />
+                <div className="flex flex-col gap-2 p-2">
+                  {rows.map((c) => (
+                    <PhoneCard key={c.id} open={openCat === c.id} onToggle={() => setOpenCat(openCat === c.id ? null : c.id)} dim={c.hidden}
+                      title={<>{c.emoji ? c.emoji + " " : ""}{c.name}{c.favourite !== null && <span className="ml-1.5" style={{ color: "var(--accent-text)" }}>★</span>}{c.hidden && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>hidden</span>}</>}
+                      sub={`Classic: ${classicColumn(c)}`}>
+                      <div className="flex items-end gap-2">
+                        <div className={lbl} style={lblStyle}>Emoji<EmojiButton value={c.emoji} onPick={(emoji) => put(c.id, { emoji })} size={40} /></div>
+                        <label className={lbl + " flex-1"} style={lblStyle}>Name<TextCell value={c.name} onSave={(name) => put(c.id, { name })} className="w-full" /></label>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between text-[12px]" style={{ color: "var(--muted)" }}>
-                      <span>Classic: {classicColumn(c)}</span>
-                      <label className="flex items-center gap-1.5"><input type="checkbox" checked={c.hidden} onChange={(e) => put(c.id, { hiddenInBudget: e.target.checked })} /> Hidden</label>
-                    </div>
-                  </div>
-                ))}
+                      {c.kind === "normal" && (
+                        <>
+                          <div className={lbl} style={lblStyle}>Group<Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 40 }} className="w-full" /></div>
+                          <div className={lbl} style={lblStyle}>Classic line / rule<Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 40 }} className="w-full" menuWidth={280} /></div>
+                        </>
+                      )}
+                      <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                        <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={c.favourite !== null} onChange={(e) => put(c.id, { favourite: e.target.checked })} style={{ width: 20, height: 20 }} /> Pinned to top of pickers</label>
+                        <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={c.hidden} onChange={(e) => put(c.id, { hiddenInBudget: e.target.checked })} style={{ width: 20, height: 20 }} /> Hidden</label>
+                      </div>
+                    </PhoneCard>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -396,32 +422,22 @@ function RecurringSection() {
             const catLabel = cats.find((c) => c.value === (r.categoryId ?? "rta"))?.label ?? "";
             const when = r.everyDays ? `every ${r.everyDays} days` : r.dayOfMonth ? `day ${r.dayOfMonth}` : "any day";
             return (
-              <div key={r.id} className="rounded-xl" style={{ border: `1px solid ${isOpen ? "var(--navy)" : "var(--border)"}`, background: "var(--card)", opacity: r.active || isOpen ? 1 : 0.6 }}>
-                {/* summary: one tap opens the editor; the big targets are all on the right where a thumb lands */}
-                <button onClick={() => setOpenRow(isOpen ? null : r.id)} aria-expanded={isOpen} className="w-full text-left flex items-center gap-3" style={{ padding: "12px 14px", minHeight: 56 }}>
-                  <span className="flex-1 min-w-0 flex flex-col">
-                    <span className="font-semibold text-[15px] truncate">{r.payee}{!r.active && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>off</span>}</span>
-                    <span className="text-xs truncate" style={{ color: "var(--muted)" }}>{acctName} · {catLabel} · {when}{r.nextDue && r.active ? ` · next ${shortDate(r.nextDue)}` : ""}</span>
-                  </span>
-                  <span className="font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(r.amount))}</span>
-                  <Chevron dir={isOpen ? "up" : "down"} size={14} />
-                </button>
-                {isOpen && (
-                  <div className="flex flex-col gap-3 px-3.5 pb-3.5">
-                    <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Payee<TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} className="w-full" /></label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Amount<AmountCell r={r} width="100%" /></label>
-                      <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Account<Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 40 }} className="w-full" /></div>
-                    </div>
-                    <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Category<Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 40 }} className="w-full" menuWidth={300} /></div>
-                    <div className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--muted)" }}>Repeats<ScheduleCell r={r} /></div>
-                    <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
-                      <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} style={{ width: 20, height: 20 }} /> Active</label>
-                      <button onClick={async () => { if (!confirm(`Delete ${r.payee}?`)) return; await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); toast(`Removed ${r.payee}`); }} className="rounded-lg px-4 text-[13px] font-semibold" style={{ minHeight: 40, border: "1px solid var(--field)", color: "var(--red-text)" }}>Delete</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <PhoneCard key={r.id} open={isOpen} onToggle={() => setOpenRow(isOpen ? null : r.id)} dim={!r.active}
+                title={<>{r.payee}{!r.active && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>off</span>}</>}
+                sub={`${acctName} · ${catLabel} · ${when}${r.nextDue && r.active ? ` · next ${shortDate(r.nextDue)}` : ""}`}
+                right={formatMoney(Math.abs(r.amount))}>
+                <label className={lbl} style={lblStyle}>Payee<TextCell value={r.payee} onSave={(payee) => put(r.id, { payee })} className="w-full" /></label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className={lbl} style={lblStyle}>Amount<AmountCell r={r} width="100%" /></label>
+                  <div className={lbl} style={lblStyle}>Account<Select ariaLabel="Account" value={r.accountId} onChange={(v) => v && put(r.id, { accountId: v })} options={acctOpts} style={{ height: 40 }} className="w-full" /></div>
+                </div>
+                <div className={lbl} style={lblStyle}>Category<Select ariaLabel="Category" value={r.categoryId ?? "rta"} onChange={(v) => put(r.id, { categoryId: v === "rta" ? null : v })} options={cats} style={{ height: 40 }} className="w-full" menuWidth={300} /></div>
+                <div className={lbl} style={lblStyle}>Repeats<ScheduleCell r={r} /></div>
+                <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                  <label className="inline-flex items-center gap-2.5 text-[14px]" style={{ minHeight: 44 }}><input type="checkbox" checked={r.active} onChange={(e) => put(r.id, { active: e.target.checked })} style={{ width: 20, height: 20 }} /> Active</label>
+                  <button onClick={async () => { if (!confirm(`Delete ${r.payee}?`)) return; await api(`/recurring/${r.id}`, { method: "DELETE" }); load(); refreshApp(); toast(`Removed ${r.payee}`); }} className="rounded-lg px-4 text-[13px] font-semibold" style={{ minHeight: 40, border: "1px solid var(--field)", color: "var(--red-text)", background: "var(--card)" }}>Delete</button>
+                </div>
+              </PhoneCard>
             );
           })}
         </div>

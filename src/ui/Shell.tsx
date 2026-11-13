@@ -26,7 +26,7 @@ const screens = [
   { id: "settings", label: "Settings", desktopOnly: true },
 ] as const;
 
-type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null; phoneNav?: string[] | null };
+type Me = { id: string; email: string; name: string; initial?: string; appearance?: string; showBars?: boolean; avatarEmoji?: string; avatarUrl?: string | null; phoneNav?: string[] | null; textSize?: string };
 
 export function Shell({ me }: { me: Me }) {
   return (
@@ -57,7 +57,8 @@ function ShellInner({ me }: { me: Me }) {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", me.appearance ?? "system");
-  }, [me.appearance]);
+    root.setAttribute("data-text", me.textSize ?? "normal");
+  }, [me.appearance, me.textSize]);
   const openNew = () => lists && setDraft(emptyDraft(lists, me, screen === "transactions" ? account ?? undefined : undefined));
   const onSaved = (_id: string, summary: string) => { setDraft(null); setRefreshKey((k) => k + 1); loadLists(); toast(summary); };
   return (

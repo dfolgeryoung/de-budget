@@ -36,6 +36,13 @@
       "when": 1794567224694,
       "tag": "0004_phone_nav",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794567860554,
+      "tag": "0005_text_size",
+      "breakpoints": true
     }
   ]
 }

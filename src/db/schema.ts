@@ -49,6 +49,7 @@ export const users = pgTable("users", {
   homeLayout: jsonb("home_layout").$type<{ order: string[]; hidden: string[] }>(),
   phoneNav: jsonb("phone_nav").$type<string[]>(), // the four screens on the phone's bottom bar (More is always last)
   appearance: text("appearance").notNull().default("system"), // system | light | dark
+  textSize: text("text_size").notNull().default("normal"), // small | normal | large | larger
   showBars: boolean("show_bars").notNull().default(true),
   sounds: boolean("sounds").notNull().default(false),
   pushRecurring: boolean("push_recurring").notNull().default(true),

@@ -81,7 +81,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
 
   const trig = pill
     ? { paddingRight: 10, background: on ? "var(--navy)" : "var(--card)", color: on ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${on ? "var(--navy)" : "var(--field)"}` }
-    : { height: 34, padding: "0 8px 0 10px", borderRadius: 6, fontSize: 13, background: "var(--card)", color: current ? "var(--text)" : "var(--faint)", border: "1px solid var(--field)" };
+    : { height: 34, padding: "0 8px 0 10px", borderRadius: 6, fontSize: "calc(13px * var(--fs))", background: "var(--card)", color: current ? "var(--text)" : "var(--faint)", border: "1px solid var(--field)" };
 
   let lastGroup: string | undefined;
   return (

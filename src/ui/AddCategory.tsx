@@ -38,7 +38,7 @@ export function AddCategory({ data, onDone }: { data: MonthPayload; onDone: () =
         <input autoFocus aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="Category name" className="fld flex-1 rounded-lg px-3 text-[15px] outline-none" style={field} />
       </div>
       <label className="flex flex-col gap-1.5 text-xs font-medium" style={{ color: "var(--muted)" }}>Group
-        <Select ariaLabel="Group" value={groupId} onChange={setGroupId} options={groups.map((g) => ({ value: g.id, label: g.name }))} className="w-full" style={{ height: 40, borderRadius: 8, fontSize: 15 }} />
+        <Select ariaLabel="Group" value={groupId} onChange={setGroupId} options={groups.map((g) => ({ value: g.id, label: g.name }))} className="w-full" style={{ height: 40, borderRadius: 8, fontSize: "calc(15px * var(--fs))" }} />
       </label>
       <div className="flex flex-col gap-2 rounded-lg p-3" style={{ background: "var(--card-alt)", border: "1px solid var(--border-soft)" }}>
         <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Goal from {monthLabel(data.month)} (optional)</div>

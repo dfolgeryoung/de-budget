@@ -77,7 +77,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const acct = account ? lists.accounts.find((a) => a.id === account) : null;
 
   if (!isDesktop) {
-    const hp = { height: 32, padding: "0 11px", fontSize: 12 } as const;
+    const hp = { height: 32, padding: "0 11px", fontSize: "calc(12px * var(--fs))" } as const;
     const hpOff = { ...hp, background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.35)", fontWeight: 500 };
     const hpOn = { ...hp, background: "#fff", color: "var(--rail)", border: "1px solid #fff", fontWeight: 600 };
     const catOpts = [{ value: "", label: "All categories" }, ...categoryOptions(lists, { all: true })];

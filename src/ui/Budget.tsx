@@ -235,7 +235,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           <div className="flex items-end justify-between">
             <button onClick={() => setOpen("rta")} className="flex flex-col text-left" style={{ gap: 2 }}>
               <span className="text-xs font-medium uppercase opacity-80" style={{ letterSpacing: "0.08em" }}>Ready to Assign</span>
-              <span className="font-bold" style={{ fontSize: 34, lineHeight: 1.1 }}>{formatMoney(rta)}</span>
+              <span className="font-bold" style={{ fontSize: "calc(34px * var(--fs))", lineHeight: 1.1 }}>{formatMoney(rta)}</span>
             </button>
             <button onClick={() => setOpen("rta")} className="text-xs font-semibold rounded-full" style={{ background: pill.bg, color: pill.fg, padding: "6px 10px" }}>{pill.text}</button>
           </div>

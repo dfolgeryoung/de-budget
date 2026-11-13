@@ -183,7 +183,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Split across categories · {remainder === 0 ? "all placed" : `${formatMoney(remainder)} left`}</span>
           {d.split.map((l, i) => (
             <div key={i} className="flex gap-2">
-              <Select ariaLabel={`Split line ${i + 1} category`} value={l.categoryId} onChange={(v) => set({ split: d.split.map((x, j) => (j === i ? { ...x, categoryId: v } : x)) })} options={catOptions} placeholder="Category…" className="flex-1" style={{ height: 42, borderRadius: 10, fontSize: 15 }} menuWidth={300} />
+              <Select ariaLabel={`Split line ${i + 1} category`} value={l.categoryId} onChange={(v) => set({ split: d.split.map((x, j) => (j === i ? { ...x, categoryId: v } : x)) })} options={catOptions} placeholder="Category…" className="flex-1" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} menuWidth={300} />
               <input inputMode="decimal" value={l.amountText} onChange={(e) => set({ split: d.split.map((x, j) => (j === i ? { ...x, amountText: e.target.value } : x)) })} className={field + " w-28 shrink-0 text-right"} style={fieldStyle} placeholder="0.00" />
             </div>
           ))}
@@ -195,7 +195,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       ) : (
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Category</span>
-          <Select ariaLabel="Category" value={d.categoryId} onChange={(v) => set({ categoryId: v })} options={catOptions} placeholder="Pick a category…" className="w-full" style={{ height: 42, borderRadius: 10, fontSize: 15 }} menuWidth={300} />
+          <Select ariaLabel="Category" value={d.categoryId} onChange={(v) => set({ categoryId: v })} options={catOptions} placeholder="Pick a category…" className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} menuWidth={300} />
         </div>
       )}
 
@@ -233,7 +233,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
             )}
           </div>
           {lists.tracked.length > 0 && (
-            <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: 15 }} />
+            <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} />
           )}
         </div>
       </details>

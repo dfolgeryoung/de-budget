@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "text_size" text DEFAULT 'normal' NOT NULL;

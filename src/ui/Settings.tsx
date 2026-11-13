@@ -302,8 +302,8 @@ function CategoriesSection() {
 
 function AppearanceSection() {
   const toast = useToast();
-  const [me, setMe] = useState<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null } | null>(null);
-  useEffect(() => { api<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null }>("/me").then(setMe).catch(() => setMe(null)); }, []);
+  const [me, setMe] = useState<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null; textSize?: string } | null>(null);
+  useEffect(() => { api<{ avatarEmoji?: string; appearance?: string; showBars?: boolean; phoneNav?: string[] | null; textSize?: string }>("/me").then(setMe).catch(() => setMe(null)); }, []);
   const nav = me?.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV;
   const setSlot = (i: number, id: string) => {
     const next = [...nav];
@@ -320,6 +320,7 @@ function AppearanceSection() {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px]">
           <span className="flex items-center gap-2">Avatar <span className="text-xs" style={{ color: "var(--muted)" }}>— click your picture at the top of the rail (or on More on the phone) to change it</span></span>
           <label className="flex items-center gap-2">Theme <Select ariaLabel="Theme" value={me.appearance ?? "system"} onChange={(v) => save({ appearance: v ?? "system" })} options={[{ value: "system", label: "Match the device" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} style={{ height: 32 }} /></label>
+          <label className="flex items-center gap-2">Text size <Select ariaLabel="Text size" value={me.textSize ?? "normal"} onChange={(v) => save({ textSize: v ?? "normal" })} options={[{ value: "small", label: "Small" }, { value: "normal", label: "Normal" }, { value: "large", label: "Large" }, { value: "larger", label: "Larger" }]} style={{ height: 32 }} /></label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={me.showBars ?? true} onChange={(e) => save({ showBars: e.target.checked })} /> Show progress bars by default</label>
         </div>
       )}

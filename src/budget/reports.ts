@@ -25,7 +25,7 @@ export interface CategorySpend { id: string; name: string; emoji: string | null;
 export interface OwnerSpend { who: "shared" | "D" | "E"; spent: Cents; share: number }
 export interface Mover { id: string; name: string; emoji: string | null; now: Cents; before: Cents; delta: Cents }
 export interface BillToCome { id: string; payee: string; amount: Cents; day: number | null; categoryId: string | null; overdue: boolean }
-export interface ProjectedCategory { id: string; name: string; emoji: string | null; spent: Cents; billsLeft: Cents; avgDaily: number; projected: Cents; available: Cents; budget: Cents; over: Cents; isBills: boolean }
+export interface ProjectedCategory { id: string; name: string; emoji: string | null; spent: Cents; billsLeft: Cents; avgDaily: number; projected: Cents; available: Cents; budget: Cents; over: Cents; isBills: boolean; how: "bills" | "daily" | "one-off" }
 
 export interface ReportsView {
   month: MonthKey;
@@ -205,15 +205,30 @@ export function computeReports(r: ReportsInput): ReportsView {
     for (const l of t.lines) if (l.categoryId) billsSoFarByCat.set(l.categoryId, (billsSoFarByCat.get(l.categoryId) ?? 0) - l.amount);
   }
   const recurringCats = new Set(r.recurring.map((b) => b.categoryId).filter(Boolean) as string[]);
+  // everyday categories (steady spending: three or more entries so far, or spending in both of the last two months)
+  // keep their daily rate; a one-off lands at the larger of what it spent and its budget
+  const entriesThisMonth = new Map<string, number>();
+  const monthsWithSpend = new Map<string, Set<string>>();
+  for (const t of input.transactions) {
+    if (t.confirmed === false || t.transferToAccountId) continue;
+    const tm = monthOf(t.date);
+    for (const l of t.lines) {
+      if (!l.categoryId || l.amount >= 0) continue;
+      if (tm === month && (!through || t.date <= through)) entriesThisMonth.set(l.categoryId, (entriesThisMonth.get(l.categoryId) ?? 0) + 1);
+      if (tm === prevMonth || tm === addMonths(month, -2)) (monthsWithSpend.get(l.categoryId) ?? monthsWithSpend.set(l.categoryId, new Set()).get(l.categoryId)!).add(tm);
+    }
+  }
+  const isEveryday = (id: string) => (entriesThisMonth.get(id) ?? 0) >= 3 || (monthsWithSpend.get(id)?.size ?? 0) === 2;
   const projCats: ProjectedCategory[] = [...new Set([...spentIds, ...billsLeftByCat.keys()])]
     .filter((id) => spendable({ kind: meta.get(id)?.kind ?? "normal" }))
     .map((id) => {
       const s = byCat.get(id) ?? 0, bl = billsLeftByCat.get(id) ?? 0, ev = s - (billsSoFarByCat.get(id) ?? 0);
       const isBills = recurringCats.has(id);
-      const ad = daysElapsed && !isBills ? ev / daysElapsed : 0;
-      const projected = daysElapsed ? s + bl + Math.round(ad * daysLeft) : (availIn.get(id) ?? 0) + bl;
-      const available = availIn.get(id) ?? 0;
-      return { id, name: name(id), emoji: emoji(id), spent: s, billsLeft: bl, avgDaily: ad, projected, available, budget: budgetOf.get(id) ?? 0, over: Math.max(0, projected - available), isBills };
+      const how: ProjectedCategory["how"] = isBills ? "bills" : isEveryday(id) ? "daily" : "one-off";
+      const ad = daysElapsed && how === "daily" ? ev / daysElapsed : 0;
+      const available = availIn.get(id) ?? 0, budget = budgetOf.get(id) ?? 0;
+      const projected = !daysElapsed ? available + bl : how === "one-off" ? Math.max(s + bl, budget) : s + bl + Math.round(ad * daysLeft);
+      return { id, name: name(id), emoji: emoji(id), spent: s, billsLeft: bl, avgDaily: ad, projected, available, budget, over: Math.max(0, projected - available), isBills, how };
     })
     .filter((c) => c.spent || c.billsLeft) // a category with no spending and no bills just holds its balance
     .sort((a, b) => b.over - a.over || b.projected - a.projected);
@@ -221,8 +236,10 @@ export function computeReports(r: ReportsInput): ReportsView {
   const activeIds = new Set(projCats.map((c) => c.id));
   const untouched = byCategory.filter((c) => !activeIds.has(c.id) && c.budget > 0);
   const untouchedBudget = sum(untouched.map((c) => c.budget));
-  const everydayProjected = sum(projCats.map((c) => c.projected - c.spent - c.billsLeft));
-  const totalProjected = daysElapsed ? spent + billsTotal + everydayProjected + untouchedBudget : budgeted;
+  const everydayProjected = sum(projCats.filter((c) => c.how === "daily").map((c) => c.projected - c.spent - c.billsLeft));
+  const oneOffs = projCats.filter((c) => c.how === "one-off");
+  const oneOffTopUp = sum(oneOffs.map((c) => c.projected - c.spent - c.billsLeft));
+  const totalProjected = daysElapsed ? spent + billsTotal + everydayProjected + oneOffTopUp + untouchedBudget : budgeted;
   if (daysElapsed) onPace = totalProjected;
   const totalAvailable = sum(projCats.map((c) => c.available));
   const totalBudgeted = budgeted;
@@ -246,13 +263,14 @@ export function computeReports(r: ReportsInput): ReportsView {
       { k: `Bills still to come (${billsToCome.length})`, v: money(billsTotal), op: "+" },
       { k: `Everyday spending so far (spent minus bills already paid ${fmt(billsSoFar)})`, v: money(everyday), sub: true },
       { k: `÷ ${daysElapsed} days elapsed = average per day`, v: fmt(Math.round(avgDaily)), sub: true },
-      { k: `Average per day × ${daysLeft} days left, category by category`, v: money(everydayProjected), op: "+" },
+      { k: `Everyday categories (${projCats.filter((c) => c.how === "daily").length}): their average per day × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
+      { k: `One-offs (${oneOffs.length}): the rest of their budget, not extrapolated`, v: money(oneOffTopUp), op: "+" },
       { k: `Budgets of the ${untouched.length} categories with nothing spent yet`, v: money(untouchedBudget), op: "+" },
       { k: "On pace to spend", v: money(onPace), result: true },
       { k: "Budgeted", v: money(budgeted), op: "−" },
       { k: onPace > budgeted ? "Over budget if it holds" : "Under budget if it holds", v: money(Math.abs(onPace - budgeted)), result: true },
     ],
-    note: "Bills are the active recurring bills; a category with a bill counts its bills, everything else keeps its average daily rate, and a category untouched so far is assumed to spend its budget.",
+    note: "Bills are the active recurring bills. An everyday category (three or more entries so far, or spending in each of the last two months) keeps its average daily rate; a one-off lands at the larger of what it spent and its budget; a category untouched so far is assumed to spend its budget.",
   };
   const explainVs: ExplainBox = {
     title: `Vs ${monthName(prevMonth)}, same day`,
@@ -285,14 +303,15 @@ export function computeReports(r: ReportsInput): ReportsView {
     rows: [
       { k: "Spent so far", v: money(spent) },
       { k: "Bills still to come", v: money(billsTotal), op: "+" },
-      { k: `Everyday categories at their average daily rate × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
+      { k: `Everyday categories (${projCats.filter((c) => c.how === "daily").length}) at their average daily rate × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
+      { k: `One-offs (${oneOffs.length}): the rest of their budget, not extrapolated`, v: money(oneOffTopUp), op: "+" },
       { k: `Budgets of the ${untouched.length} categories with nothing spent yet`, v: money(untouchedBudget), op: "+" },
       { k: "Projected spend at month end", v: money(totalProjected), result: true },
       { k: "Budgeted (assigned, or what each goal needs this month)", v: money(totalBudgeted), op: "−" },
       { k: totalProjected > totalBudgeted ? "Over budget if it holds" : "Under budget if it holds", v: money(Math.abs(totalBudgeted - totalProjected)), result: true },
       { k: "Available in these categories, carry-over included", v: money(totalAvailable), sub: true },
     ],
-    note: "A category with a recurring bill counts its bills, not a daily rate; everything else keeps spending at its average so far. A category is heading over when its projection passes what it has available, carry-over included.",
+    note: "A category with a recurring bill counts its bills, not a daily rate. An everyday category (three or more entries so far, or spending in each of the last two months) keeps its average daily rate; a one-off is not extrapolated and lands at the larger of what it spent and its budget. A category is heading over when its projection passes what it has available, carry-over included.",
   };
 
   return {

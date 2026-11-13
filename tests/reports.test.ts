@@ -57,34 +57,43 @@ describe("pacing with bills", () => {
   const input: BudgetInput = {
     firstMonth: "2026-11-01",
     accounts: [{ id: "d", type: "checking", onBudget: true, owner: "D", startingBalance: 100000, startingDate: "2026-11-01" }, { id: "e", type: "checking", onBudget: true, owner: "E", startingBalance: 100000, startingDate: "2026-11-01" }],
-    categories: [{ id: "groc", groupId: "g", kind: "normal" }, { id: "rent", groupId: "g", kind: "normal" }],
+    categories: [{ id: "groc", groupId: "g", kind: "normal" }, { id: "rent", groupId: "g", kind: "normal" }, { id: "car", groupId: "g", kind: "normal" }],
     transactions: [
       { id: "1", date: "2026-11-02", accountId: "d", amount: -10000, sharedFiftyFifty: true, payee: "Store", lines: [{ categoryId: "groc", amount: -10000 }] },
-      { id: "2", date: "2026-11-05", accountId: "e", amount: -5000, payee: "Store", lines: [{ categoryId: "groc", amount: -5000 }] },
+      { id: "2", date: "2026-11-05", accountId: "e", amount: -2500, payee: "Store", lines: [{ categoryId: "groc", amount: -2500 }] },
+      { id: "2b", date: "2026-11-08", accountId: "e", amount: -2500, payee: "Store", lines: [{ categoryId: "groc", amount: -2500 }] },
+      { id: "5", date: "2026-11-03", accountId: "d", amount: -60000, payee: "Mechanic", lines: [{ categoryId: "car", amount: -60000 }] },
       { id: "3", date: "2026-11-01", accountId: "d", amount: -100000, payee: "Landlord", lines: [{ categoryId: "rent", amount: -100000 }] },
       { id: "4", date: "2026-11-20", accountId: "d", amount: -99900, payee: "Future", lines: [{ categoryId: "groc", amount: -99900 }] },
     ],
-    assignments: [{ categoryId: "groc", month: "2026-11-01", amount: 40000 }, { categoryId: "rent", month: "2026-11-01", amount: 100000 }],
+    assignments: [{ categoryId: "groc", month: "2026-11-01", amount: 40000 }, { categoryId: "rent", month: "2026-11-01", amount: 100000 }, { categoryId: "car", month: "2026-11-01", amount: 30000 }],
     goals: [],
   };
-  const cats = [{ id: "groc", name: "Groceries", emoji: "🛒", kind: "normal" }, { id: "rent", name: "Rent", emoji: "🏠", kind: "normal" }];
+  const cats = [{ id: "groc", name: "Groceries", emoji: "🛒", kind: "normal" }, { id: "rent", name: "Rent", emoji: "🏠", kind: "normal" }, { id: "car", name: "Car repairs", emoji: null, kind: "normal" }];
   const recurring = [{ id: "r1", payee: "Landlord", amount: -100000, day: 1, categoryId: "rent" }, { id: "r2", payee: "Water", amount: -3000, day: 25, categoryId: "rent" }];
   const r = computeReports({ input, categories: cats, recurring, month: "2026-11-01", today: "2026-11-10" });
 
   it("only counts entries through today", () => {
-    expect(r.thisMonth.spent).toBe(115000);
+    expect(r.thisMonth.spent).toBe(175000);
     expect(spendByCategory(input, "2026-11-01", "2026-11-10").get("groc")).toBe(15000);
   });
   it("splits a 50/50 entry between the two of you", () => {
-    expect(spendByOwner(input, "2026-11-01", "2026-11-10")).toEqual({ shared: 0, D: 105000, E: 10000 });
+    expect(spendByOwner(input, "2026-11-01", "2026-11-10")).toEqual({ shared: 0, D: 165000, E: 10000 });
   });
   it("bills to come are the recurring payees not yet entered", () => {
     expect(r.thisMonth.billsToCome.map((b) => b.payee)).toEqual(["Water"]);
     expect(r.thisMonth.billsTotal).toBe(3000);
   });
-  it("on pace = spent + bills to come + everyday rate × days left", () => {
-    // everyday = 15000 over 10 days = 1500/day × 20 days left = 30000
-    expect(r.thisMonth.onPace).toBe(115000 + 3000 + 30000);
+  it("on pace = spent + bills to come + everyday rate × days left; a one-off is not extrapolated", () => {
+    // groceries (three entries) = 15000 over 10 days = 1500/day × 20 days left = 30000; the car repair stays at 60000
+    expect(r.thisMonth.onPace).toBe(175000 + 3000 + 30000);
+    const car = r.projection.categories.find((c) => c.id === "car")!;
+    expect(car.how).toBe("one-off");
+    expect(car.projected).toBe(60000);
+  });
+  it("a one-off that is still under its budget is assumed to spend the budget", () => {
+    const small = computeReports({ input: { ...input, transactions: input.transactions.map((t) => (t.id === "5" ? { ...t, amount: -10000, lines: [{ categoryId: "car", amount: -10000 }] } : t)) }, categories: cats, recurring, month: "2026-11-01", today: "2026-11-10" });
+    expect(small.projection.categories.find((c) => c.id === "car")!.projected).toBe(30000);
   });
   it("projection flags the category heading over", () => {
     const groc = r.projection.categories.find((c) => c.id === "groc")!;
@@ -93,6 +102,6 @@ describe("pacing with bills", () => {
     const rent = r.projection.categories.find((c) => c.id === "rent")!;
     expect(rent.isBills).toBe(true);
     expect(rent.projected).toBe(103000);
-    expect(r.projection.headingOver.map((c) => c.id)).toEqual(["groc", "rent"]);
+    expect(r.projection.headingOver.map((c) => c.id)).toEqual(["car", "groc", "rent"]);
   });
 });

@@ -233,8 +233,8 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     const short = pr.totalProjected - pr.totalBudgeted;
     const pmax = Math.max(1, ...pr.categories.map((c) => Math.max(c.projected, c.budget)));
     const PRow = ({ c }: { c: ProjectedCategory }) => (
-      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} className="row-hover grid items-center gap-3 text-[13px] rounded-md text-left -mx-1 px-1" style={{ gridTemplateColumns: ph ? "110px minmax(0,1fr) 70px" : "150px minmax(0,1fr) 90px 90px", height: 28 }} title={`${c.name}: spent ${formatMoney(c.spent)} so far${c.billsLeft ? `, bills to come ${formatMoney(c.billsLeft)}` : ""}${!c.isBills && c.avgDaily ? `, about ${formatMoney(Math.round(c.avgDaily))} a day` : ""} → ${formatMoney(c.projected)} of ${formatMoney(c.available)} available`}>
-        <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}</span>
+      <button onClick={() => goToTransactions({ category: c.id, month: d.month })} className="row-hover grid items-center gap-3 text-[13px] rounded-md text-left -mx-1 px-1" style={{ gridTemplateColumns: ph ? "110px minmax(0,1fr) 70px" : "150px minmax(0,1fr) 90px 90px", height: 28 }} title={`${c.name}: spent ${formatMoney(c.spent)} so far${c.billsLeft ? `, bills to come ${formatMoney(c.billsLeft)}` : ""}${c.how === "daily" ? `, about ${formatMoney(Math.round(c.avgDaily))} a day` : c.how === "one-off" ? ", one-off (not extrapolated)" : ""} → ${formatMoney(c.projected)} of ${formatMoney(c.available)} available`}>
+        <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}{c.how === "one-off" && !ph && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>one-off</span>}</span>
         <span className="relative block rounded" style={{ height: 16, background: "var(--track)" }}>
           <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${Math.min(100, (c.spent / pmax) * 100)}%`, background: c.over ? "var(--red)" : BAR }} />
           <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${Math.min(100, (c.projected / pmax) * 100)}%`, background: c.over ? "var(--red)" : BAR, opacity: 0.35 }} />
@@ -257,7 +257,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
             <strong>Heading over:</strong> {pr.headingOver.slice(0, 5).map((c) => `${c.name} by ${formatMoney(c.over)}`).join(", ")}{pr.headingOver.length > 5 ? ` and ${pr.headingOver.length - 5} more` : ""}.
           </div>
         )}
-        <Card title="Where each category lands" sub={ph ? "solid = spent · faint = projected · tick = available" : "categories with spending or bills this month · solid = spent so far · faint = projected by month end · tick = available (carry-over included) · click for its entries"}>
+        <Card title="Where each category lands" sub={ph ? "solid = spent · faint = projected · tick = available" : "solid = spent so far · faint = projected by month end · tick = available (carry-over included) · one-offs are not extrapolated · click for its entries"}>
           {!ph && <div className="grid gap-3 text-[11px] font-semibold uppercase tracking-wider -mb-1" style={{ gridTemplateColumns: "150px minmax(0,1fr) 90px 90px", color: "var(--muted)" }}><span /><span /><span className="text-right">Projected</span><span className="text-right">Available</span></div>}
           <div className="flex flex-col gap-1">{pr.categories.map((c) => <PRow key={c.id} c={c} />)}</div>
         </Card>

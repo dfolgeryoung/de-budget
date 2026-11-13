@@ -72,6 +72,21 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   // phone: press-and-hold lifts a row; the finger moves it; the native touchmove listener below (non-passive) stops the page scrolling meanwhile
   const [touchDrag, setTouchDrag] = useState<{ id: string; dy: number } | null>(null);
   const touchRef = useRef<{ id: string | null; timer: number | null; startX: number; startY: number; lastY: number; moved: boolean }>({ id: null, timer: null, startX: 0, startY: 0, lastY: 0, moved: false });
+  // Home's budget check hands over a category to jump to: open its panel, uncollapse its group and scroll its row into view
+  useEffect(() => {
+    if (!data) return;
+    let handed: string | null = null;
+    try { handed = sessionStorage.getItem("budget-select"); if (handed) sessionStorage.removeItem("budget-select"); } catch { /* private mode */ }
+    if (!handed || !data.categories[handed]) return;
+    const id = handed;
+    setCollapsed((s) => { const n = new Set(s); for (const g of data.groups) if (g.categories.includes(id)) n.delete(g.id); return n; });
+    setOpen(id);
+    setTimeout(() => {
+      const row = document.querySelector<HTMLElement>(`[data-cat="${id}"]`);
+      row?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (row) { row.style.transition = "background 1200ms"; row.style.background = "var(--selected)"; setTimeout(() => { row.style.background = ""; }, 1600); }
+    }, 60);
+  }, [data]);
   useEffect(() => {
     // on the document (the list mounts after loading); it only intervenes while a row is lifted
     const onMove = (e: TouchEvent) => {
@@ -402,7 +417,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
                   const lineAbove = dragId && dropAt?.groupId === g.id && dropAt.index === ri;
                   const lineBelow = dragId && dropAt?.groupId === g.id && dropAt.index === ri + 1 && ri === rows.length - 1;
                   return (
-                    <div key={c.categoryId} className={"drag-row grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")}
+                    <div key={c.categoryId} data-cat={c.categoryId} className={"drag-row grid items-center px-4 py-2 text-sm" + (isSel ? "" : " row-hover")}
                       draggable onDragStart={(e) => { if (!dragArmed.current) { e.preventDefault(); return; } e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", c.categoryId); setDragId(c.categoryId); }}
                       onDragEnd={() => { dragArmed.current = false; setDragId(null); setDropAt(null); }} {...rowDragProps(g.id, ri)}
                       style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", borderTop: lineAbove ? "2px solid var(--navy)" : "1px solid var(--border-soft)", borderBottom: lineBelow ? "2px solid var(--navy)" : undefined, background: isSel ? "var(--selected)" : c.status === "underfunded" ? "var(--yellow-row)" : undefined, boxShadow: isSel ? "inset 3px 0 0 var(--navy)" : undefined, opacity: dragId === c.categoryId ? 0.4 : 1 }}>

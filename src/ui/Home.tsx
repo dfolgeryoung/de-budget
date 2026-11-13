@@ -21,7 +21,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
     api<MonthPayload>("/month").then(setM).catch(() => setM(null));
     api<LedgerRow[]>("/transactions?limit=4").then(setRecent).catch(() => setRecent([]));
     api<typeof pend>("/pending").then((p) => setPend(Array.isArray(p) ? p : [])).catch(() => setPend([]));
-    api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(r.tracked)).catch(() => setTracked([]));
+    api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(Array.isArray(r.tracked) ? r.tracked : [])).catch(() => setTracked([]));
   }, [refreshKey, bump]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
     try {
@@ -48,6 +48,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const week = fun ? weeklyAllowance(fun.available, todayISO()) : null;
   // open tracked amounts that are mine or shared get a card each
   const myTracked = tracked.filter((x) => !x.closed && (x.owner === initial || x.owner === "shared"));
+  const goCategory = (id: string) => { try { sessionStorage.setItem("budget-select", id); } catch { /* private mode */ } location.hash = "budget"; };
   const openTracked = (id: string) => { try { sessionStorage.setItem("tracked-select", id); } catch { /* private mode */ } location.hash = "tracked"; };
 
   return (
@@ -123,7 +124,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             {[{ items: overspent, label: "Overspent", bg: "var(--red-bg)", fg: "var(--red-text)", val: (c: typeof cats[number]) => c.available }, { items: under, label: "Underfunded", bg: "var(--yellow-bg)", fg: "var(--yellow-text)", val: (c: typeof cats[number]) => c.short }].map((s) => (
               <div key={s.label} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-[13px] font-semibold"><span>{s.label}</span><span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold" style={{ background: s.bg, color: s.fg }}>{s.items.length}</span></div>
-                {s.items.slice(0, 3).map((c) => <div key={c.categoryId} className="flex justify-between text-xs pl-2"><span style={{ color: "var(--text-2)" }}>{catName(c.categoryId)}</span><span className="font-semibold" style={{ color: s.fg }}>{formatMoney(s.val(c))}</span></div>)}
+                {s.items.slice(0, 3).map((c) => <button key={c.categoryId} onClick={(e) => { e.preventDefault(); e.stopPropagation(); goCategory(c.categoryId); }} className="flex justify-between text-xs pl-2 w-full text-left rounded-md tb-btn" style={{ padding: "3px 4px 3px 8px", margin: "-3px 0" }}><span className="truncate" style={{ color: "var(--text-2)" }}>{catName(c.categoryId)}</span><span className="font-semibold shrink-0" style={{ color: s.fg }}>{formatMoney(s.val(c))} ›</span></button>)}
                 {s.items.length > 3 && <span className="text-xs pl-2" style={{ color: "var(--muted)" }}>+ {s.items.length - 3} more</span>}
               </div>
             ))}

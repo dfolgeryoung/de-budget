@@ -14,7 +14,7 @@ import type { ReportsPayload } from "../server/reports";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
+export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
@@ -22,8 +22,13 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [upcoming, setUpcoming] = useState<UpcomingBill[]>([]);
   const [report, setReport] = useState<ReportsPayload | null>(null);
   const [editing, setEditing] = useState(false);
-  const [layout, setLayout] = useState<{ order: string[]; hidden: string[] }>(() => ({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }));
-  useEffect(() => { setLayout({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [] }); }, [me.homeLayout]);
+  type Layout = { order: string[]; hidden: string[]; spendCategories?: string[] };
+  const fromMe = (): Layout => ({ order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [], spendCategories: me.homeLayout?.spendCategories });
+  const [layout, setLayout] = useState<Layout>(fromMe);
+  useEffect(() => { setLayout(fromMe()); }, [me.homeLayout]);
+  const [pickingCats, setPickingCats] = useState(false);
+  const allCats = lists.groups.flatMap((g) => g.categories.filter((c) => c.kind === "normal").map((c) => ({ ...c, group: g.name })));
+  const [catSearch, setCatSearch] = useState("");
   const [bump, setBump] = useState(0);
   const toast = useToast();
   useEffect(() => {
@@ -166,7 +171,8 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
     spend: { label: "Spend by category (this month)", node: (
       <>
         {report && report.thisMonth.byCategory.length > 0 && (() => {
-          const cats = report.thisMonth.byCategory.filter((c) => c.spent > 0).slice(0, 5);
+          const chosen = layout.spendCategories ?? [];
+          const cats = chosen.length ? chosen.map((id) => report.thisMonth.byCategory.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c) : report.thisMonth.byCategory.filter((c) => c.spent > 0).slice(0, 5);
           const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
           return (
             <a href="#reports" className={card} style={cs}>
@@ -213,7 +219,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const DEFAULT_HIDDEN = ["spend"]; // optional cards start hidden until switched on in Edit Home
   const order = [...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k))];
   const isHidden = (k: string) => layout.hidden.includes(k) || (DEFAULT_HIDDEN.includes(k) && !layout.order.includes(k));
-  async function saveLayout(next: { order: string[]; hidden: string[] }) {
+  async function saveLayout(next: Layout) {
     setLayout(next);
     try { await api("/me", { method: "PUT", json: { homeLayout: next } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
   }
@@ -283,7 +289,32 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                 );
               })}
             </div>
-            {(layout.order.length || layout.hidden.length) ? <button onClick={() => saveLayout({ order: [], hidden: [] })} className="text-xs underline text-left" style={{ color: "var(--muted)" }}>Reset to the default layout</button> : null}
+            {!isHidden("spend") && (
+              <div className="rounded-xl p-3 flex flex-col gap-2" style={cs}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0"><div className="text-[13px] font-semibold">Spend by category card</div><div className="text-xs truncate" style={{ color: "var(--muted)" }}>{layout.spendCategories?.length ? `${layout.spendCategories.length} chosen: ${layout.spendCategories.map((id) => allCats.find((c) => c.id === id)?.name ?? "").filter(Boolean).join(", ")}` : "Showing the five biggest this month"}</div></div>
+                  <button onClick={() => setPickingCats((p) => !p)} className="rounded-lg px-3 text-[13px] font-semibold shrink-0" style={{ height: 34, border: "1px solid var(--field)", background: "var(--card)" }}>{pickingCats ? "Done" : "Choose"}</button>
+                </div>
+                {pickingCats && (
+                  <div className="flex flex-col gap-1.5">
+                    <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="Find a category" aria-label="Find a category" className="fld rounded-md px-3 text-[13px] outline-none" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }} />
+                    <div className="flex flex-col max-h-64 overflow-y-auto rounded-lg" style={{ border: "1px solid var(--border-soft)" }}>
+                      {allCats.filter((c) => !catSearch || c.name.toLowerCase().includes(catSearch.toLowerCase())).map((c) => {
+                        const on = (layout.spendCategories ?? []).includes(c.id);
+                        return (
+                          <label key={c.id} className="flex items-center gap-2.5 px-3 text-[14px]" style={{ minHeight: 40, borderTop: "1px solid var(--border-soft)" }}>
+                            <input type="checkbox" checked={on} onChange={() => { const cur = layout.spendCategories ?? []; const next = on ? cur.filter((x) => x !== c.id) : cur.length >= 12 ? cur : [...cur, c.id]; saveLayout({ ...layout, spendCategories: next }); }} style={{ width: 20, height: 20 }} />
+                            <span className="truncate">{c.emoji ? c.emoji + " " : ""}{c.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between text-xs" style={{ color: "var(--muted)" }}><span>Up to 12, shown in the order you tick them. None ticked = the five biggest.</span>{layout.spendCategories?.length ? <button onClick={() => saveLayout({ ...layout, spendCategories: [] })} className="underline">Clear</button> : null}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            {(layout.order.length || layout.hidden.length || layout.spendCategories?.length) ? <button onClick={() => saveLayout({ order: [], hidden: [], spendCategories: [] })} className="text-xs underline text-left" style={{ color: "var(--muted)" }}>Reset to the default layout</button> : null}
           </div>
         </Sheet>
       )}

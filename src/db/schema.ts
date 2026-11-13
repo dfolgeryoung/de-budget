@@ -46,7 +46,7 @@ export const users = pgTable("users", {
   avatarEmoji: text("avatar_emoji").default("🙂"),
   avatarUrl: text("avatar_url"),
   // per-person settings
-  homeLayout: jsonb("home_layout").$type<{ order: string[]; hidden: string[] }>(),
+  homeLayout: jsonb("home_layout").$type<{ order: string[]; hidden: string[]; spendCategories?: string[] }>(),
   phoneNav: jsonb("phone_nav").$type<string[]>(), // the four screens on the phone's bottom bar (More is always last)
   appearance: text("appearance").notNull().default("system"), // system | light | dark
   textSize: text("text_size").notNull().default("normal"), // small | normal | large | larger

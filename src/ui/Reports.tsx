@@ -92,7 +92,9 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const cats = showAll ? tm.byCategory : tm.byCategory.slice(0, ph ? 6 : 9);
   // the bar runs to what the category can spend this month: the budget, plus anything carried over (shown as a hatched band)
   const roomOf = (c: CategorySpend) => Math.max(c.budget, c.available);
-  const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, roomOf(c))));
+  // scale on spending and this month's budgets only: a big carried-over balance (an emergency fund, say) would otherwise
+  // squash every bar; the carry-over band is simply clipped at the end of the track
+  const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
   // each row is its own grid, so the amount column is sized once to the widest figure to keep every bar the same length
   const colFor = (labels: string[]) => `${Math.max(3, ...labels.map((l) => l.length)) * 7.4 + 4}px`;
   const catAmtCol = colFor(cats.map((c) => money(c.spent, ph)));
@@ -108,7 +110,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
           {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(c.budget)}%`, width: `${pct(c.available) - pct(c.budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
           <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${pct(c.spent)}%`, background: over ? "var(--red)" : BAR, transition: "width 400ms ease-out" }} />
           {c.budget > 0 && <span className="absolute" style={{ left: `calc(${pct(c.budget)}% - 1px)`, top: -3, width: 2, height: 22, background: "var(--text)" }} />}
-          {carry > 0 && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 18, background: "var(--muted)", opacity: 0.7 }} />}
+          {carry > 0 && c.available <= scale && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 18, background: "var(--muted)", opacity: 0.7 }} />}
         </span>
         <span className="text-right font-semibold tabular-nums">{money(c.spent, ph)}</span>
       </button>

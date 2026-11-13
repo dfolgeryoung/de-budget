@@ -303,9 +303,9 @@ app.post("/backup/run", async (c) => { try { return c.json(await nightlyBackup(d
 app.get("/reports/:month", async (c) => {
   const m = validMonth(c.req.param("month"));
   if (!m) return c.json({ error: "month must be YYYY-MM-01" }, 400);
-  return c.json(await reportsPayload(db, m, today()));
+  return c.json(await reportsPayload(db, m, today(), c.get("user").id));
 });
-app.get("/reports", async (c) => c.json(await reportsPayload(db, today().slice(0, 7) + "-01", today())));
+app.get("/reports", async (c) => c.json(await reportsPayload(db, today().slice(0, 7) + "-01", today(), c.get("user").id)));
 const classicTypedSchema = z.object({ owner: z.enum(["D", "E", "shared"]), income: z.number().int().optional(), incomeActual: z.number().int().optional(), typed: z.record(z.string(), z.number().int()).optional() });
 app.put("/classic/:month", async (c) => {
   const m = validMonth(c.req.param("month"));

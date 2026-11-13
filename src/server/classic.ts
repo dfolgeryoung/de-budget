@@ -20,7 +20,8 @@ async function setting<T>(db: Db, key: string, fallback: T): Promise<T> {
   return (r[0]?.value as T | undefined) ?? fallback;
 }
 
-export async function classicPayload(db: Db, month: MonthKey, today: string, me: string): Promise<ClassicPayload> {
+/** The Classic input for a month (budgets, typed figures and every entry); Reports reuses it for "who spent". */
+export async function buildClassicInput(db: Db, month: MonthKey, today: string, me: string): Promise<{ ci: ClassicInput; cmRows: typeof t.classicMonth.$inferSelect[] }> {
   const [{ input, cats }, layout, keywords, cmRows, txns] = await Promise.all([
     loadBudget(db),
     setting<ClassicLineDef[]>(db, "classic_layout", []),
@@ -52,6 +53,11 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
       return { id: x.id, date: x.date, accountId: x.accountId, payee: m?.payee ?? null, hidden: !!m?.hidden, masked, transferToAccountId: x.transferToAccountId ?? null, sharedFiftyFifty: x.sharedFiftyFifty ?? false, lines: x.lines };
     }),
   };
+  return { ci, cmRows };
+}
+
+export async function classicPayload(db: Db, month: MonthKey, today: string, me: string): Promise<ClassicPayload> {
+  const { ci, cmRows } = await buildClassicInput(db, month, today, me);
   const result = computeClassic(ci);
 
   // acceptance check against the sheet's own Classic figures for the exported month
@@ -68,7 +74,7 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
     }
     check = { ok: diffs.length === 0, diffs };
   }
-  return { ...result, layout, keywords, typed, check };
+  return { ...result, layout: ci.layout, keywords: ci.keywords, typed: ci.typed, check };
 }
 
 /** Type a figure: a person's income (budget or actual) or a typed line budget. */

@@ -15,6 +15,8 @@ export interface ReportsInput {
   recurring: ReportRecurring[];
   month: MonthKey;
   today: ISODate;
+  /** whose spending it is, by Classic's routing (shared lines vs each person's); falls back to who paid */
+  whoSpent?: (month: MonthKey, through: ISODate | null) => Record<"shared" | "D" | "E", Cents>;
 }
 
 export interface ExplainRow { k: string; v: number | string; op?: string; result?: boolean; sub?: boolean }
@@ -174,7 +176,8 @@ export function computeReports(r: ReportsInput): ReportsView {
   const summary = !prevSpent ? "Nothing recorded last month" : [ups.length ? `${ups.join(" and ")} up` : "", downs.length ? `${downs.join(", ")} down` : ""].filter(Boolean).join("; ") || "About the same mix";
 
   // who spent
-  const owners = daysElapsed ? spendByOwner(input, month, through) : { shared: 0, D: 0, E: 0 };
+  const who = r.whoSpent ?? ((m: MonthKey, th: ISODate | null) => spendByOwner(input, m, th));
+  const owners = daysElapsed ? who(month, through) : { shared: 0, D: 0, E: 0 };
   const ownerTotal = owners.shared + owners.D + owners.E;
   const byOwner: OwnerSpend[] = (["shared", "D", "E"] as const).map((who) => ({ who, spent: owners[who], share: ownerTotal ? owners[who] / ownerTotal : 0 }));
 
@@ -188,7 +191,7 @@ export function computeReports(r: ReportsInput): ReportsView {
   const trendMonths = tm.map((m) => {
     const full = spendByCategory(input, m, m === month ? through : null);
     const assignedTotal = m < input.firstMonth ? 0 : sum((m === month ? view : computeMonth(input, m)).categories.map((c) => c.assigned));
-    return { month: m, spent: sum([...full.values()]), income: incomeToRTA(input, m), assigned: assignedTotal, byOwner: spendByOwner(input, m, m === month ? through : null), full };
+    return { month: m, spent: sum([...full.values()]), income: incomeToRTA(input, m), assigned: assignedTotal, byOwner: who(m, m === month ? through : null), full };
   });
   const catTotals = new Map<string, Cents>();
   for (const t of trendMonths) for (const [id, v] of t.full) catTotals.set(id, (catTotals.get(id) ?? 0) + v);
@@ -283,8 +286,18 @@ export function computeReports(r: ReportsInput): ReportsView {
     ],
     note: `${monthName(prevMonth)} spent ${fmt(sum([...prevFull.values()]))} in total.`,
   };
-  const explainWho: ExplainBox = {
-    title: "Who spent",
+  const explainWho: ExplainBox = r.whoSpent ? {
+    title: "Whose spending",
+    rows: [
+      { k: "Shared: entries in the shared Classic lines (Mortgage, Groceries, Misc shared, utilities…)", v: money(owners.shared) },
+      { k: "David: his Classic lines, plus his half of 50/50 entries in by-account categories", v: money(owners.D), op: "+" },
+      { k: "Elizabeth: her Classic lines, plus her half of 50/50 entries", v: money(owners.E), op: "+" },
+      { k: "Total", v: money(ownerTotal), result: true },
+      ...(ownerTotal !== spent ? [{ k: `Spent so far differs by ${fmt(Math.abs(spent - ownerTotal))}: ${spent > ownerTotal ? "spending in categories with no Classic line isn't attributed" : "Classic counts some lines Reports doesn't treat as spending"}`, v: "", sub: true }] : []),
+    ],
+    note: "Follows the Classic view: a category's Classic line decides whose expense it is, whichever account paid. A by-account category goes by the payer; 50/50 splits half each.",
+  } : {
+    title: "Who paid",
     rows: [
       { k: "From shared accounts", v: money(owners.shared) },
       { k: "From David's accounts (+ half of 50/50 entries)", v: money(owners.D), op: "+" },

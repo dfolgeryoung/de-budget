@@ -46,3 +46,11 @@ export async function createTag(name: string): Promise<{ id: string; name: strin
 /** The phone's bottom bar: four screens of the person's choosing (Settings › Phone menu), then More. */
 export const PHONE_NAV_OPTIONS = [["home", "Home"], ["budget", "Budget"], ["transactions", "Transactions"], ["classic", "Classic"], ["reports", "Reports"], ["tracked", "Tracked amounts"]] as const;
 export const DEFAULT_PHONE_NAV = ["home", "budget", "transactions", "classic"];
+
+/** Dark or light text for a tag chip, from its background's luminance. */
+export function tagText(bg: string): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(bg);
+  if (!m) return "#1A1D23";
+  const [r, g, b] = [m[1], m[2], m[3]].map((h) => parseInt(h!, 16) / 255);
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b! > 0.55 ? "#1A1D23" : "#ffffff";
+}

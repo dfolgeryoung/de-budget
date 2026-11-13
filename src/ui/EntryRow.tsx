@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, todayISO, categoryOptions, createTag, type Lists } from "./api";
+import { api, todayISO, categoryOptions, createTag, type Lists, tagText } from "./api";
 import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
@@ -247,7 +247,7 @@ function TagPicker({ lists, value, onChange }: { lists: Lists; value: string[]; 
     <>
       <button ref={btn} type="button" aria-label="Tags" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="fld flex items-center gap-1 rounded-md px-2 min-w-0 w-full overflow-hidden text-left" style={{ ...fs, color: chosen.length ? "var(--text)" : "var(--faint)" }}>
         {chosen.length === 0 && <span className="text-[13px] truncate">Tags</span>}
-        {chosen.map((t) => <span key={t.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0 leading-4" style={{ background: t.color, color: "#1A1D23" }}>{t.name}</span>)}
+        {chosen.map((t) => <span key={t.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0 leading-4" style={{ background: t.color, color: tagText(t.color) }}>{t.name}</span>)}
       </button>
       <Popover anchor={btn} open={open} onClose={() => setOpen(false)} width={200}>
         {() => (

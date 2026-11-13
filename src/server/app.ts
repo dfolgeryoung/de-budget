@@ -241,7 +241,25 @@ app.put("/categories/reorder", async (c) => {
 });
 
 // ---------- tags ----------
-const TAG_PALETTE = ["#FFE8A3", "#CDF3D8", "#E7F1FB", "#FBE4E2", "#EADCF8", "#FFD9C2", "#D9F2F2", "#E6E9EE"];
+const TAG_PALETTE = ["#FFE8A3", "#CDF3D8", "#E7F1FB", "#FBE4E2", "#EADCF8", "#FFD9C2", "#D9F2F2", "#E6E9EE", "#FFF3B0", "#C9E8FF", "#F6D5F0", "#D5F0E3"];
+app.get("/tags", async (c) => {
+  const [rows, links] = await Promise.all([db.select().from(t.tags), db.select({ tagId: t.transactionTags.tagId }).from(t.transactionTags)]);
+  const used = new Map<string, number>(); for (const l of links) used.set(l.tagId, (used.get(l.tagId) ?? 0) + 1);
+  return c.json({ tags: rows.sort((a, b) => a.sortOrder - b.sortOrder).map((x) => ({ id: x.id, name: x.name, color: x.color, uses: used.get(x.id) ?? 0 })), palette: TAG_PALETTE });
+});
+app.put("/tags/:id", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(40).optional(), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Invalid tag" }, 400);
+  if (p.data.name) { const clash = (await db.select().from(t.tags)).find((x) => x.id !== c.req.param("id") && x.name.toLowerCase() === p.data.name!.toLowerCase()); if (clash) return c.json({ error: `There's already a tag called ${clash.name}` }, 400); }
+  await db.update(t.tags).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.tags.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
+app.delete("/tags/:id", async (c) => {
+  const id = c.req.param("id");
+  await db.delete(t.transactionTags).where(eq(t.transactionTags.tagId, id)); // the entries keep everything else
+  await db.delete(t.tags).where(eq(t.tags.id, id));
+  return c.json({ ok: true });
+});
 app.post("/tags", async (c) => {
   const p = z.object({ name: z.string().trim().min(1).max(40), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "Tag needs a name" }, 400);

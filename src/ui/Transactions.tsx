@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, categoryOptions, type Lists } from "./api";
+import { api, categoryOptions, type Lists, tagText } from "./api";
 import { formatMoney } from "../budget/money";
 import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
@@ -133,7 +133,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                         <span className="truncate">{!account && !masked ? `${acctName.get(r.accountId)} · ` : ""}{cats}{r.memo ? ` · ${r.memo}` : ""}</span>
                         {r.source === "recurring" && <span aria-label="Recurring" className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center shrink-0" style={{ border: "1.5px solid var(--muted)" }}>R</span>}
                         {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? "½" : "50/50"}</span>}
-                        {r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <span key={tg!.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</span>)}
+                        {r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <span key={tg!.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: tg!.color, color: tagText(tg!.color) }}>{tg!.name}</span>)}
                       </span>
                     </span>
                     <span className="text-right text-[15px] font-semibold" style={{ color: shownAmount === null ? "var(--faint)" : shownAmount < 0 ? "var(--neg)" : "var(--green-text)" }}>{shownAmount === null ? "—" : (shownAmount > 0 ? "+" : "") + formatMoney(shownAmount)}</span>
@@ -206,7 +206,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <span className="truncate" style={{ color: "var(--text-2)" }}>{acctName.get(r.accountId)}</span>
                   <span className="truncate">{cats}</span>
                   <span className="truncate" style={{ color: "var(--muted)" }}>{r.memo ?? ""}</span>
-                  <span className="flex gap-1 flex-wrap">{r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <button key={tg!.id} onClick={() => setTag(tg!.id)} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</button>)}</span>
+                  <span className="flex gap-1 flex-wrap">{r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <button key={tg!.id} onClick={() => setTag(tg!.id)} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: tagText(tg!.color) }}>{tg!.name}</button>)}</span>
                   <span className="text-right">{shownAmount !== null && shownAmount < 0 ? formatMoney(-shownAmount) : shownAmount === null ? "—" : ""}</span>
                   <span className="text-right" style={{ color: "var(--green-text)" }}>{shownAmount !== null && shownAmount > 0 ? formatMoney(shownAmount) : ""}</span>
                   <span className="text-right" style={{ color: "var(--muted)" }}>{account && r.balance !== null ? formatMoney(r.balance) : ""}</span>

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { api, categoryOptions, todayISO, PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, type Lists } from "./api";
+import { api, categoryOptions, todayISO, PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, type Lists, tagText } from "./api";
 import { Select } from "./Select";
 import { Chevron } from "./icons";
 import { EmojiButton } from "./EmojiPicker";
@@ -42,12 +42,14 @@ export function Settings() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
       <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
-        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["appearance", "Appearance & profile"], ["backup", "Backup & restore"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
+        {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["tags", "Tags"], ["appearance", "Appearance & profile"], ["backup", "Backup & restore"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />
       <CategoriesSection />
       <RecurringSection />
       <CsvSection />
+      <div id="s-tags" />
+      <TagsSection />
       <NotificationsSection />
       <AppearanceSection />
       <div id="s-import" />
@@ -552,6 +554,55 @@ const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 const shortDate = (d: string) => `${MONS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
 
 /** Import a bank CSV for one account: matches are marked, missing entries can be added with a category, app entries the bank lacks get a mismatch mark. */
+function TagsSection() {
+  const [data, setData] = useState<{ tags: { id: string; name: string; color: string; uses: number }[]; palette: string[] } | null>(null);
+  const [newName, setNewName] = useState("");
+  const toast = useToast();
+  const load = () => api<typeof data>("/tags").then(setData).catch(() => setData(null));
+  useEffect(() => { load(); }, []);
+  const changed = () => { load(); dispatchEvent(new Event("lists-changed")); };
+  async function put(id: string, patch: { name?: string; color?: string }) {
+    try { await api(`/tags/${id}`, { method: "PUT", json: patch }); changed(); } catch (e) { toast((e as Error).message); }
+  }
+  async function add() {
+    const name = newName.trim(); if (!name) return;
+    try { await api("/tags", { method: "POST", json: { name } }); setNewName(""); changed(); } catch (e) { toast((e as Error).message); }
+  }
+  async function remove(tg: { id: string; name: string; uses: number }) {
+    if (!confirm(tg.uses ? `Delete the tag "${tg.name}"? It will be removed from ${tg.uses} ${tg.uses === 1 ? "entry" : "entries"} (the entries themselves stay).` : `Delete the tag "${tg.name}"?`)) return;
+    try { await api(`/tags/${tg.id}`, { method: "DELETE" }); changed(); toast(`Deleted ${tg.name}`); } catch (e) { toast((e as Error).message); }
+  }
+  return (
+    <section aria-labelledby="tags-h" className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div><h2 id="tags-h" className="font-bold">Tags</h2><p className="text-sm" style={{ color: "var(--muted)" }}>Labels you can put on any entry (a trip, a project, "reimbursable"), then filter the ledger by. Pick a colour for each; new tags get the next colour in the set.</p></div>
+      {data === null ? <p className="text-sm m-0" style={{ color: "var(--muted)" }}>Loading…</p> : (
+        <div className="flex flex-col gap-2">
+          {data.tags.length === 0 && <p className="text-sm m-0" style={{ color: "var(--muted)" }}>No tags yet.</p>}
+          {data.tags.map((tg) => (
+            <div key={tg.id} className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2" style={{ border: "1px solid var(--border)" }}>
+              <span className="px-2 rounded-full text-[11px] font-semibold leading-5" style={{ background: tg.color, color: tagText(tg.color) }}>{tg.name}</span>
+              <TextCell value={tg.name} onSave={(name) => put(tg.id, { name })} width={160} />
+              <span className="flex items-center gap-1" role="radiogroup" aria-label={`Colour for ${tg.name}`}>
+                {data.palette.map((c) => <button key={c} role="radio" aria-checked={tg.color.toLowerCase() === c.toLowerCase()} title={c} onClick={() => put(tg.id, { color: c })} className="rounded-full" style={{ width: 22, height: 22, background: c, border: tg.color.toLowerCase() === c.toLowerCase() ? "2px solid var(--navy)" : "2px solid var(--border)", boxShadow: tg.color.toLowerCase() === c.toLowerCase() ? "0 0 0 2px var(--card) inset" : undefined }} />)}
+                <label className="relative inline-flex items-center justify-center rounded-full overflow-hidden" title="Any colour" style={{ width: 22, height: 22, border: "2px dashed var(--field)", background: data.palette.some((c) => c.toLowerCase() === tg.color.toLowerCase()) ? "var(--card)" : tg.color, cursor: "pointer" }}>
+                  <input type="color" value={tg.color} onChange={(e) => put(tg.id, { color: e.target.value })} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Custom colour" />
+                  {data.palette.some((c) => c.toLowerCase() === tg.color.toLowerCase()) && <span className="text-[11px]" style={{ color: "var(--muted)" }}>+</span>}
+                </label>
+              </span>
+              <span className="text-xs ml-auto" style={{ color: "var(--muted)" }}>{tg.uses} {tg.uses === 1 ? "entry" : "entries"}</span>
+              <button onClick={() => remove(tg)} className="text-xs font-semibold" style={{ color: "var(--red-text)" }}>Delete</button>
+            </div>
+          ))}
+          <form onSubmit={(e) => { e.preventDefault(); add(); }} className="flex items-center gap-2 pt-1">
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New tag" aria-label="New tag" className="fld rounded-md px-3 text-[13px] outline-none" style={{ height: 34, border: "1px solid var(--field)", background: "var(--card)", width: 200 }} />
+            <button type="submit" disabled={!newName.trim()} className="rounded-md px-3 text-[13px] font-semibold disabled:opacity-50" style={{ height: 34, background: "var(--navy)", color: "var(--navy-text)" }}>Add</button>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CsvSection() {
   const toast = useToast();
   const [lists, setLists] = useState<Lists | null>(null);

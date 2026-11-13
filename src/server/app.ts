@@ -12,7 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
-import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending } from "./recurring.js";
+import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
 import { nextDue, dueDatesInMonth } from "../budget/recurringDates.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
 import { pushConfigured, emailConfigured, pushToUser, vapidPublic } from "./notify.js";
@@ -332,6 +332,7 @@ app.put("/recurring/:id", async (c) => {
   return c.json({ ok: true });
 });
 app.delete("/recurring/:id", async (c) => { await db.delete(t.recurring).where(eq(t.recurring.id, c.req.param("id"))); return c.json({ ok: true }); });
+app.get("/recurring/upcoming", async (c) => c.json({ bills: await upcomingBills(db, today()) }));
 app.post("/recurring/run", async (c) => c.json(await createDueRecurring(db, today(), c.get("user").id)));
 app.get("/pending", async (c) => c.json(await pending(db)));
 app.post("/transactions/:id/confirm", async (c) => {

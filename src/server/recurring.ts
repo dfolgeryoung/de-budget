@@ -90,3 +90,31 @@ export async function skippedPending(db: Db, transactionId: string, today: strin
   await db.update(t.recurring).set(isInterval(sched) ? { lastCreatedDate: x.date } : { lastCreatedMonth: null }).where(eq(t.recurring.id, r.id));
   return { landsAgainOn: Number(next.slice(8, 10)) };
 }
+
+export interface UpcomingBill { id: string; payee: string; amount: number; date: string; accountId: string; categoryId: string | null; pending: boolean }
+
+/** Bills due from today through the next `days` days that haven't been entered yet (a pending entry counts as landed but still shows, flagged). */
+export async function upcomingBills(db: Db, today: string, days = 21): Promise<UpcomingBill[]> {
+  const [recs, txns] = await Promise.all([
+    db.select().from(t.recurring).where(eq(t.recurring.active, true)),
+    db.select({ payee: t.transactions.payee, accountId: t.transactions.accountId, date: t.transactions.date, confirmed: t.transactions.confirmed, recurringId: t.transactions.recurringId }).from(t.transactions).where(isNull(t.transactions.deletedAt)),
+  ]);
+  const end = new Date(today + "T00:00:00Z"); end.setUTCDate(end.getUTCDate() + days);
+  const endIso = end.toISOString().slice(0, 10);
+  const thisMonth = today.slice(0, 7) + "-01";
+  const nextMonth = (() => { const d = new Date(thisMonth + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 10); })();
+  const out: UpcomingBill[] = [];
+  for (const r of recs) {
+    const sched = { dayOfMonth: r.dayOfMonth, everyDays: r.everyDays, anchorDate: r.anchorDate };
+    const dates = [...dueDatesInMonth(sched, thisMonth), ...dueDatesInMonth(sched, nextMonth)].filter((d) => d >= today && d <= endIso);
+    for (const date of dates) {
+      const same = (x: typeof txns[number]) => (x.payee ?? "").trim().toLowerCase() === r.payee.trim().toLowerCase() && x.accountId === r.accountId;
+      const near = (x: typeof txns[number]) => (isInterval(sched) ? Math.abs(Date.parse(x.date) - Date.parse(date)) <= 3 * 86_400_000 : x.date.slice(0, 7) === date.slice(0, 7));
+      const confirmed = txns.some((x) => same(x) && near(x) && x.confirmed);
+      if (confirmed) continue; // already paid and entered
+      const pendingTwin = txns.some((x) => same(x) && near(x) && !x.confirmed);
+      out.push({ id: r.id, payee: r.payee, amount: r.amount, date, accountId: r.accountId, categoryId: r.categoryId, pending: pendingTwin });
+    }
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.payee.localeCompare(b.payee)));
+}

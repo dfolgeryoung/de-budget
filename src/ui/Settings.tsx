@@ -29,6 +29,12 @@ export function Settings() {
     }
   }
 
+  useEffect(() => {
+    // Home can ask for a section (e.g. the upcoming-bills card → recurring)
+    let want: string | null = null;
+    try { want = sessionStorage.getItem("settings-section"); if (want) sessionStorage.removeItem("settings-section"); } catch { /* private mode */ }
+    if (want) setTimeout(() => document.getElementById(`s-${want}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+  }, []);
   return (
     <div className="flex flex-col gap-4 max-w-5xl min-w-0">
       <div>

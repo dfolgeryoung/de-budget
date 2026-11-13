@@ -6,6 +6,7 @@ import { useToast } from "./Toast";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
 import type { TrackedSummary } from "../server/tracked";
+import type { UpcomingBill } from "../server/recurring";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -15,12 +16,14 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
   const [tracked, setTracked] = useState<TrackedSummary[]>([]);
+  const [upcoming, setUpcoming] = useState<UpcomingBill[]>([]);
   const [bump, setBump] = useState(0);
   const toast = useToast();
   useEffect(() => {
     api<MonthPayload>("/month").then(setM).catch(() => setM(null));
     api<LedgerRow[]>("/transactions?limit=4").then(setRecent).catch(() => setRecent([]));
     api<typeof pend>("/pending").then((p) => setPend(Array.isArray(p) ? p : [])).catch(() => setPend([]));
+    api<{ bills: UpcomingBill[] }>("/recurring/upcoming").then((r) => setUpcoming(Array.isArray(r.bills) ? r.bills : [])).catch(() => setUpcoming([]));
     api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(Array.isArray(r.tracked) ? r.tracked : [])).catch(() => setTracked([]));
   }, [refreshKey, bump]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
@@ -49,6 +52,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const week = fun ? weeklyAllowance(fun.available, todayISO()) : null;
   // open tracked amounts that are mine or shared get a card each
   const myTracked = tracked.filter((x) => !x.closed && (x.owner === initial || x.owner === "shared"));
+  const todayIso = todayISO();
+  const dayLabel = (iso: string) => { const d = Math.round((Date.parse(iso) - Date.parse(todayIso)) / 86_400_000); return d === 0 ? "Today" : d === 1 ? "Tomorrow" : d < 7 ? DAYS[new Date(iso + "T12:00:00").getDay()]!.slice(0, 3) + ` ${Number(iso.slice(8, 10))}` : `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`; };
+  const upcomingTotal = upcoming.reduce((s, b) => s + Math.min(0, b.amount), 0);
+  const goRecurring = () => { try { sessionStorage.setItem("settings-section", "recurring"); } catch { /* private mode */ } location.hash = "more"; };
   const goCategory = (id: string) => { try { sessionStorage.setItem("budget-select", id); } catch { /* private mode */ } location.hash = "budget"; };
   const openTracked = (id: string) => { try { sessionStorage.setItem("tracked-select", id); } catch { /* private mode */ } location.hash = "tracked"; };
 
@@ -118,6 +125,22 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
             </div>
           </button>
         ))}
+
+        {upcoming.length > 0 && (
+          <button onClick={goRecurring} className={card + " w-full text-left"} style={cs}>
+            <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Upcoming bills</span><span className="text-xs" style={{ color: "var(--muted)" }}>next 3 weeks · {formatMoney(-upcomingTotal)} ›</span></div>
+            <div className="flex flex-col gap-1">
+              {upcoming.slice(0, 6).map((b, i) => (
+                <div key={b.id + b.date + i} className="flex items-center gap-2 text-xs">
+                  <span className="w-14 shrink-0 font-semibold" style={{ color: b.date === todayIso ? "var(--yellow-text)" : "var(--muted)" }}>{dayLabel(b.date)}</span>
+                  <span className="flex-1 min-w-0 truncate" style={{ color: "var(--text-2)" }}>{b.payee}{b.pending ? " · to confirm" : ""}<span style={{ color: "var(--faint)" }}> · {acctName(b.accountId)}</span></span>
+                  <span className="font-semibold tabular-nums shrink-0" style={{ color: b.amount > 0 ? "var(--green-text)" : undefined }}>{formatMoney(Math.abs(b.amount))}</span>
+                </div>
+              ))}
+              {upcoming.length > 6 && <span className="text-xs" style={{ color: "var(--muted)" }}>+ {upcoming.length - 6} more</span>}
+            </div>
+          </button>
+        )}
 
         {m && (
           <a href="#budget" className={card} style={cs}>

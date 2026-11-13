@@ -45,6 +45,55 @@ app.get("/me", async (c) => {
   return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂" });
 });
 
+app.put("/me", async (c) => {
+  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), appearance: z.enum(["system", "light", "dark"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await db.update(t.users).set({ ...p.data, updatedAt: new Date() }).where(eq(t.users.id, c.get("user").id));
+  return c.json({ ok: true });
+});
+
+// ---------- settings: everything the Settings screen edits ----------
+app.get("/settings/all", async (c) => {
+  const me = c.get("user").id;
+  const [accts, groups, cats, layoutRow] = await Promise.all([db.select().from(t.accounts), db.select().from(t.categoryGroups), db.select().from(t.categories), db.select().from(t.settings).where(eq(t.settings.key, "classic_layout"))]);
+  const layout = (layoutRow[0]?.value as { name: string; column: string; section: string }[] | undefined) ?? [];
+  return c.json({
+    accounts: accts.sort((a, b) => a.sortOrder - b.sortOrder).map((a) => ({ id: a.id, name: a.name, type: a.type, onBudget: a.onBudget, owner: a.owner, startingBalance: a.startingBalance, startingDate: a.startingDate, closed: a.closed })),
+    groups: groups.sort((a, b) => a.sortOrder - b.sortOrder).map((g) => ({ id: g.id, name: g.name, system: g.system })),
+    categories: cats.sort((a, b) => a.sortOrder - b.sortOrder).map((x) => ({ id: x.id, name: x.name, emoji: x.emoji, groupId: x.groupId, kind: x.kind, hidden: x.hiddenInBudget, classicBucket: x.classicBucket, classicRule: x.classicRule, favourite: (() => { const v = x.favouriteOrder?.[me] ?? x.favouriteOrder?._ ?? null; return v === null || v < 0 ? null : v; })() })),
+    classicLines: layout.map((l) => ({ name: l.name, column: l.column, section: l.section })),
+  });
+});
+app.post("/groups", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "A group needs a name" }, 400);
+  const n = (await db.select().from(t.categoryGroups)).length;
+  const id = `grp-${Date.now().toString(36)}`;
+  await db.insert(t.categoryGroups).values({ id, name: p.data.name, sortOrder: n, system: false, updatedBy: c.get("user").id });
+  return c.json({ id });
+});
+app.put("/groups/:id", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await db.update(t.categoryGroups).set({ name: p.data.name, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.categoryGroups.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
+app.post("/accounts", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60), type: z.enum(["checking", "savings", "credit_card"]), owner: z.enum(["D", "E", "shared"]), onBudget: z.boolean(), startingBalance: z.number().int(), startingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: p.error.issues.map((i) => i.message).join("; ") }, 400);
+  const all = await db.select().from(t.accounts);
+  if (all.some((a) => a.name.toLowerCase() === p.data.name.toLowerCase())) return c.json({ error: "That account name is taken" }, 400);
+  const id = `acct-${Date.now().toString(36)}`;
+  await db.insert(t.accounts).values({ id, ...p.data, sortOrder: all.length, updatedBy: c.get("user").id });
+  return c.json({ id });
+});
+app.put("/accounts/:id", async (c) => {
+  const p = z.object({ name: z.string().trim().min(1).max(60).optional(), type: z.enum(["checking", "savings", "credit_card"]).optional(), owner: z.enum(["D", "E", "shared"]).optional(), onBudget: z.boolean().optional(), closed: z.boolean().optional(), startingBalance: z.number().int().optional() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await db.update(t.accounts).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.accounts.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
+
 // ---- phase 1: import from the spreadsheet export, read-only month view ----
 app.post("/import/sheet", async (c) => {
   const text = await c.req.text();
@@ -150,9 +199,21 @@ app.post("/categories", async (c) => {
   return c.json({ id });
 });
 app.put("/categories/:id", async (c) => {
-  const p = z.object({ name: z.string().trim().min(1).max(60).optional(), emoji: z.string().trim().max(8).nullable().optional(), groupId: z.string().optional(), hiddenInBudget: z.boolean().optional() }).safeParse(await c.req.json());
+  const p = z.object({ name: z.string().trim().min(1).max(60).optional(), emoji: z.string().trim().max(8).nullable().optional(), groupId: z.string().optional(), hiddenInBudget: z.boolean().optional(),
+    classicBucket: z.string().nullable().optional(), classicRule: z.enum(["none", "by_account", "utilities_split", "phone_split", "drive_split"]).optional(), favourite: z.boolean().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
-  await db.update(t.categories).set({ ...p.data, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.categories.id, c.req.param("id")));
+  const me = c.get("user").id, id = c.req.param("id");
+  const { favourite, ...rest } = p.data;
+  const set: Record<string, unknown> = { ...rest, updatedBy: me, updatedAt: new Date() };
+  if (favourite !== undefined) {
+    // my own pin order: appended at the end when pinned, removed when unpinned (the shared "_" order from the sheet stays as the fallback for the other person)
+    const all = await db.select().from(t.categories);
+    const cur = all.find((x) => x.id === id)?.favouriteOrder ?? {};
+    const next = { ...cur } as Record<string, number>;
+    if (favourite) next[me] = Math.max(-1, ...all.map((x) => x.favouriteOrder?.[me] ?? x.favouriteOrder?._ ?? -1)) + 1; else { next[me] = -1; }
+    set.favouriteOrder = next;
+  }
+  await db.update(t.categories).set(set).where(eq(t.categories.id, id));
   return c.json({ ok: true });
 });
 

@@ -210,7 +210,7 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
         <button type="button" aria-pressed={d.split.length > 0} title="Split the amount across categories" onClick={toggleSplit} className={pillCls} style={pill(d.split.length > 0, d.transfer)} disabled={d.transfer}><span className="tb">Split</span></button>
         <button type="button" aria-pressed={d.transfer} title="Move money between two accounts" onClick={toggleTransfer} className={pillCls} style={pill(d.transfer, d.split.length > 0)} disabled={d.split.length > 0}><span className="tb">Transfer</span></button>
         {trackedOptions.length > 0 && <Select ariaLabel="Track against" pill on={!!d.trackedAmountId} value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Not tracked" }, ...trackedOptions]} placeholder="Track against…" />}
-        {d.sharedFiftyFifty && cents > 0 && <span className="ml-2" style={{ color: "var(--muted)" }}>Other checking owes {formatMoney(Math.round(cents / 2))}</span>}
+        {d.sharedFiftyFifty && cents > 0 && <span className="ml-2" style={{ color: "var(--muted)" }}>Shows as {formatMoney(Math.round(cents / 2))} on each checking account</span>}
         {dup && <span style={{ color: "var(--yellow-text)" }}>⚠ Possible duplicate: {dup.payee} {formatMoney(Math.abs(dup.amount))} on {pretty(dup.date)}</span>}
         {err && <span className="font-semibold" style={{ color: "var(--red-text)" }}>{err}</span>}
         {onDelete && <button onClick={onDelete} className="ml-auto font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}

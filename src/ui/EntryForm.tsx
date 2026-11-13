@@ -25,7 +25,9 @@ export interface EntryDraft {
   more?: boolean; // open the "More" section straight away (set when arriving from a quick-entry chip)
 }
 
-export function draftFromRow(r: LedgerRow, lists: Lists): EntryDraft {
+export function draftFromRow(row: LedgerRow, lists: Lists): EntryDraft {
+  // a half of a 50/50 entry edits the whole stored entry
+  const r = row.half ? { ...row, accountId: row.half.full.accountId, amount: row.half.full.amount, lines: row.half.full.lines } : row;
   const amt = r.amount ?? 0;
   const multi = r.lines.length > 1;
   return {

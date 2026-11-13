@@ -39,6 +39,8 @@ export interface LedgerRow {
   transferToAccountId: string | null; sharedFiftyFifty: boolean; hidden: boolean; mine: boolean; source: string;
   bankStatus: string; bankNote: string | null; confirmed: boolean; trackedAmountId: string | null;
   lines: { categoryId: string | null; amount: number }[]; tagIds: string[]; balance: number | null;
+  /** a 50/50 entry is shown as two halves, one per checking account; `full` is the stored entry for editing */
+  half: { share: "payer" | "other"; otherAccountId: string; full: { accountId: string; amount: number | null; lines: { categoryId: string | null; amount: number }[] } } | null;
 }
 
 export async function listTransactions(db: Db, me: string, q: { accountId?: string; month?: string; categoryId?: string; search?: string; limit?: number }): Promise<LedgerRow[]> {
@@ -51,8 +53,17 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
   const tagsBy = new Map<string, string[]>();
   for (const tg of tags) tagsBy.set(tg.transactionId, [...(tagsBy.get(tg.transactionId) ?? []), tg.tagId]);
 
+  const acctById = new Map(input.accounts.map((a) => [a.id, a]));
+  const checkingOf = (owner: "D" | "E") => input.accounts.find((a) => a.type === "checking" && a.owner === owner)?.id ?? null;
+  /** the other person's checking for a 50/50 entry paid from a personal account (null for shared-account or transfer entries) */
+  const otherHalfAccount = (r: typeof rows[number]) => {
+    if (!r.sharedFiftyFifty || r.transferToAccountId) return null;
+    const payer = acctById.get(r.accountId); if (!payer || payer.owner === "shared") return null;
+    const other = checkingOf(payer.owner === "D" ? "E" : "D");
+    return other && other !== r.accountId ? other : null;
+  };
   let out = rows.filter((r) => {
-    if (q.accountId && r.accountId !== q.accountId && r.transferToAccountId !== q.accountId) return false;
+    if (q.accountId && r.accountId !== q.accountId && r.transferToAccountId !== q.accountId && otherHalfAccount(r) !== q.accountId) return false;
     if (q.month && monthOf(r.date) !== q.month) return false;
     if (q.categoryId && !(byTxn.get(r.id) ?? []).some((l) => l.categoryId === q.categoryId)) return false;
     if (q.search) {
@@ -72,6 +83,8 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
     let bal = accountBalance(input, q.accountId, asOf);
     for (const o of rows) {
       if (o.date === r.date && o.createdAt > r.createdAt && o.deletedAt === null) {
+        const otherAcct = otherHalfAccount(o);
+        if (otherAcct && (o.accountId === q.accountId || otherAcct === q.accountId)) { bal -= Math.round(o.amount / 2); continue; } // each checking carries half
         if (o.accountId === q.accountId) bal -= o.amount;
         if (o.transferToAccountId === q.accountId) bal += o.amount;
       }
@@ -79,17 +92,27 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
     return bal;
   };
 
-  return out.map((r) => {
+  return out.flatMap((r): LedgerRow[] => {
     const mine = r.createdBy === me;
     const masked = r.hidden && !mine;
-    return {
+    const lines = masked ? (byTxn.get(r.id) ?? []).map((l) => ({ categoryId: l.categoryId, amount: 0 })) : (byTxn.get(r.id) ?? []);
+    const base: LedgerRow = {
       id: r.id, date: r.date, accountId: r.accountId,
       payee: masked ? "[Hidden]" : r.payee, memo: masked ? null : r.memo, amount: masked ? null : r.amount,
       transferToAccountId: r.transferToAccountId, sharedFiftyFifty: r.sharedFiftyFifty, hidden: r.hidden, mine, source: r.source,
       bankStatus: r.bankStatus, bankNote: r.bankNote, confirmed: r.confirmed, trackedAmountId: r.trackedAmountId,
-      lines: masked ? (byTxn.get(r.id) ?? []).map((l) => ({ categoryId: l.categoryId, amount: 0 })) : (byTxn.get(r.id) ?? []),
-      tagIds: tagsBy.get(r.id) ?? [], balance: withBalance(r),
+      lines, tagIds: tagsBy.get(r.id) ?? [], balance: withBalance(r), half: null,
     };
+    const other = otherHalfAccount(r);
+    if (!other) return [base];
+    // a 50/50 entry reads as if each of you made half of it from your own checking; editing either half edits the one stored entry
+    const halve = (c: number) => Math.round(c / 2);
+    const full = { accountId: r.accountId, amount: base.amount, lines };
+    const halfLines = lines.map((l) => ({ categoryId: l.categoryId, amount: halve(l.amount) }));
+    const payerHalf: LedgerRow = { ...base, amount: base.amount === null ? null : halve(base.amount), lines: halfLines, half: { share: "payer", otherAccountId: other, full } };
+    const otherHalf: LedgerRow = { ...base, accountId: other, amount: base.amount === null ? null : base.amount - halve(base.amount), lines: lines.map((l) => ({ categoryId: l.categoryId, amount: l.amount - halve(l.amount) })), balance: null, half: { share: "other", otherAccountId: r.accountId, full } };
+    if (q.accountId) return [q.accountId === other ? { ...otherHalf, balance: withBalance(r) } : payerHalf];
+    return [payerHalf, otherHalf];
   });
 }
 

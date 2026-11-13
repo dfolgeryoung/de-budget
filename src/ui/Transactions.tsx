@@ -120,7 +120,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                 const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
                 const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
                 return (
-                  <button key={r.id} onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="w-full grid items-center text-left" style={{ gridTemplateColumns: cols, padding: "11px 16px", borderTop: i ? "1px solid var(--border-soft)" : undefined, background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                  <button key={r.id + (r.half?.share ?? "")} onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="w-full grid items-center text-left" style={{ gridTemplateColumns: cols, padding: "11px 16px", borderTop: i ? "1px solid var(--border-soft)" : undefined, background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                     <span className="flex flex-col min-w-0" style={{ gap: 2 }}>
                       <span className="text-[15px] font-medium flex items-center gap-1.5 truncate" style={{ color: masked ? "var(--muted)" : undefined }}>
                         {masked && <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
@@ -132,7 +132,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                       <span className="text-xs flex items-center gap-1.5 min-w-0" style={{ color: "var(--muted)" }}>
                         <span className="truncate">{!account && !masked ? `${acctName.get(r.accountId)} · ` : ""}{cats}{r.memo ? ` · ${r.memo}` : ""}</span>
                         {r.source === "recurring" && <span aria-label="Recurring" className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center shrink-0" style={{ border: "1.5px solid var(--muted)" }}>R</span>}
-                        {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
+                        {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? "½" : "50/50"}</span>}
                         {r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <span key={tg!.id} className="px-1.5 rounded-full text-[10px] font-semibold shrink-0" style={{ background: tg!.color, color: "#1A1D23" }}>{tg!.name}</span>)}
                       </span>
                     </span>
@@ -191,17 +191,17 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
-                isDesktop && editing === r.id ? (
-                <EntryRow key={r.id} mode="edit" lists={lists} me={me} account={account} initial={draftFromRow(r, lists)} onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} onDelete={() => { setEditing(null); del(r); }} />
+                isDesktop && editing === r.id + (r.half?.share ?? "") ? (
+                <EntryRow key={r.id + (r.half?.share ?? "")} mode="edit" lists={lists} me={me} account={account} initial={draftFromRow(r, lists)} onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} onDelete={() => { setEditing(null); del(r); }} />
                 ) : isDesktop ? (
-                <div key={r.id} onClick={(e) => { if (!masked && !(e.target as HTMLElement).closest("button")) setEditing(r.id); }} className={"row-hover relative grid items-center px-4 py-2 text-[13px]" + (masked ? "" : " cursor-pointer")} title={masked ? undefined : "Click to edit"} style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
+                <div key={r.id + (r.half?.share ?? "")} onClick={(e) => { if (!masked && !(e.target as HTMLElement).closest("button")) setEditing(r.id + (r.half?.share ?? "")); }} className={"row-hover relative grid items-center px-4 py-2 text-[13px]" + (masked ? "" : " cursor-pointer")} title={masked ? undefined : "Click to edit"} style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>
                   <span className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
                     {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
-                    {r.sharedFiftyFifty && <span className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>50/50</span>}
+                    {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? `½ of ${formatMoney(Math.abs(r.half.full.amount ?? 0))}` : "50/50"}</span>}
                   </span>
                   <span className="truncate" style={{ color: "var(--text-2)" }}>{acctName.get(r.accountId)}</span>
                   <span className="truncate">{cats}</span>
@@ -210,10 +210,10 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <span className="text-right">{shownAmount !== null && shownAmount < 0 ? formatMoney(-shownAmount) : shownAmount === null ? "—" : ""}</span>
                   <span className="text-right" style={{ color: "var(--green-text)" }}>{shownAmount !== null && shownAmount > 0 ? formatMoney(shownAmount) : ""}</span>
                   <span className="text-right" style={{ color: "var(--muted)" }}>{account && r.balance !== null ? formatMoney(r.balance) : ""}</span>
-                  <button aria-label="Row menu" onClick={() => setMenu(menu === r.id ? null : r.id)} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>
-                  {menu === r.id && (
+                  <button aria-label="Row menu" onClick={() => setMenu(menu === r.id + (r.half?.share ?? "") ? null : r.id + (r.half?.share ?? ""))} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>
+                  {menu === r.id + (r.half?.share ?? "") && (
                     <div className="absolute right-4 top-9 z-10 rounded-lg shadow-lg text-sm flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); setEditing(r.id); }}>Edit</button>
+                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); setEditing(r.id + (r.half?.share ?? "")); }}>Edit</button>
                       <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); const d = draftFromRow(r, lists); delete d.id; setPrefill({ ...d, more: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Duplicate</button>
                       <button className="px-4 py-2 text-left" style={{ color: "var(--red-text)" }} onClick={() => del(r)}>Delete</button>
                     </div>

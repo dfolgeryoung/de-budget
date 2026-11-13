@@ -44,7 +44,7 @@ export function MonthPanel({ data, onPick, onRelease }: { data: MonthPayload; on
         {row("Assigned this month", formatMoney(sum("assigned")))}
         {row("Activity", formatMoney(sum("activity")))}
         {row("Available", formatMoney(sum("available")), true)}
-        {row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign === 0 ? "var(--green-text)" : v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
+        {v.readyToAssign === 0 ? row("Ready to Assign", "All money assigned", true, "var(--muted)") : row("Ready to Assign", formatMoney(v.readyToAssign), true, v.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)")}
         {nmm && onRelease && (
           <button onClick={() => onRelease(nmm.categoryId, Math.min(nmm.available, nmm.carriedIn))} className="mt-2 rounded-lg px-3 py-2 text-[13px] font-semibold text-left" style={{ background: "var(--selected)", color: "var(--accent-text)", border: "1px solid var(--navy)" }}>
             Release {formatMoney(Math.min(nmm.available, nmm.carriedIn))} from {data.categories[nmm.categoryId]?.name} into Ready to Assign ›

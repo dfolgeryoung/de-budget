@@ -158,7 +158,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                 {s.items.length > 3 && <span className="text-xs pl-2" style={{ color: "var(--muted)" }}>+ {s.items.length - 3} more</span>}
               </div>
             ))}
-            <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}><span>Ready to Assign <strong style={{ color: m.view.readyToAssign === 0 ? "var(--green-text)" : "var(--yellow-text)" }}>{formatMoney(m.view.readyToAssign)}</strong></span><span>{cats.filter((c) => c.goal && c.status === "funded").length} funded ✓</span></div>
+            <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}><span>{m.view.readyToAssign === 0 ? <span style={{ color: "var(--muted)" }}>All money assigned</span> : <>Ready to Assign <strong style={{ color: m.view.readyToAssign > 0 ? "var(--yellow-text)" : "var(--red-text)" }}>{formatMoney(m.view.readyToAssign)}</strong></>}</span><span>{cats.filter((c) => c.goal && c.status === "funded").length} funded ✓</span></div>
           </a>
         )}
       </>

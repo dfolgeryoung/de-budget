@@ -20,7 +20,7 @@ export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: {
     db.select({ transactionId: t.transactionTags.transactionId, tagId: t.transactionTags.tagId }).from(t.transactionTags),
   ]);
   // an entry tagged "one-off" still counts as spent, but Classic and Reports leave it out when projecting the rest of the month
-  const oneOffTags = new Set(tagRows.filter((x) => /^one[\s-]?off$/i.test(x.name.trim())).map((x) => x.id));
+  const oneOffTags = new Set(tagRows.filter((x) => /^one[\s\-\u2010-\u2015\u2212]?off$/i.test(x.name.trim())).map((x) => x.id));
   const oneOffTxns = new Set(tagLinks.filter((l) => oneOffTags.has(l.tagId)).map((l) => l.transactionId));
   const firstMonth = (first[0]?.value as string | undefined) ?? "2026-11-01";
   const linesByTxn = new Map<string, { categoryId: string | null; amount: number }[]>();

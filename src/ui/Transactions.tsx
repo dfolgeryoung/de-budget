@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, categoryOptions, type Lists, tagText } from "./api";
+import { api, apiCached, categoryOptions, type Lists, tagText } from "./api";
 import { formatMoney } from "../budget/money";
 import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
@@ -56,7 +56,8 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     if (month) p.set("month", month);
     if (q) p.set("q", q);
     p.set("limit", "300");
-    api<LedgerRow[]>(`/transactions?${p}`).then(setRows).catch((e) => toast(String(e)));
+    // searches aren't cached (every keystroke would be a new entry); filtered and unfiltered lists are
+    (q ? api<LedgerRow[]>(`/transactions?${p}`).then(setRows) : apiCached<LedgerRow[]>(`/transactions?${p}`, setRows)).catch((e) => toast(String(e)));
   };
   useEffect(load, [account, category, month, q, refreshKey]);
   const shown = (rows ?? []).filter((r) => (!tag || r.tagIds.includes(tag)) && (!onlyHidden || r.hidden) && (!onlyMismatch || r.bankStatus === "mismatch"));

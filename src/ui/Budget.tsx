@@ -5,7 +5,7 @@ import type { MonthPayload } from "../server/month";
 import type { CategoryMonth } from "../budget/engine";
 import { Chevron } from "./icons";
 import { Marquee } from "./Marquee";
-import { api } from "./api";
+import { api, apiCached } from "./api";
 import { useToast } from "./Toast";
 import { CategoryPanel } from "./CategoryPanel";
 import { Sheet } from "./Sheet";
@@ -141,9 +141,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
 
   const load = () => {
     setError(null);
-    fetch(month ? `/api/month/${month}` : "/api/month")
-      .then(async (r) => (r.ok ? setData((await r.json()) as MonthPayload) : setError((await r.json()).error ?? r.statusText)))
-      .catch((e) => setError(String(e)));
+    apiCached<MonthPayload>(month ? `/month/${month}` : "/month", setData).catch((e) => setError((e as Error).message));
   };
   useEffect(load, [month, refreshKey]);
   const byId = useMemo(() => new Map(data?.view.categories.map((c) => [c.categoryId, c]) ?? []), [data]);

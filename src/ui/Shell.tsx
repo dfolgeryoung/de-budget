@@ -5,7 +5,7 @@ import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
 import { draftFromRow } from "./EntryForm";
 import type { LedgerRow } from "../server/transactions";
 import type { EntryDraft } from "./EntryForm";
-import { PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, api, type Lists } from "./api";
+import { PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, api, apiCached, clearCache, type Lists } from "./api";
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
@@ -45,7 +45,10 @@ function ShellInner({ me }: { me: Me }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [account, setAccount] = useState<string | null>(null);
   const toast = useToast();
-  const loadLists = () => api<Lists>("/lists").then(setLists).catch((e) => toast(String(e)));
+  const loadLists = () => apiCached<Lists>("/lists", setLists).catch((e) => toast(String(e)));
+  // "Updating…" while a screen is showing its cached copy and waiting for the server
+  const [syncing, setSyncing] = useState(false);
+  useEffect(() => { const on = (e: Event) => setSyncing((e as CustomEvent<boolean>).detail); addEventListener("syncing", on); return () => removeEventListener("syncing", on); }, []);
   useEffect(() => {
     const onHash = () => setScreen(location.hash.slice(1) || "budget");
     addEventListener("hashchange", onHash);
@@ -128,7 +131,7 @@ function ShellInner({ me }: { me: Me }) {
               </div>
             )}
             <Settings />
-            <form method="post" action="/api/auth/signout" className="mt-6">
+            <form method="post" action="/api/auth/signout" className="mt-6" onSubmit={() => { clearCache(); try { localStorage.removeItem("cache:me"); } catch { /* storage off */ } }}>
               <button className="text-sm underline" style={{ color: "var(--accent-text)" }}>Sign out ({me.email})</button>
             </form>
           </>
@@ -141,6 +144,7 @@ function ShellInner({ me }: { me: Me }) {
       </main>
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
+      {syncing && <div aria-live="polite" className="fixed left-1/2 -translate-x-1/2 z-40 rounded-full px-3 text-[11px] font-semibold inline-flex items-center gap-1.5" style={{ top: "calc(6px + env(safe-area-inset-top))", height: 24, background: "var(--card)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}><span className="inline-block rounded-full" style={{ width: 6, height: 6, background: "var(--accent-text)", animation: "pulse 1s ease-in-out infinite" }} />Updating…</div>}
       <input ref={decoy} inputMode="decimal" aria-hidden="true" tabIndex={-1} className="md:hidden" style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", fontSize: 16 }} />
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
       {picker && <ProfilePicker me={me} onClose={() => setPicker(false)} />}

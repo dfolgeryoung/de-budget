@@ -121,6 +121,16 @@ app.get("/month/:key", async (c) => {
   return c.json(await monthPayload(db, key, today()));
 });
 app.get("/month", async (c) => c.json(await monthPayload(db, today().slice(0, 7) + "-01", today())));
+// everything the Home screen shows, in one round trip (the pieces run in parallel server-side)
+app.get("/home", async (c) => {
+  const me = c.get("user").id, t0 = today(), month = t0.slice(0, 7) + "-01";
+  const withReport = c.req.query("report") === "1";
+  const [m, recent, pend, upcoming, tracked, report] = await Promise.all([
+    monthPayload(db, month, t0), listTransactions(db, me, { limit: 4 }), pending(db), upcomingBills(db, t0), listTracked(db),
+    withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null),
+  ]);
+  return c.json({ month: m, recent, pending: pend, upcoming, tracked, report });
+});
 
 // ---- phase 2: ledger ----
 app.get("/lists", async (c) => c.json(await lists(db, c.get("user").id)));

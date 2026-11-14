@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, todayISO, type Lists } from "./api";
+import { api, apiCached, todayISO, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
 import { useToast } from "./Toast";
@@ -31,15 +31,15 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [catSearch, setCatSearch] = useState("");
   const [bump, setBump] = useState(0);
   const toast = useToast();
-  useEffect(() => {
-    api<MonthPayload>("/month").then(setM).catch(() => setM(null));
-    api<LedgerRow[]>("/transactions?limit=4").then(setRecent).catch(() => setRecent([]));
-    api<typeof pend>("/pending").then((p) => setPend(Array.isArray(p) ? p : [])).catch(() => setPend([]));
-    api<{ bills: UpcomingBill[] }>("/recurring/upcoming").then((r) => setUpcoming(Array.isArray(r.bills) ? r.bills : [])).catch(() => setUpcoming([]));
-    api<{ tracked: TrackedSummary[] }>("/tracked").then((r) => setTracked(Array.isArray(r.tracked) ? r.tracked : [])).catch(() => setTracked([]));
-  }, [refreshKey, bump]);
   const wantsReport = layout.order.includes("spend") && !layout.hidden.includes("spend");
-  useEffect(() => { if (wantsReport) api<ReportsPayload>("/reports").then(setReport).catch(() => setReport(null)); }, [wantsReport, refreshKey, bump]);
+  type HomeData = { month: MonthPayload | null; recent: LedgerRow[]; pending: typeof pend; upcoming: UpcomingBill[]; tracked: TrackedSummary[]; report: ReportsPayload | null };
+  useEffect(() => {
+    // one round trip for the whole screen; the last copy shows instantly while the fresh one loads
+    apiCached<HomeData>(`/home${wantsReport ? "?report=1" : ""}`, (h) => {
+      setM(h.month); setRecent(Array.isArray(h.recent) ? h.recent : []); setPend(Array.isArray(h.pending) ? h.pending : []);
+      setUpcoming(Array.isArray(h.upcoming) ? h.upcoming : []); setTracked(Array.isArray(h.tracked) ? h.tracked : []); setReport(h.report ?? null);
+    }).catch(() => { /* keep whatever is on screen */ });
+  }, [refreshKey, bump, wantsReport]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
     try {
       let again: number | null = null;

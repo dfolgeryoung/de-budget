@@ -208,7 +208,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <span className="truncate">{cats}</span>
                   <span className="truncate" style={{ color: "var(--muted)" }}>{r.memo ?? ""}</span>
                   <span className="flex gap-1 flex-wrap">{r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <button key={tg!.id} onClick={() => setTag(tg!.id)} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: tagText(tg!.color) }}>{tg!.name}</button>)}</span>
-                  <span className="text-right">{shownAmount !== null && shownAmount < 0 ? formatMoney(-shownAmount) : shownAmount === null ? "—" : ""}</span>
+                  <span className="text-right">{shownAmount !== null && shownAmount < 0 ? formatMoney(shownAmount) : shownAmount === null ? "—" : ""}</span>
                   <span className="text-right" style={{ color: "var(--green-text)" }}>{shownAmount !== null && shownAmount > 0 ? formatMoney(shownAmount) : ""}</span>
                   <span className="text-right" style={{ color: "var(--muted)" }}>{account && r.balance !== null ? formatMoney(r.balance) : ""}</span>
                   <button aria-label="Row menu" onClick={() => setMenu(menu === r.id + (r.half?.share ?? "") ? null : r.id + (r.half?.share ?? ""))} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>

@@ -215,7 +215,12 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
         const set_ = [d.memo && "memo", d.sharedFiftyFifty && "50/50", d.hidden && "hidden", d.split.length && "split", d.transfer && "transfer", d.tagIds.length && `${d.tagIds.length} tag${d.tagIds.length === 1 ? "" : "s"}`, d.trackedAmountId && "tracked"].filter(Boolean) as string[];
         return (
           <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${moreOpen ? "var(--navy)" : "var(--field)"}`, background: moreOpen ? "var(--group)" : "var(--card)", transition: "background 180ms, border-color 180ms" }}>
-            <button type="button" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="w-full flex items-center justify-between gap-3 px-4 text-left text-[14px] font-semibold tb-btn" style={{ height: 44, color: "var(--text)", background: moreOpen ? "var(--selected)" : "transparent" }}>
+            <button type="button" onClick={(e) => {
+              const box = e.currentTarget.parentElement;
+              setMoreOpen((o) => !o);
+              // once unfolded (220ms), bring the whole box into view inside the sheet
+              if (!moreOpen) setTimeout(() => box?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 240);
+            }} aria-expanded={moreOpen} className="w-full flex items-center justify-between gap-3 px-4 text-left text-[14px] font-semibold tb-btn" style={{ height: 44, color: "var(--text)", background: moreOpen ? "var(--selected)" : "transparent" }}>
               <span className="min-w-0 flex flex-col"><span>{moreOpen ? "Fewer options" : "More options"}</span>{!moreOpen && <span className="text-[11px] font-normal truncate" style={{ color: "var(--muted)" }}>{set_.length ? set_.join(" · ") : "memo, 50/50, split, transfer, tags, track against"}</span>}</span>
               <Chevron dir={moreOpen ? "up" : "down"} size={14} />
             </button>

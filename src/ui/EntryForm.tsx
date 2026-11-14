@@ -4,6 +4,7 @@ import { parseMoney, formatMoney } from "../budget/money";
 import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
 import { Select } from "./Select";
+import { Chevron } from "./icons";
 import type { LedgerRow } from "../server/transactions";
 
 export interface EntryDraft {
@@ -58,7 +59,7 @@ const chip = (on: boolean) => ({
 export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void; onDelete?: (id: string) => void }) {
   const [d, setD] = useState<EntryDraft>(initial);
   // Start with the extra section open when anything in it is already set, or a quick-entry chip asked for it.
-  const [moreOpen] = useState(() => !!(initial.more || initial.split.length || initial.transfer || initial.sharedFiftyFifty || initial.hidden || initial.tagIds.length || initial.trackedAmountId || initial.memo));
+  const [moreOpen, setMoreOpen] = useState(() => !!(initial.more || initial.split.length || initial.transfer || initial.sharedFiftyFifty || initial.hidden || initial.tagIds.length || initial.trackedAmountId || initial.memo));
   const [dup, setDup] = useState<{ date: string; payee: string | null; amount: number } | null>(null);
   const [dateText, setDateText] = useState(initial.date);
   const [busy, setBusy] = useState(false);
@@ -209,9 +210,18 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
         <input value={dateText} onChange={(e) => setDateText(e.target.value)} onBlur={commitDate} onKeyDown={(e) => e.key === "Enter" && commitDate()} className={field + " w-32"} style={fieldStyle} placeholder="11/11 or Nov 11" />
       </div>
 
-      <details className="flex flex-col gap-2" open={moreOpen}>
-        <summary className="text-xs font-semibold cursor-pointer" style={{ color: "var(--accent-text)" }}>More: memo, 50/50, hidden, split, transfer, tags, track against</summary>
-        <div className="flex flex-col gap-3 pt-3">
+      {(() => {
+        // what's already set, so the collapsed button says so
+        const set_ = [d.memo && "memo", d.sharedFiftyFifty && "50/50", d.hidden && "hidden", d.split.length && "split", d.transfer && "transfer", d.tagIds.length && `${d.tagIds.length} tag${d.tagIds.length === 1 ? "" : "s"}`, d.trackedAmountId && "tracked"].filter(Boolean) as string[];
+        return (
+          <button type="button" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="w-full flex items-center justify-between gap-3 rounded-xl px-4 text-left text-[14px] font-semibold tb-btn" style={{ height: 44, border: `1px solid ${moreOpen ? "var(--navy)" : "var(--field)"}`, background: moreOpen ? "var(--selected)" : "var(--card)", color: "var(--text)" }}>
+            <span className="min-w-0 flex flex-col"><span>{moreOpen ? "Fewer options" : "More options"}</span>{!moreOpen && <span className="text-[11px] font-normal truncate" style={{ color: "var(--muted)" }}>{set_.length ? set_.join(" · ") : "memo, 50/50, split, transfer, tags, track against"}</span>}</span>
+            <Chevron dir={moreOpen ? "up" : "down"} size={14} />
+          </button>
+        );
+      })()}
+      {moreOpen && (
+        <div className="flex flex-col gap-3">
           <input value={d.memo} onChange={(e) => set({ memo: e.target.value })} className={field} style={fieldStyle} placeholder="Memo" />
           <div className="flex flex-wrap gap-2">
             <button onClick={() => set({ sharedFiftyFifty: !d.sharedFiftyFifty })} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={chip(d.sharedFiftyFifty)}>Shared 50/50</button>
@@ -220,7 +230,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
             <button onClick={() => set({ transfer: !d.transfer, split: [] })} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={chip(d.transfer)}>Transfer</button>
           </div>
           {d.sharedFiftyFifty && cents > 0 && (
-            <p className="text-xs" style={{ color: "var(--muted)" }}>The other checking will owe {formatMoney(Math.round(cents / 2))} to {lists.accounts.find((a) => a.id === d.accountId)?.name}.</p>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>Shows as {formatMoney(Math.round(cents / 2))} on {lists.accounts.find((a) => a.id === d.accountId)?.name} and {formatMoney(cents - Math.round(cents / 2))} on the other checking account.</p>
           )}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-medium mr-1" style={{ color: "var(--muted)" }}>Tags</span>
@@ -239,7 +249,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
             <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} />
           )}
         </div>
-      </details>
+      )}
 
       {dup && (
         <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px]" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)", border: "1px solid var(--yellow)" }}>

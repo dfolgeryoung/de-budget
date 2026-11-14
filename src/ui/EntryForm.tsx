@@ -69,7 +69,8 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   // Focus the amount once the sheet has finished sliding in, without letting the browser scroll anything.
   const amountRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    const h = setTimeout(() => { const el = amountRef.current; if (!el) return; el.focus({ preventScroll: true }); const sc = el.closest<HTMLElement>(".overflow-y-auto"); if (sc) sc.scrollTop = 0; }, 260);
+    // the keyboard is already up (Shell focused a stand-in input during the tap), so this just moves the caret here
+    const h = setTimeout(() => { const el = amountRef.current; if (!el) return; el.focus({ preventScroll: true }); const sc = el.closest<HTMLElement>(".overflow-y-auto"); if (sc) sc.scrollTop = 0; }, 80);
     return () => clearTimeout(h);
   }, []);
 

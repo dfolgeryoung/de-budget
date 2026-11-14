@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Budget } from "./Budget";
 import { Settings } from "./Settings";
 import { Transactions, EntrySheet, emptyDraft } from "./Transactions";
@@ -59,7 +59,14 @@ function ShellInner({ me }: { me: Me }) {
     root.setAttribute("data-theme", me.appearance ?? "system");
     root.setAttribute("data-text", me.textSize ?? "normal");
   }, [me.appearance, me.textSize]);
-  const openNew = () => lists && setDraft(emptyDraft(lists, me, screen === "transactions" ? account ?? undefined : undefined));
+  // iOS only raises the keyboard for a focus() made inside the tap itself; the amount field doesn't exist yet at that
+  // moment, so the tap focuses an invisible input first and the entry sheet moves focus to the amount once mounted
+  const decoy = useRef<HTMLInputElement>(null);
+  const openNew = () => {
+    if (!lists) return;
+    if (isPhone) decoy.current?.focus({ preventScroll: true });
+    setDraft(emptyDraft(lists, me, screen === "transactions" ? account ?? undefined : undefined));
+  };
   const onSaved = (_id: string, summary: string) => { setDraft(null); setRefreshKey((k) => k + 1); loadLists(); toast(summary); };
   return (
     <div className="min-h-full flex">
@@ -134,6 +141,7 @@ function ShellInner({ me }: { me: Me }) {
       </main>
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
+      <input ref={decoy} inputMode="decimal" aria-hidden="true" tabIndex={-1} className="md:hidden" style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", fontSize: 16 }} />
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
       {picker && <ProfilePicker me={me} onClose={() => setPicker(false)} />}
       {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} onDeleted={() => setRefreshKey((k) => k + 1)} />}

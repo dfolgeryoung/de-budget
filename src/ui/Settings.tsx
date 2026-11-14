@@ -591,7 +591,7 @@ function TagsSection() {
   }
   return (
     <section aria-labelledby="tags-h" className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div><h2 id="tags-h" className="font-bold">Tags</h2><p className="text-sm" style={{ color: "var(--muted)" }}>Labels you can put on any entry (a trip, a project, "reimbursable"), then filter the ledger by. Pick a colour for each; new tags get the next colour in the set.</p></div>
+      <div><h2 id="tags-h" className="font-bold">Tags</h2><p className="text-sm" style={{ color: "var(--muted)" }}>Labels you can put on any entry (a trip, a project, "reimbursable"), then filter the ledger by. Pick a colour for each; new tags get the next colour in the set. A tag named "one-off" is special: entries carrying it still count as spent, but Classic and Reports leave them out when projecting the rest of the month.</p></div>
       {data === null ? <p className="text-sm m-0" style={{ color: "var(--muted)" }}>Loading…</p> : (
         <div className="flex flex-col gap-2">
           {data.tags.length === 0 && <p className="text-sm m-0" style={{ color: "var(--muted)" }}>No tags yet.</p>}

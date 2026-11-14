@@ -154,13 +154,16 @@ export function computeReports(r: ReportsInput): ReportsView {
 
   // on pace: spent so far + bills still to come + everyday spending at its average daily rate for the days left
   const recurringPayees = new Set(r.recurring.map((b) => b.payee.trim().toLowerCase()));
-  let billsSoFar = 0;
+  // bills already paid and entries tagged one-off are spent but not part of the everyday pace
+  const notPace = (t: { payee?: string | null; oneOff?: boolean }) => recurringPayees.has((t.payee ?? "").trim().toLowerCase()) || !!t.oneOff;
+  let billsSoFar = 0, oneOffSoFar = 0;
   for (const t of input.transactions) {
     if (monthOf(t.date) !== month || t.confirmed === false || t.transferToAccountId || (through && t.date > through)) continue;
-    if (!recurringPayees.has((t.payee ?? "").trim().toLowerCase())) continue;
-    for (const l of t.lines) if (l.categoryId && spendable({ kind: meta.get(l.categoryId)?.kind ?? "normal" })) billsSoFar -= l.amount;
+    if (!notPace(t)) continue;
+    const isBill = recurringPayees.has((t.payee ?? "").trim().toLowerCase());
+    for (const l of t.lines) if (l.categoryId && spendable({ kind: meta.get(l.categoryId)?.kind ?? "normal" })) { if (isBill) billsSoFar -= l.amount; else oneOffSoFar -= l.amount; }
   }
-  const everyday = spent - billsSoFar;
+  const everyday = spent - billsSoFar - oneOffSoFar;
   const avgDaily = daysElapsed ? everyday / daysElapsed : 0;
   let onPace = budgeted; // settled below once the per-category projection is in
 
@@ -210,7 +213,7 @@ export function computeReports(r: ReportsInput): ReportsView {
   const billsSoFarByCat = new Map<string, Cents>();
   for (const t of input.transactions) {
     if (monthOf(t.date) !== month || t.confirmed === false || t.transferToAccountId || (through && t.date > through)) continue;
-    if (!recurringPayees.has((t.payee ?? "").trim().toLowerCase())) continue;
+    if (!notPace(t)) continue;
     for (const l of t.lines) if (l.categoryId) billsSoFarByCat.set(l.categoryId, (billsSoFarByCat.get(l.categoryId) ?? 0) - l.amount);
   }
   const recurringCats = new Set(r.recurring.map((b) => b.categoryId).filter(Boolean) as string[]);
@@ -270,7 +273,7 @@ export function computeReports(r: ReportsInput): ReportsView {
     rows: [
       { k: "Spent so far", v: money(spent) },
       { k: `Bills still to come (${billsToCome.length})`, v: money(billsTotal), op: "+" },
-      { k: `Everyday spending so far (spent minus bills already paid ${fmt(billsSoFar)})`, v: money(everyday), sub: true },
+      { k: `Everyday spending so far (spent minus bills already paid ${fmt(billsSoFar)}${oneOffSoFar ? ` and one-offs ${fmt(oneOffSoFar)}` : ""})`, v: money(everyday), sub: true },
       { k: `÷ ${daysElapsed} days elapsed = average per day`, v: fmt(Math.round(avgDaily)), sub: true },
       { k: `Everyday categories (${projCats.filter((c) => c.how === "daily").length}): their average per day × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
       { k: `One-offs (${oneOffs.length}): the rest of their budget, not extrapolated`, v: money(oneOffTopUp), op: "+" },
@@ -279,7 +282,7 @@ export function computeReports(r: ReportsInput): ReportsView {
       { k: "Budgeted", v: money(budgeted), op: "−" },
       { k: onPace > budgeted ? "Over budget if it holds" : "Under budget if it holds", v: money(Math.abs(onPace - budgeted)), result: true },
     ],
-    note: "Bills are the active recurring bills. An everyday category (three or more entries so far, or spending in each of the last two months) keeps its average daily rate; a one-off lands at the larger of what it spent and its budget; a category untouched so far is assumed to spend its budget.",
+    note: "Bills are the active recurring bills. An everyday category (three or more entries so far, or spending in each of the last two months) keeps its average daily rate; a one-off category lands at the larger of what it spent and its budget; a category untouched so far is assumed to spend its budget. An entry tagged \"one-off\" counts as spent but never sets the pace.",
   };
   const explainVs: ExplainBox = {
     title: `Vs ${monthName(prevMonth)}, same day`,

@@ -229,7 +229,8 @@ function Explain({ data }: { data: ClassicPayload }) {
       { k: "Budget", v: l.budget },
       { k: "Spent so far", v: l.actual, op: "−" },
       { k: "Remaining now", v: l.projection!.remaining, result: true },
-      { k: `Spent so far ÷ ${data.daysElapsed} days elapsed`, v: l.projection!.avgDaily, sub: true },
+      ...(l.projection!.oneOff ? [{ k: `Spent so far minus one-offs (${formatMoney(l.projection!.oneOff)}, tagged "one-off")`, v: l.actual - l.projection!.oneOff, sub: true }] : []),
+      { k: `${l.projection!.oneOff ? "That" : "Spent so far"} ÷ ${data.daysElapsed} days elapsed`, v: l.projection!.avgDaily, sub: true },
       { k: `Average daily spend × ${data.daysLeft} days left`, v: Math.round(l.projection!.avgDaily * data.daysLeft), op: "−" },
       { k: "Projected remaining at month end", v: l.projection!.projectedRemaining, result: true },
     ]} />

@@ -36,6 +36,7 @@ export interface TransactionIn {
   lines: LineIn[];
   confirmed?: boolean;
   payee?: string | null; // used by reports to tell recurring bills from everyday spending
+  oneOff?: boolean; // tagged "one-off": counts as spent, but projections don't extrapolate it
 }
 export interface AssignmentIn {
   categoryId: string;

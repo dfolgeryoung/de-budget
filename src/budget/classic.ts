@@ -31,14 +31,14 @@ export interface ClassicInput {
   goalMonthly: Record<string, Cents>; // categoryId -> the goal's monthly amount (every other bucket line shows this)
   typed: Record<string, Cents>; // "<column>:<name>" -> typed budget for this month
   income: Record<"D" | "E", { budget: Cents; actual: Cents }>;
-  transactions: { id: string; date: ISODate; accountId: string; payee: string | null; hidden: boolean; masked: boolean; transferToAccountId: string | null; sharedFiftyFifty: boolean; lines: { categoryId: string | null; amount: Cents }[] }[];
+  transactions: { id: string; date: ISODate; accountId: string; payee: string | null; hidden: boolean; masked: boolean; transferToAccountId: string | null; sharedFiftyFifty: boolean; oneOff?: boolean; lines: { categoryId: string | null; amount: Cents }[] }[];
 }
 
-export interface ClassicEntry { id: string; date: ISODate; payee: string; category: string; amount: Cents; half: boolean }
+export interface ClassicEntry { id: string; date: ISODate; payee: string; category: string; amount: Cents; half: boolean; oneOff?: boolean }
 export interface ClassicLine {
   key: string; name: string; column: ClassicColumn; section: ClassicSection; typed: boolean;
-  budget: Cents; actual: Cents; entries: ClassicEntry[]; categories: { id: string; name: string; needed: Cents }[];
-  projection: { remaining: Cents; avgDaily: Cents; projectedRemaining: Cents } | null;
+  budget: Cents; actual: Cents; oneOff: Cents; entries: ClassicEntry[]; categories: { id: string; name: string; needed: Cents }[];
+  projection: { remaining: Cents; avgDaily: Cents; projectedRemaining: Cents; oneOff: Cents } | null;
   fun: { weeklyBudget: Cents; spent: Cents; remaining: Cents; perDay: Cents; perWeek: Cents; weeksLeft: number; projectedRemaining: Cents } | null;
 }
 export interface ClassicPerson {
@@ -70,7 +70,7 @@ export function computeClassic(input: ClassicInput): ClassicView {
 
   const lines: ClassicLine[] = input.layout.map((d) => ({
     key: key(d.column, d.name), name: d.name, column: d.column, section: d.section, typed: d.typed,
-    budget: d.typed ? (input.typed[key(d.column, d.name)] ?? d.defaultBudget) : 0, actual: 0, entries: [], categories: [], projection: null, fun: null,
+    budget: d.typed ? (input.typed[key(d.column, d.name)] ?? d.defaultBudget) : 0, actual: 0, oneOff: 0, entries: [], categories: [], projection: null, fun: null,
   }));
   const byKey = new Map(lines.map((l) => [l.key, l]));
   const byName = (name: string, prefer?: ClassicColumn) => (prefer && byKey.get(key(prefer, name))) || lines.find((l) => l.name === name) || null;
@@ -105,7 +105,7 @@ export function computeClassic(input: ClassicInput): ClassicView {
       const c = cats.get(l.categoryId); if (!c) continue;
       const spend = -l.amount; // outflow positive
       const payee = x.masked ? "[Hidden]" : x.payee || "—";
-      const add = (line: ClassicLine | null, amount: Cents, half = false) => { if (!line) return; line.actual += amount; line.entries.push({ id: x.id, date: x.date, payee, category: c.name, amount, half }); };
+      const add = (line: ClassicLine | null, amount: Cents, half = false) => { if (!line) return; line.actual += amount; if (x.oneOff) line.oneOff += amount; line.entries.push({ id: x.id, date: x.date, payee, category: c.name, amount, half, oneOff: !!x.oneOff }); };
       switch (c.rule) {
         case "by_account":
           if (x.sharedFiftyFifty) { add(byName(FUN, "D"), r2(spend / 2), true); add(byName(FUN, "E"), spend - r2(spend / 2), true); }
@@ -123,9 +123,10 @@ export function computeClassic(input: ClassicInput): ClassicView {
   for (const l of lines) {
     if (l.section !== "variable") continue;
     const remaining = l.budget - l.actual;
-    const avgDaily = daysElapsed > 0 ? l.actual / daysElapsed : 0;
+    // one-offs are spent, but the pace for the rest of the month comes from everything else
+    const avgDaily = daysElapsed > 0 ? (l.actual - l.oneOff) / daysElapsed : 0;
     const projectedRemaining = r2(remaining - avgDaily * daysLeft);
-    l.projection = { remaining, avgDaily: r2(avgDaily), projectedRemaining };
+    l.projection = { remaining, avgDaily: r2(avgDaily), projectedRemaining, oneOff: l.oneOff };
     if (l.name === FUN) {
       const weeksLeft = daysLeft / 7;
       l.fun = { weeklyBudget: r2(l.budget / (dim / 7)), spent: l.actual, remaining, perDay: daysLeft > 0 ? r2(remaining / daysLeft) : remaining, perWeek: weeksLeft > 0 ? r2(remaining / weeksLeft) : remaining, weeksLeft: Math.round(weeksLeft * 10) / 10, projectedRemaining };

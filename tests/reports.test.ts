@@ -105,3 +105,26 @@ describe("pacing with bills", () => {
     expect(r.projection.headingOver.map((c) => c.id)).toEqual(["car", "groc", "rent"]);
   });
 });
+
+describe("one-off entries", () => {
+  const input: BudgetInput = {
+    firstMonth: "2026-11-01",
+    accounts: [{ id: "d", type: "checking", onBudget: true, owner: "D", startingBalance: 100000, startingDate: "2026-11-01" }],
+    categories: [{ id: "fun", groupId: "g", kind: "normal" }],
+    transactions: [
+      { id: "1", date: "2026-11-02", accountId: "d", amount: -2000, payee: "Coffee", lines: [{ categoryId: "fun", amount: -2000 }] },
+      { id: "2", date: "2026-11-04", accountId: "d", amount: -2000, payee: "Coffee", lines: [{ categoryId: "fun", amount: -2000 }] },
+      { id: "3", date: "2026-11-06", accountId: "d", amount: -2000, payee: "Coffee", lines: [{ categoryId: "fun", amount: -2000 }] },
+      { id: "4", date: "2026-11-05", accountId: "d", amount: -59900, payee: "NC Revenue", oneOff: true, lines: [{ categoryId: "fun", amount: -59900 }] },
+    ],
+    assignments: [{ categoryId: "fun", month: "2026-11-01", amount: 60000 }],
+    goals: [],
+  };
+  const r = computeReports({ input, categories: [{ id: "fun", name: "Fun", emoji: null, kind: "normal" }], recurring: [], month: "2026-11-01", today: "2026-11-10" });
+  it("count as spent but don't set the pace", () => {
+    expect(r.thisMonth.spent).toBe(65900);
+    // everyday = 6000 over 10 days → 600/day × 20 = 12000 more
+    expect(r.thisMonth.onPace).toBe(65900 + 12000);
+    expect(r.projection.categories[0]!.projected).toBe(65900 + 12000);
+  });
+});

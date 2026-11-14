@@ -97,7 +97,7 @@ function ShellInner({ me }: { me: Me }) {
         <RailAccounts refreshKey={refreshKey} selected={screen === "transactions" ? account : null} onPick={(id) => { setAccount(id); location.hash = "transactions"; }} />
       </nav>
 
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic" || screen === "reports" || screen === "tracked") && isPhone ? { paddingTop: 0 } : undefined}>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-20 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic" || screen === "reports" || screen === "tracked") && isPhone ? { paddingTop: 0 } : undefined}>
         {screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} openEdit={async (id) => { const rows = await api<LedgerRow[]>("/transactions?limit=500"); const r = rows.find((x) => x.id === id); if (r) setDraft(draftFromRow(r, lists)); }} />
         ) : screen === "budget" || screen === "home" ? (
@@ -142,15 +142,15 @@ function ShellInner({ me }: { me: Me }) {
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
       <input ref={decoy} inputMode="decimal" aria-hidden="true" tabIndex={-1} className="md:hidden" style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", fontSize: 16 }} />
-      <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
+      <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
       {picker && <ProfilePicker me={me} onClose={() => setPicker(false)} />}
       {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} onDeleted={() => setRefreshKey((k) => k + 1)} />}
 
       {/* Phone bottom bar */}
       <nav
         aria-label="Main"
-        className="md:hidden fixed bottom-0 inset-x-0 flex justify-around items-start pt-2.5"
-        style={{ background: "var(--card)", borderTop: "1px solid var(--border)", height: "calc(78px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="md:hidden fixed bottom-0 inset-x-0 flex justify-around items-start pt-1.5"
+        style={{ background: "var(--card)", borderTop: "1px solid var(--border)", height: "calc(56px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {[...(me.phoneNav?.length === 4 ? me.phoneNav : DEFAULT_PHONE_NAV), "more"].map((id) => {
           const label = id === "more" ? "More" : PHONE_NAV_OPTIONS.find((o) => o[0] === id)?.[1].replace("Tracked amounts", "Tracked") ?? id;

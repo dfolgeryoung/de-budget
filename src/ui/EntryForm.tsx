@@ -214,14 +214,15 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
         // what's already set, so the collapsed button says so
         const set_ = [d.memo && "memo", d.sharedFiftyFifty && "50/50", d.hidden && "hidden", d.split.length && "split", d.transfer && "transfer", d.tagIds.length && `${d.tagIds.length} tag${d.tagIds.length === 1 ? "" : "s"}`, d.trackedAmountId && "tracked"].filter(Boolean) as string[];
         return (
-          <button type="button" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="w-full flex items-center justify-between gap-3 rounded-xl px-4 text-left text-[14px] font-semibold tb-btn" style={{ height: 44, border: `1px solid ${moreOpen ? "var(--navy)" : "var(--field)"}`, background: moreOpen ? "var(--selected)" : "var(--card)", color: "var(--text)" }}>
-            <span className="min-w-0 flex flex-col"><span>{moreOpen ? "Fewer options" : "More options"}</span>{!moreOpen && <span className="text-[11px] font-normal truncate" style={{ color: "var(--muted)" }}>{set_.length ? set_.join(" · ") : "memo, 50/50, split, transfer, tags, track against"}</span>}</span>
-            <Chevron dir={moreOpen ? "up" : "down"} size={14} />
-          </button>
-        );
-      })()}
-      {moreOpen && (
-        <div className="flex flex-col gap-3">
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${moreOpen ? "var(--navy)" : "var(--field)"}`, background: moreOpen ? "var(--group)" : "var(--card)", transition: "background 180ms, border-color 180ms" }}>
+            <button type="button" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="w-full flex items-center justify-between gap-3 px-4 text-left text-[14px] font-semibold tb-btn" style={{ height: 44, color: "var(--text)", background: moreOpen ? "var(--selected)" : "transparent" }}>
+              <span className="min-w-0 flex flex-col"><span>{moreOpen ? "Fewer options" : "More options"}</span>{!moreOpen && <span className="text-[11px] font-normal truncate" style={{ color: "var(--muted)" }}>{set_.length ? set_.join(" · ") : "memo, 50/50, split, transfer, tags, track against"}</span>}</span>
+              <Chevron dir={moreOpen ? "up" : "down"} size={14} />
+            </button>
+            {/* the options fold out beneath the button inside the same shaded box */}
+            <div style={{ display: "grid", gridTemplateRows: moreOpen ? "1fr" : "0fr", transition: "grid-template-rows 220ms ease" }}>
+              <div className="min-h-0 overflow-hidden">
+                <div className="flex flex-col gap-3 p-3">
           <input value={d.memo} onChange={(e) => set({ memo: e.target.value })} className={field} style={fieldStyle} placeholder="Memo" />
           <div className="flex flex-wrap gap-2">
             <button onClick={() => set({ sharedFiftyFifty: !d.sharedFiftyFifty })} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={chip(d.sharedFiftyFifty)}>Shared 50/50</button>
@@ -248,8 +249,12 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
           {lists.tracked.length > 0 && (
             <Select ariaLabel="Track against" value={d.trackedAmountId} onChange={(v) => set({ trackedAmountId: v })} options={[{ value: "", label: "Track against… (none)" }, ...lists.tracked.map((x) => ({ value: x.id, label: `${x.emoji ? x.emoji + " " : ""}${x.name}` }))]} className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} />
           )}
-        </div>
-      )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {dup && (
         <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px]" style={{ background: "var(--yellow-row)", color: "var(--yellow-text)", border: "1px solid var(--yellow)" }}>

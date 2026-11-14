@@ -234,8 +234,23 @@ function AccountsSection() {
   const [adding, setAdding] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [n, setN] = useState({ name: "", type: "checking" as "checking" | "savings" | "credit_card", owner: "shared" as "D" | "E" | "shared", onBudget: true, startingBalance: "", startingDate: new Date().toISOString().slice(0, 10) });
+  const move = async (id: string, dir: -1 | 1) => {
+    if (!all) return;
+    const ids = all.accounts.map((a) => a.id); const i = ids.indexOf(id), j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    try { await api("/accounts/reorder", { method: "PUT", json: { ids } }); load(); refreshApp(); } catch (e) { toast((e as Error).message); }
+  };
+  const Arrows = ({ id, big }: { id: string; big?: boolean }) => {
+    const ids = all?.accounts.map((a) => a.id) ?? []; const i = ids.indexOf(id);
+    const cls = (big ? "w-10 h-10" : "w-7 h-7") + " rounded-md inline-flex items-center justify-center disabled:opacity-30 tb-btn";
+    return (<span className="inline-flex gap-1">
+      <button aria-label="Move up" disabled={i <= 0} onClick={() => move(id, -1)} className={cls} style={{ border: "1px solid var(--field)" }}><Chevron dir="up" size={12} /></button>
+      <button aria-label="Move down" disabled={i < 0 || i >= ids.length - 1} onClick={() => move(id, 1)} className={cls} style={{ border: "1px solid var(--field)" }}><Chevron dir="down" size={12} /></button>
+    </span>);
+  };
   const put = async (id: string, body: object) => { try { await api(`/accounts/${id}`, { method: "PUT", json: body }); load(); refreshApp(); } catch (e) { toast(`Not saved: ${(e as Error).message}`); } };
-  const grid = "minmax(140px,1.4fr) 130px 118px 90px 110px 70px";
+  const grid = "minmax(140px,1.4fr) 130px 118px 90px 110px 70px 70px";
   const phone = usePhone();
   return (
     <section id="s-accounts" className={sec} style={secStyle}>
@@ -261,6 +276,7 @@ function AccountsSection() {
               title={<>{a.name}{a.closed && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--faint)" }}>closed</span>}</>}
               sub={`${{ checking: "Checking", savings: "Savings", credit_card: "Credit card" }[a.type] ?? a.type} · ${{ D: "David", E: "Elizabeth", shared: "Shared" }[a.owner] ?? a.owner}${a.onBudget ? "" : " · off budget"}`}
               right={formatMoney(a.startingBalance)}>
+              <div className="flex items-center justify-between"><span className="text-xs font-semibold" style={lblStyle}>Order (entry form and rail)</span><Arrows id={a.id} big /></div>
               <label className={lbl} style={lblStyle}>Name<TextCell value={a.name} onSave={(name) => put(a.id, { name })} className="w-full" /></label>
               <div className="grid grid-cols-2 gap-2">
                 <div className={lbl} style={lblStyle}>Type<Select ariaLabel="Type" value={a.type} onChange={(v) => v && put(a.id, { type: v })} options={[{ value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "credit_card", label: "Credit card" }]} style={{ height: 40 }} className="w-full" /></div>
@@ -276,7 +292,7 @@ function AccountsSection() {
         </div>
       ) : (
         <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
-          <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 700 }}><span>Account</span><span>Type</span><span>Owner</span><span>On budget</span><span className="text-right">Starting</span><span>Closed</span></div>
+          <div className="grid gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ gridTemplateColumns: grid, color: "var(--muted)", background: "var(--group)", minWidth: 700 }}><span>Account</span><span>Type</span><span>Owner</span><span>On budget</span><span className="text-right">Starting</span><span>Closed</span><span>Order</span></div>
           {all.accounts.map((a) => (
             <div key={a.id} className="row-hover grid gap-2 items-center px-3 py-1.5" style={{ gridTemplateColumns: grid, borderTop: "1px solid var(--border-soft)", opacity: a.closed ? 0.55 : 1, minWidth: 700 }}>
               <TextCell value={a.name} onSave={(name) => put(a.id, { name })} />
@@ -285,6 +301,7 @@ function AccountsSection() {
               <input type="checkbox" checked={a.onBudget} onChange={(e) => put(a.id, { onBudget: e.target.checked })} className="m-0 justify-self-start" />
               <span className="text-right text-[13px]" title={`as of ${a.startingDate}`}>{formatMoney(a.startingBalance)}</span>
               <input type="checkbox" checked={a.closed} onChange={(e) => put(a.id, { closed: e.target.checked })} className="m-0 justify-self-start" />
+              <Arrows id={a.id} />
             </div>
           ))}
         </div>

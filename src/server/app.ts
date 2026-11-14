@@ -240,6 +240,12 @@ app.put("/categories/:id", async (c) => {
 });
 
 // ---------- category order (drag and drop on the Budget screen) ----------
+app.put("/accounts/reorder", async (c) => {
+  const p = z.object({ ids: z.array(z.string()).min(1) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  for (let i = 0; i < p.data.ids.length; i++) await db.update(t.accounts).set({ sortOrder: i, updatedBy: c.get("user").id, updatedAt: new Date() }).where(eq(t.accounts.id, p.data.ids[i]!));
+  return c.json({ ok: true });
+});
 app.put("/categories/reorder", async (c) => {
   const p = z.object({ groups: z.array(z.object({ groupId: z.string(), ids: z.array(z.string()) })) }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);

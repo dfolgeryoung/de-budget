@@ -176,7 +176,7 @@ function LineList({ l, t }: { l: ClassicLine; t: ReturnType<typeof tone> }) {
       {l.entries.length > 0 && (
         <div className="flex flex-col text-xs" style={{ padding: "0 14px 8px 22px", gap: 3, color: "var(--text-2)" }}>
           {l.entries.map((e, i) => (
-            <div key={e.id + i} className="row-hover flex justify-between gap-3 rounded px-1 -mx-1"><span className="truncate">{short(e.date)} · {e.payee}{l.name === "Misc shared" ? ` · ${e.category}` : ""}{e.half ? " (½ shared)" : ""}</span><span className="shrink-0">{formatMoney(e.amount)}</span></div>
+            <div key={e.id + i} className="row-hover flex justify-between gap-3 rounded px-1 -mx-1"><span className="truncate">{short(e.date)} · {e.payee}{l.name === "Misc shared" ? ` · ${e.category}` : ""}{e.half ? " (½ shared)" : ""}{e.oneOff && <span title="Tagged one-off: counts as spent, left out of the pace" className="ml-1.5 px-1.5 rounded-full text-[10px] font-semibold align-middle" style={{ background: "var(--group)", color: "var(--muted)" }}>one-off</span>}</span><span className="shrink-0">{formatMoney(e.amount)}</span></div>
           ))}
         </div>
       )}

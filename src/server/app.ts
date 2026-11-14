@@ -226,6 +226,14 @@ app.post("/categories", async (c) => {
   if (p.data.goal && p.data.goal.amount > 0) await db.insert(t.goals).values({ id: `goal-${id}-${p.data.goal.validFrom}`, categoryId: id, validFrom: p.data.goal.validFrom, type: p.data.goal.type, amount: p.data.goal.amount, frequencyMonths: p.data.goal.targetDate ? null : p.data.goal.frequencyMonths ?? 1, targetDate: p.data.goal.targetDate, updatedBy: me });
   return c.json({ id });
 });
+app.put("/categories/reorder", async (c) => {
+  const p = z.object({ groups: z.array(z.object({ groupId: z.string(), ids: z.array(z.string()) })) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  const me = c.get("user").id;
+  for (const g of p.data.groups) for (let i = 0; i < g.ids.length; i++) {
+    await db.update(t.categories).set({ groupId: g.groupId, sortOrder: i, updatedBy: me, updatedAt: new Date() }).where(eq(t.categories.id, g.ids[i]!));
+  }
+  return c.json({ ok: true });
 app.put("/categories/:id", async (c) => {
   const p = z.object({ name: z.string().trim().min(1).max(60).optional(), emoji: z.string().trim().max(8).nullable().optional(), groupId: z.string().optional(), hiddenInBudget: z.boolean().optional(),
     classicBucket: z.string().nullable().optional(), classicRule: z.enum(["none", "by_account", "utilities_split", "phone_split", "drive_split"]).optional(), favourite: z.boolean().optional() }).safeParse(await c.req.json());
@@ -246,14 +254,6 @@ app.put("/categories/:id", async (c) => {
 });
 
 // ---------- category order (drag and drop on the Budget screen) ----------
-app.put("/categories/reorder", async (c) => {
-  const p = z.object({ groups: z.array(z.object({ groupId: z.string(), ids: z.array(z.string()) })) }).safeParse(await c.req.json());
-  if (!p.success) return c.json({ error: "bad body" }, 400);
-  const me = c.get("user").id;
-  for (const g of p.data.groups) for (let i = 0; i < g.ids.length; i++) {
-    await db.update(t.categories).set({ groupId: g.groupId, sortOrder: i, updatedBy: me, updatedAt: new Date() }).where(eq(t.categories.id, g.ids[i]!));
-  }
-  return c.json({ ok: true });
 });
 
 // ---------- tags ----------

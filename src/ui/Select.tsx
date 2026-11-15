@@ -12,19 +12,35 @@ export function Popover({ anchor, open, onClose, width = 220, children, panelRef
   const own = useRef<HTMLDivElement>(null);
   const ref = panelRef ?? own;
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxH: number } | null>(null);
-  useLayoutEffect(() => {
+  const place = () => {
     if (!open || !anchor.current) { setPos(null); return; }
     const r = anchor.current.getBoundingClientRect();
+    if (isTouch) {
+      // on the phone the keyboard takes the lower half of the screen, so the list fills whatever is left of the
+      // visible viewport from the top down (re-measured as the keyboard comes and goes)
+      const vv = window.visualViewport;
+      const vh = vv?.height ?? window.innerHeight, vt = vv?.offsetTop ?? 0;
+      setPos({ top: vt + 8, left: 8, width: window.innerWidth - 16, maxH: vh - 16 });
+      return;
+    }
     const w = Math.max(r.width, width);
     const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
     const below = window.innerHeight - r.bottom - 8, above = r.top - 8;
     if (below >= 240 || below >= above) setPos({ top: r.bottom + 4, left, width: w, maxH: Math.min(720, below) });
     else setPos({ bottom: window.innerHeight - r.top + 4, left, width: w, maxH: Math.min(720, above) });
-  }, [open, anchor, width]);
+  };
+  useLayoutEffect(place, [open, anchor, width]);
+  useEffect(() => {
+    if (!open || !isTouch || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    vv.addEventListener("resize", place); vv.addEventListener("scroll", place);
+    return () => { vv.removeEventListener("resize", place); vv.removeEventListener("scroll", place); };
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const down = (e: Event) => { if (!ref.current?.contains(e.target as Node) && !anchor.current?.contains(e.target as Node)) onClose(); };
-    const scroll = (e: Event) => { if (ref.current?.contains(e.target as Node)) return; if (ref.current?.contains(document.activeElement)) return; onClose(); };
+    // on touch screens the menu covers the page, and the keyboard's own scrolling would otherwise close it
+    const scroll = (e: Event) => { if (isTouch) return; if (ref.current?.contains(e.target as Node)) return; if (ref.current?.contains(document.activeElement)) return; onClose(); };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("mousedown", down); window.addEventListener("scroll", scroll, true); window.addEventListener("resize", scroll); document.addEventListener("keydown", key);
     return () => { document.removeEventListener("mousedown", down); window.removeEventListener("scroll", scroll, true); window.removeEventListener("resize", scroll); document.removeEventListener("keydown", key); };

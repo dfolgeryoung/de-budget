@@ -6,6 +6,8 @@ import { Chevron } from "./icons";
  * A floating panel anchored under (or above) an element. position:fixed so it escapes overflow-hidden cards;
  * closes on outside click, scroll, resize or Escape.
  */
+const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
+
 export function Popover({ anchor, open, onClose, width = 220, children, panelRef }: { anchor: RefObject<HTMLElement | null>; open: boolean; onClose: () => void; width?: number; children: (maxH: number) => ReactNode; panelRef?: RefObject<HTMLDivElement | null> }) {
   const own = useRef<HTMLDivElement>(null);
   const ref = panelRef ?? own;
@@ -22,7 +24,7 @@ export function Popover({ anchor, open, onClose, width = 220, children, panelRef
   useEffect(() => {
     if (!open) return;
     const down = (e: Event) => { if (!ref.current?.contains(e.target as Node) && !anchor.current?.contains(e.target as Node)) onClose(); };
-    const scroll = (e: Event) => { if (!ref.current?.contains(e.target as Node)) onClose(); };
+    const scroll = (e: Event) => { if (ref.current?.contains(e.target as Node)) return; if (ref.current?.contains(document.activeElement)) return; onClose(); };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("mousedown", down); window.addEventListener("scroll", scroll, true); window.addEventListener("resize", scroll); document.addEventListener("keydown", key);
     return () => { document.removeEventListener("mousedown", down); window.removeEventListener("scroll", scroll, true); window.removeEventListener("resize", scroll); document.removeEventListener("keydown", key); };
@@ -45,9 +47,10 @@ export interface SelectOption { value: string; label: string; group?: string; hi
  * A dropdown drawn by the app rather than the browser, so the open list matches the rest of the UI
  * (the native <select> menu can't be styled). Keyboard: arrows, Enter, Escape; type to filter long lists.
  */
-export function Select({ value, onChange, options, placeholder = "Choose…", pill = false, on = false, className = "", style, menuWidth, searchable, ariaLabel, prefix }: {
+export function Select({ value, onChange, options, placeholder = "Choose…", pill = false, on = false, className = "", style, menuWidth, searchable, ariaLabel, prefix, onOpen }: {
   value: string | null; onChange: (v: string | null) => void; options: SelectOption[]; placeholder?: string;
   pill?: boolean; on?: boolean; className?: string; style?: React.CSSProperties; menuWidth?: number; searchable?: boolean; ariaLabel?: string; prefix?: ReactNode;
+  onOpen?: (button: HTMLButtonElement) => void; // e.g. scroll the field into view on the phone before the menu positions itself
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -86,7 +89,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
   let lastGroup: string | undefined;
   return (
     <>
-      <button ref={btn} type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+      <button ref={btn} type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} onClick={(e) => { if (!open) onOpen?.(e.currentTarget); setOpen((o) => !o); }}
         onKeyDown={(e) => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setOpen(true); } }}
         className={(pill ? "pill " + (on ? "on " : "") : "fld inline-flex items-center gap-1.5 ") + "min-w-0 outline-none " + className} style={{ ...trig, ...style }}>
         {prefix}
@@ -97,7 +100,7 @@ export function Select({ value, onChange, options, placeholder = "Choose…", pi
         {(maxH) => (
           <div role="listbox" onKeyDown={onKey} className="flex flex-col">
             {canSearch && (
-              <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type to filter…" className="m-2 mb-1 px-2.5 text-[13px] rounded-md outline-none" style={{ height: 32, border: "1px solid var(--field)", background: "var(--card-alt)", color: "var(--text)" }} />
+              <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type to filter…" className="m-2 mb-1 px-2.5 rounded-md outline-none" style={{ height: 36, fontSize: isTouch ? 16 : "calc(13px * var(--fs))", border: "1px solid var(--field)", background: "var(--card-alt)", color: "var(--text)" }} />
             )}
             <div className="overflow-y-auto py-1" style={{ maxHeight: maxH - 10 - (canSearch ? 44 : 0) }}>
               {filtered.length === 0 && <div className="px-3 py-2 text-xs" style={{ color: "var(--muted)" }}>No matches</div>}

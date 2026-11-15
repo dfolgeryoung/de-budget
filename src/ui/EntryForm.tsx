@@ -56,6 +56,9 @@ const chip = (on: boolean) => ({
   border: on ? "2px solid var(--navy)" : "1px solid var(--field)", background: on ? "var(--selected)" : "var(--card)", color: on ? "var(--accent-text)" : "var(--text-2)",
 });
 
+/** On the phone the keyboard covers the lower half of the sheet: once it's up, scroll the focused field into view. */
+const intoView = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 320); };
+
 export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void; onDelete?: (id: string) => void }) {
   const [d, setD] = useState<EntryDraft>(initial);
   // Start with the extra section open when anything in it is already set, or a quick-entry chip asked for it.
@@ -160,7 +163,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       {!d.transfer && (
         <label className="flex flex-col gap-1.5 relative">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Payee</span>
-          <input value={d.payee} onChange={(e) => set({ payee: e.target.value })} className={field} style={fieldStyle} placeholder="Trader Joe's" />
+          <input value={d.payee} onChange={(e) => set({ payee: e.target.value })} onFocus={intoView} className={field} style={fieldStyle} placeholder="Trader Joe's" />
           {payeeMatches.length > 0 && d.payee !== payeeMatches[0]?.name && (
             <div className="flex flex-wrap gap-1.5">
               {payeeMatches.map((p) => (
@@ -199,7 +202,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       ) : (
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Category</span>
-          <Select ariaLabel="Category" value={d.categoryId} onChange={(v) => set({ categoryId: v })} options={catOptions} placeholder="Pick a category…" className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} menuWidth={300} />
+          <Select ariaLabel="Category" value={d.categoryId} onChange={(v) => set({ categoryId: v })} onOpen={(el) => el.scrollIntoView({ block: "start" })} options={catOptions} placeholder="Pick a category…" className="w-full" style={{ height: 42, borderRadius: 10, fontSize: "calc(15px * var(--fs))" }} menuWidth={300} />
         </div>
       )}
 
@@ -228,7 +231,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
             <div style={{ display: "grid", gridTemplateRows: moreOpen ? "1fr" : "0fr", transition: "grid-template-rows 220ms ease" }}>
               <div className="min-h-0 overflow-hidden">
                 <div className="flex flex-col gap-3 p-3">
-          <input value={d.memo} onChange={(e) => set({ memo: e.target.value })} className={field} style={fieldStyle} placeholder="Memo" />
+          <input value={d.memo} onChange={(e) => set({ memo: e.target.value })} onFocus={intoView} className={field} style={fieldStyle} placeholder="Memo" />
           <div className="flex flex-wrap gap-2">
             <button onClick={() => set({ sharedFiftyFifty: !d.sharedFiftyFifty })} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={chip(d.sharedFiftyFifty)}>Shared 50/50</button>
             <button onClick={() => set({ hidden: !d.hidden })} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={chip(d.hidden)}>Hidden</button>

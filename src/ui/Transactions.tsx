@@ -47,6 +47,9 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const toast = useToast();
   const catName = useMemo(() => new Map(lists.groups.flatMap((g) => g.categories.map((c) => [c.id, `${c.emoji ? c.emoji + " " : ""}${c.name}`]))), [lists]);
   const acctName = useMemo(() => new Map(lists.accounts.map((a) => [a.id, a.name])), [lists]);
+  const acctType = useMemo(() => new Map(lists.accounts.map((a) => [a.id, a.type])), [lists]);
+  // a transfer into a credit card is a payment; between other accounts it's a money transfer
+  const transferKind = (r: LedgerRow) => (acctType.get(r.transferToAccountId ?? "") === "credit_card" ? "Credit card payment" : acctType.get(r.accountId) === "credit_card" ? "Credit card refund" : "Money transfer");
   const tagById = useMemo(() => new Map(lists.tags.map((t) => [t.id, t])), [lists]);
 
   const load = () => {
@@ -118,14 +121,14 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
               {g.rows.map((r, i) => {
                 const masked = r.amount === null;
                 const isTransfer = !!r.transferToAccountId;
-                const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
+                const cats = isTransfer ? `⇄ ${transferKind(r)}${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
                 const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
                 return (
                   <button key={r.id + (r.half?.share ?? "")} onClick={() => !masked && openEntry(draftFromRow(r, lists))} className="w-full grid items-center text-left" style={{ gridTemplateColumns: cols, padding: "11px 16px", borderTop: i ? "1px solid var(--border-soft)" : undefined, background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                     <span className="flex flex-col min-w-0" style={{ gap: 2 }}>
                       <span className="text-[15px] font-medium flex items-center gap-1.5 truncate" style={{ color: masked ? "var(--muted)" : undefined }}>
                         {masked && <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
-                        <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? "Transfer" : "—")}</span>
+                        <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? transferKind(r) : "—")}</span>
                         {r.hidden && r.mine && <span title="Hidden from the other person" className="text-xs">🔒</span>}
                         {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} className="text-xs" style={{ color: "var(--neg)" }}>⚠</span>}
                         {!r.confirmed && <PendingBadge r={r} />}
@@ -189,7 +192,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
             {g.rows.map((r) => {
               const masked = r.amount === null;
               const isTransfer = !!r.transferToAccountId;
-              const cats = isTransfer ? `⇄ Transfer${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
+              const cats = isTransfer ? `⇄ ${transferKind(r)}${account === r.transferToAccountId ? ` from ${acctName.get(r.accountId)}` : ` to ${acctName.get(r.transferToAccountId!)}`}` : r.lines.length > 1 ? "Split across categories" : (r.lines[0]?.categoryId ? catName.get(r.lines[0].categoryId) : "Ready to Assign");
               const shownAmount = r.amount === null ? null : account && r.transferToAccountId === account ? -r.amount : r.amount;
               return (
                 isDesktop && editing === r.id + (r.half?.share ?? "") ? (
@@ -198,7 +201,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                 <div key={r.id + (r.half?.share ?? "")} onClick={(e) => { if (!masked && !(e.target as HTMLElement).closest("button")) setEditing(r.id + (r.half?.share ?? "")); }} className={"row-hover relative grid items-center px-4 py-2 text-[13px]" + (masked ? "" : " cursor-pointer")} title={masked ? undefined : "Click to edit"} style={{ gridTemplateColumns: LEDGER_COLS, gap: 10, borderBottom: "1px solid var(--border-soft)", background: r.bankStatus === "mismatch" ? "var(--yellow-row)" : masked ? "var(--card-alt)" : undefined }}>
                   <span style={{ color: "var(--muted)" }}>{short(r.date)}</span>
                   <span className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
-                    {masked && "🔒 "}{r.payee || (isTransfer ? "Transfer" : "—")}
+                    {masked && "🔒 "}{r.payee || (isTransfer ? transferKind(r) : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}

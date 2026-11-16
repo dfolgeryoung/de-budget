@@ -100,7 +100,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
           <h1 className="text-[30px] font-bold m-0 leading-tight">{greet}, {first}.</h1>
           <div className="text-[14px] mt-1" style={{ color: "var(--muted)" }}>{dateLine}{r ? ` · day ${r.daysElapsed} of ${r.daysInMonth} in ${monthName(r.month)}` : ""}</div>
         </div>
-        {attention > 0 && <a href="#attention" className="rounded-full px-3.5 h-9 inline-flex items-center text-[13px] font-semibold no-underline" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>{attention} {attention === 1 ? "thing" : "things"} to look at ↓</a>}
+        {attention > 0 && <button onClick={() => document.getElementById("attention")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="rounded-full px-3.5 h-9 inline-flex items-center text-[13px] font-semibold" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>{attention} {attention === 1 ? "thing" : "things"} to look at ↓</button>}
       </header>
 
       {tm && r && (

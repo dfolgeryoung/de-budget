@@ -59,7 +59,7 @@ const chip = (on: boolean) => ({
 /** On the phone the keyboard covers the lower half of the sheet: once it's up, scroll the focused field into view. */
 const intoView = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 320); };
 
-export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { lists: Lists; me: { id: string; initial?: string }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void; onDelete?: (id: string) => void }) {
+export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { lists: Lists; me: { id: string; initial?: string; useLocation?: boolean }; initial: EntryDraft; onSaved: (id: string, summary: string) => void; onClose: () => void; onDelete?: (id: string) => void }) {
   const [d, setD] = useState<EntryDraft>(initial);
   // Start with the extra section open when anything in it is already set, or a quick-entry chip asked for it.
   const [moreOpen, setMoreOpen] = useState(() => !!(initial.more || initial.split.length || initial.transfer || initial.sharedFiftyFifty || initial.hidden || initial.tagIds.length || initial.trackedAmountId || initial.memo));
@@ -105,6 +105,18 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
     if (parsed) { set({ date: parsed }); setDateText(parsed); } else setDateText(d.date);
   }
 
+  // location suggestions: take a fix when the sheet opens (new entries, phones, setting on), then ask for payees logged near here
+  const [fix, setFix] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [nearby, setNearby] = useState<{ name: string; lastCategoryId: string | null; lastAccountId: string | null; distance: number }[]>([]);
+  useEffect(() => {
+    if (!me.useLocation || d.id || typeof navigator === "undefined" || !navigator.geolocation || !matchMedia("(pointer: coarse)").matches) return;
+    let gone = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { if (gone) return; const f = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }; setFix(f); api<{ payees: typeof nearby }>(`/payees/nearby?lat=${f.lat}&lng=${f.lng}`).then((r) => { if (!gone) setNearby(r.payees); }).catch(() => {}); },
+      () => { /* denied or unavailable: no chips */ }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 });
+    return () => { gone = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me.useLocation]);
   async function save() {
     setErr(null);
     if (!cents) return setErr("Enter an amount.");
@@ -118,6 +130,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       categoryId: d.split.length ? null : d.categoryId === "rta" ? null : d.categoryId,
       lines: d.split.length ? d.split.map((l) => ({ categoryId: l.categoryId === "rta" ? null : l.categoryId, amount: d.outflow ? -Math.abs(parseMoney(l.amountText) ?? 0) : Math.abs(parseMoney(l.amountText) ?? 0) })) : [],
       sharedFiftyFifty: d.sharedFiftyFifty, hidden: d.hidden, trackedAmountId: d.trackedAmountId, tagIds: d.tagIds,
+      location: fix && !d.transfer ? fix : null,
     };
     setBusy(true);
     try {
@@ -164,6 +177,14 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
         <label className="flex flex-col gap-1.5 relative">
           <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Payee</span>
           <input value={d.payee} onChange={(e) => set({ payee: e.target.value })} onFocus={intoView} className={field} style={fieldStyle} placeholder="Trader Joe's" />
+          {nearby.length > 0 && !d.payee && (
+            <div className="flex gap-1.5 flex-wrap mt-1.5" aria-label="Payees near here">
+              <span className="text-[11px] self-center" style={{ color: "var(--muted)" }}>Near here:</span>
+              {nearby.slice(0, 3).map((p) => (
+                <button key={p.name} type="button" onClick={() => pickPayee(p)} className="pill tb-btn" style={{ height: 30, padding: "0 12px", background: "var(--card)", border: "1px solid var(--field)", color: "var(--text)" }}><span className="tb">📍 {p.name}</span></button>
+              ))}
+            </div>
+          )}
           {payeeMatches.length > 0 && d.payee !== payeeMatches[0]?.name && (
             <div className="flex flex-wrap gap-1.5">
               {payeeMatches.map((p) => (

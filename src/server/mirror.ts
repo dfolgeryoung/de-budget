@@ -177,7 +177,7 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
       // the same bill is waiting as a pending recurring entry: confirm that one with the sheet's figures instead of adding a twin
       const twin = pendingTxns.find((x) => x.accountId === accountId && (x.payee ?? "").trim().toLowerCase() === e.payee.trim().toLowerCase() && x.date.slice(0, 7) === e.date.slice(0, 7));
       if (twin) { await db.update(t.transactions).set({ confirmed: true, amount: e.amount, date: e.date, updatedBy: me, updatedAt: new Date() }).where(eq(t.transactions.id, twin.id)); const tl = lines.filter((l) => l.transactionId === twin.id); if (tl.length === 1) await db.update(t.transactionLines).set({ amount: e.amount }).where(eq(t.transactionLines.id, tl[0]!.id)); pendingTxns.splice(pendingTxns.indexOf(twin), 1); reconciled++; continue; }
-      await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [] });
+      await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [], location: null });
       reconciled++;
     }
   } catch (e) { warnings.push(`Couldn't read the sheet's Ledger back (nothing was overwritten): ${(e as Error).message}`); throw e; }
@@ -296,7 +296,7 @@ export async function pickUpInbox(db: Db, me: string): Promise<{ added: number; 
       categoryId = cat.get(catName.toLowerCase()) ?? null;
       if (!categoryId) { skipped.push(`Inbox row ${rowNo}: unknown category "${catName}"`); continue; }
     }
-    await createTransaction(db, me, { date, accountId, payee: (r[2] ?? "").trim(), memo: (r[4] ?? "").trim(), amount, categoryId, lines: [], transferToAccountId, sharedFiftyFifty: /\(split\)$/i.test((r[1] ?? "").trim()), hidden: false, trackedAmountId: null, tagIds: [] });
+    await createTransaction(db, me, { date, accountId, payee: (r[2] ?? "").trim(), memo: (r[4] ?? "").trim(), amount, categoryId, lines: [], transferToAccountId, sharedFiftyFifty: /\(split\)$/i.test((r[1] ?? "").trim()), hidden: false, trackedAmountId: null, tagIds: [], location: null });
     stamps.push({ range: `Inbox!H${rowNo}`, values: [[`Added ${new Date().toISOString().slice(0, 16).replace("T", " ")}`]] });
     added++;
   }

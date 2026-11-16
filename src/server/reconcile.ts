@@ -61,7 +61,7 @@ export async function applyReconcile(db: Db, me: string, accountId: string, body
   for (const m of body.mismatches) await db.update(t.transactions).set({ bankStatus: "mismatch", bankNote: m.note, updatedBy: me, updatedAt: new Date() }).where(eq(t.transactions.id, m.id));
   let added = 0;
   for (const a of body.add) {
-    const r = await createTransaction(db, me, { date: a.date, accountId, payee: a.payee, memo: a.memo, amount: a.amount, categoryId: a.transferToAccountId ? null : a.categoryId, lines: [], transferToAccountId: a.transferToAccountId, sharedFiftyFifty: false, hidden: false, trackedAmountId: null, tagIds: [] });
+    const r = await createTransaction(db, me, { date: a.date, accountId, payee: a.payee, memo: a.memo, amount: a.amount, categoryId: a.transferToAccountId ? null : a.categoryId, lines: [], transferToAccountId: a.transferToAccountId, sharedFiftyFifty: false, hidden: false, trackedAmountId: null, tagIds: [], location: null });
     const id = typeof r === "string" ? r : (r as { id: string }).id;
     await db.update(t.transactions).set({ source: "import", bankStatus: "matched" }).where(eq(t.transactions.id, id));
     added++;

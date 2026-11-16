@@ -21,6 +21,8 @@ export const entrySchema = z.object({
   hidden: z.boolean().default(false),
   trackedAmountId: z.string().nullable().default(null),
   tagIds: z.array(z.string()).default([]),
+  // where the phone was when the entry was saved (only sent when the person has location suggestions on)
+  location: z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), accuracy: z.number().min(0).optional() }).nullable().default(null),
 });
 export type EntryInput = z.infer<typeof entrySchema>;
 
@@ -171,6 +173,36 @@ async function rememberPayee(db: Db, e: EntryInput, lines: { categoryId: string 
   const cat = lines.length === 1 ? lines[0]!.categoryId : null;
   await db.insert(t.payees).values({ id: `payee-${e.payee.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name: e.payee, lastCategoryId: cat, lastAccountId: e.accountId })
     .onConflictDoUpdate({ target: t.payees.name, set: { lastCategoryId: cat, lastAccountId: e.accountId, updatedAt: new Date() } });
+  // a usable fix (within ~200 m) nudges the payee's remembered spot toward it; a wild one is ignored
+  const loc = e.location;
+  if (loc && (loc.accuracy ?? 0) <= 200) {
+    const row = (await db.select().from(t.payees).where(eq(t.payees.name, e.payee)))[0];
+    if (!row) return;
+    const n = row.fixes, far = row.lat !== null && row.lng !== null && distanceM(row.lat, row.lng, loc.lat, loc.lng) > 2000;
+    // a place logged somewhere entirely different (a chain's other branch) restarts the average rather than dragging it between the two
+    const lat = row.lat === null || far ? loc.lat : (row.lat * n + loc.lat) / (n + 1);
+    const lng = row.lng === null || far ? loc.lng : (row.lng * n + loc.lng) / (n + 1);
+    await db.update(t.payees).set({ lat, lng, fixes: far ? 1 : n + 1 }).where(eq(t.payees.id, row.id));
+  }
+}
+
+/** Metres between two points (good enough at city scale). */
+export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000, toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/** Payees entered from near here before, nearest first (within `radius` metres, up to five). */
+export async function nearbyPayees(db: Db, lat: number, lng: number, radius = 150) {
+  const rows = await db.select().from(t.payees);
+  return rows
+    .filter((p) => p.lat !== null && p.lng !== null)
+    .map((p) => ({ name: p.name, lastCategoryId: p.lastCategoryId, lastAccountId: p.lastAccountId, distance: Math.round(distanceM(p.lat!, p.lng!, lat, lng)), fixes: p.fixes }))
+    .filter((p) => p.distance <= radius)
+    .sort((a, b) => a.distance - b.distance || b.fixes - a.fixes)
+    .slice(0, 5);
 }
 
 /** Everything the entry form needs to offer in its pickers. */

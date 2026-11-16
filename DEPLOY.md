@@ -74,3 +74,7 @@ Email (optional, for the Monday summary): create a Resend account, verify a send
 - **Nightly Drive backup**: with `BACKUP_FOLDER_ID` and the service account set (see Sheet mirror), the daily cron uploads `de-budget-backup-YYYY-MM-DD.json` to that folder and prunes to the last 30 nights plus the first backup of each month. The nightly spreadsheet copies (`DE Budget backup YYYY-MM-DD`) are pruned by the same rule. "Back up to Drive now" runs the same step on demand.
 - **Restore**: choose a backup file in the same section, check the summary, type RESTORE. It replaces the database contents table by table (the Neon HTTP driver has no transactions); if it stops part way, run it again with the same file.
 - Also worth doing: in the Neon console raise the project's history retention as far as the plan allows, and keep the GitHub, Neon, Vercel and Google logins in a password manager with recovery set up.
+
+## Location suggestions (per person)
+
+Settings › Notifications & phone › "Suggest payees from where my phone is". When on, a phone entry sends the position fix with the save (accuracy ≤ 200 m), and the payee's remembered spot (`payees.lat/lng`, a running average; a fix > 2 km away restarts it) is updated. Opening a new entry on the phone asks `/api/payees/nearby` for payees within 150 m and shows up to three as chips under Payee. Nothing leaves the app's own database; desktop, CSV and mirror entries never carry a location.

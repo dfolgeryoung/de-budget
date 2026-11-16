@@ -720,7 +720,7 @@ function CsvSection() {
 function NotificationsSection() {
   const toast = useToast();
   const [cfg, setCfg] = useState<{ push: boolean; email: boolean; keyProblem: string | null; publicKey: string | null; devices: { id: string; label: string | null; endpoint: string }[] } | null>(null);
-  const [me, setMe] = useState<{ email: string; pushRecurring?: boolean; weeklyEmail?: boolean } | null>(null);
+  const [me, setMe] = useState<{ email: string; pushRecurring?: boolean; weeklyEmail?: boolean; useLocation?: boolean } | null>(null);
   const [here, setHere] = useState<string | null>(null); // this browser's subscription endpoint, if any
   const [busy, setBusy] = useState(false);
   const load = async () => {
@@ -755,7 +755,7 @@ function NotificationsSection() {
     try { const reg = await navigator.serviceWorker.getRegistration(); const sub = await reg?.pushManager.getSubscription(); if (sub) { await api("/push/subscribe", { method: "DELETE", json: { endpoint: sub.endpoint } }); await sub.unsubscribe(); } toast("Notifications off for this device"); load(); }
     finally { setBusy(false); }
   }
-  const pref = async (body: object) => { await api("/me", { method: "PUT", json: body }); setMe((m) => (m ? { ...m, ...body } : m)); };
+  const pref = async (body: object) => { await api("/me", { method: "PUT", json: body }); setMe((m) => (m ? { ...m, ...body } : m)); dispatchEvent(new Event("me-changed")); };
   return (
     <section id="s-notifications" className={sec} style={secStyle}>
       <h2 className="font-bold">Notifications <span className="text-xs font-normal" style={{ color: "var(--muted)" }}>· per person</span></h2>
@@ -780,6 +780,10 @@ function NotificationsSection() {
           <label className="flex items-center gap-2"><input type="checkbox" checked={me?.pushRecurring ?? true} onChange={(e) => pref({ pushRecurring: e.target.checked })} /> Tell me when recurring bills land and need confirming</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={me?.weeklyEmail ?? false} onChange={(e) => pref({ weeklyEmail: e.target.checked })} disabled={!cfg.email} /> Email me the Monday summary{me?.email ? ` (${me.email})` : ""}{!cfg.email && <span style={{ color: "var(--muted)" }}> — email isn't set up on the server (RESEND_API_KEY)</span>}</label>
           <p style={{ color: "var(--muted)" }}>The Monday summary also arrives as a push: Ready to Assign, what's overspent or underfunded, fun money left, bills to confirm and bills still to come.</p>
+          <div className="flex flex-col gap-1.5 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={me?.useLocation ?? false} onChange={(e) => { pref({ useLocation: e.target.checked }); if (e.target.checked && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => toast("Location allowed — suggestions start with your next phone entry"), () => toast("Location is blocked for this site; allow it in the browser's site settings")); }} /> Suggest payees from where my phone is</label>
+            <p style={{ color: "var(--muted)" }}>With this on, a phone entry remembers roughly where it was made (one averaged spot per payee, kept only in your own database). The next time you open the entry form near that spot, those payees appear as chips under the Payee box. Just for you, only while the app is open; desktop and CSV entries never carry a location.</p>
+          </div>
         </div>
       )}
     </section>

@@ -6,6 +6,7 @@
  * the user who made the change.
  */
 import {
+  doublePrecision,
   pgTable,
   pgEnum,
   text,
@@ -53,6 +54,7 @@ export const users = pgTable("users", {
   showBars: boolean("show_bars").notNull().default(true),
   sounds: boolean("sounds").notNull().default(false),
   pushRecurring: boolean("push_recurring").notNull().default(true),
+  useLocation: boolean("use_location").notNull().default(false), // suggest payees from where the phone is
   weeklyEmail: boolean("weekly_email").notNull().default(false),
   ...audit,
 });
@@ -217,6 +219,10 @@ export const payees = pgTable("payees", {
   lastCategoryId: text("last_category_id").references(() => categories.id),
   lastAccountId: text("last_account_id").references(() => accounts.id),
   hiddenDefault: boolean("hidden_default").notNull().default(false),
+  // where this payee has been entered from (phone entries with location on): a running average, not a trail of visits
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  fixes: integer("fixes").notNull().default(0),
   ...audit,
 });
 

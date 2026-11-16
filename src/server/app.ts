@@ -6,7 +6,7 @@ import { db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { importSheetExport } from "./importer.js";
 import { monthPayload } from "./month.js";
-import { entrySchema, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
+import { entrySchema, nearbyPayees, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
@@ -51,12 +51,12 @@ app.get("/me", async (c) => {
   const initial = order.indexOf(u.email.toLowerCase()) === 1 ? "E" : "D";
   await db.insert(t.users).values({ id: u.id, email: u.email, displayName: u.name, initial }).onConflictDoNothing();
   const row = (await db.select().from(t.users).where(eq(t.users.id, u.id)))[0];
-  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null, pushRecurring: row?.pushRecurring ?? true, weeklyEmail: row?.weeklyEmail ?? false, phoneNav: row?.phoneNav ?? null, textSize: row?.textSize ?? "normal", homeLayout: row?.homeLayout ?? null });
+  return c.json({ ...u, initial: row?.initial ?? initial, appearance: row?.appearance ?? "system", showBars: row?.showBars ?? true, avatarEmoji: row?.avatarEmoji ?? "🙂", avatarUrl: row?.avatarUrl ?? null, pushRecurring: row?.pushRecurring ?? true, weeklyEmail: row?.weeklyEmail ?? false, useLocation: row?.useLocation ?? false, phoneNav: row?.phoneNav ?? null, textSize: row?.textSize ?? "normal", homeLayout: row?.homeLayout ?? null });
 });
 
 const PHONE_NAV_SCREENS = ["home", "budget", "transactions", "classic", "reports", "tracked"] as const;
 app.put("/me", async (c) => {
-  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), textSize: z.enum(["small", "normal", "large", "larger"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional(), pushRecurring: z.boolean().optional(), weeklyEmail: z.boolean().optional(), phoneNav: z.array(z.enum(PHONE_NAV_SCREENS)).length(4).nullable().optional(), homeLayout: z.object({ order: z.array(z.string().max(20)).max(12), hidden: z.array(z.string().max(20)).max(12), spendCategories: z.array(z.string().max(60)).max(12).optional() }).nullable().optional() }).safeParse(await c.req.json());
+  const p = z.object({ avatarEmoji: z.string().trim().max(8).optional(), avatarUrl: z.string().max(60_000).regex(/^data:image\/(jpeg|png|webp);base64,/).nullable().optional(), appearance: z.enum(["system", "light", "dark"]).optional(), textSize: z.enum(["small", "normal", "large", "larger"]).optional(), showBars: z.boolean().optional(), sounds: z.boolean().optional(), pushRecurring: z.boolean().optional(), weeklyEmail: z.boolean().optional(), useLocation: z.boolean().optional(), phoneNav: z.array(z.enum(PHONE_NAV_SCREENS)).length(4).nullable().optional(), homeLayout: z.object({ order: z.array(z.string().max(20)).max(12), hidden: z.array(z.string().max(20)).max(12), spendCategories: z.array(z.string().max(60)).max(12).optional() }).nullable().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   if (p.data.phoneNav && new Set(p.data.phoneNav).size !== 4) return c.json({ error: "Pick four different screens" }, 400);
   await db.update(t.users).set({ ...p.data, updatedAt: new Date() }).where(eq(t.users.id, c.get("user").id));
@@ -149,6 +149,12 @@ app.get("/transactions", async (c) => {
 app.get("/transactions/duplicate", async (c) => {
   const q = c.req.query();
   return c.json({ duplicate: await findDuplicate(db, q.payee ?? "", Number(q.amount), q.date ?? today(), q.exclude) });
+});
+// payees logged from near the phone's position (location suggestions, Settings › Notifications & phone)
+app.get("/payees/nearby", async (c) => {
+  const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return c.json({ error: "lat and lng" }, 400);
+  return c.json({ payees: await nearbyPayees(db, lat, lng) });
 });
 app.post("/transactions", async (c) => {
   const parsed = entrySchema.safeParse(await c.req.json());

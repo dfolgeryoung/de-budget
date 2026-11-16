@@ -41,7 +41,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   }
   const PendingBadge = ({ r, short }: { r: LedgerRow; short?: boolean }) => (
     <span className="inline-flex items-center gap-1 shrink-0">
-      <span className="px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap" title="Landed from a repeat; it isn't counted in balances or the budget until you confirm it" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>{short ? "Pending" : "Pending · not counted"}</span>
+      <span className="px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap" title="Landed from a repeat; it isn't counted in balances or the budget until you confirm it" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>Pending</span>
       {!short && <button onClick={(e) => { e.stopPropagation(); confirm(r); }} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--green-bg)", color: "var(--green-text)", border: "1px solid var(--green)" }} title="Confirm this recurring entry as is">Confirm</button>}
     </span>
   );
@@ -147,7 +147,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                       </span>
                     </span>
                     <span className="text-right text-[15px] font-semibold" style={{ color: shownAmount === null ? "var(--faint)" : !r.confirmed ? "var(--muted)" : shownAmount < 0 ? "var(--neg)" : "var(--green-text)", opacity: r.confirmed ? 1 : 0.75, fontStyle: r.confirmed ? undefined : "italic" }}>{shownAmount === null ? "—" : (shownAmount > 0 ? "+" : "") + formatMoney(shownAmount)}</span>
-                    {account && <span className="text-right text-[13px]" style={{ color: "var(--muted)" }}>{!r.confirmed ? <span className="text-[10px] italic">not counted</span> : r.balance !== null ? formatMoney(r.balance) : ""}</span>}
+                    {account && <span className="text-right text-[13px]" style={{ color: "var(--muted)" }}>{!r.confirmed ? "" : r.balance !== null ? formatMoney(r.balance) : ""}</span>}
                   </button>
                 );
               })}
@@ -223,7 +223,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <span className="flex gap-1 flex-wrap">{r.tagIds.map((id) => tagById.get(id)).filter(Boolean).map((tg) => <button key={tg!.id} onClick={() => setTag(tg!.id)} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: tg!.color, color: tagText(tg!.color) }}>{tg!.name}</button>)}</span>
                   <span className="text-right" style={!r.confirmed ? { color: "var(--muted)", fontStyle: "italic", opacity: 0.75 } : undefined}>{shownAmount !== null && shownAmount < 0 ? formatMoney(shownAmount) : shownAmount === null ? "—" : ""}</span>
                   <span className="text-right" style={!r.confirmed ? { color: "var(--muted)", fontStyle: "italic", opacity: 0.75 } : { color: "var(--green-text)" }}>{shownAmount !== null && shownAmount > 0 ? "+" + formatMoney(shownAmount) : ""}</span>
-                  <span className="text-right" style={{ color: "var(--muted)" }}>{!r.confirmed ? <span className="inline-flex items-center gap-1.5 justify-end"><span className="text-[11px] italic whitespace-nowrap">not counted</span><button onClick={(e) => { e.stopPropagation(); confirm(r); }} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--green-bg)", color: "var(--green-text)", border: "1px solid var(--green)" }} title="Confirm this recurring entry as is">Confirm</button></span> : account && r.balance !== null ? formatMoney(r.balance) : ""}</span>
+                  <span className="text-right" style={{ color: "var(--muted)" }}>{!r.confirmed ? <span className="inline-flex items-center justify-end"><button onClick={(e) => { e.stopPropagation(); confirm(r); }} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--green-bg)", color: "var(--green-text)", border: "1px solid var(--green)" }} title="Confirm this recurring entry as is">Confirm</button></span> : account && r.balance !== null ? formatMoney(r.balance) : ""}</span>
                   <button aria-label="Row menu" onClick={() => setMenu(menu === r.id + (r.half?.share ?? "") ? null : r.id + (r.half?.share ?? ""))} className="text-right" style={{ color: "var(--faint)" }} disabled={masked}>⋯</button>
                   {menu === r.id + (r.half?.share ?? "") && (
                     <div className="absolute right-4 top-9 z-10 rounded-lg shadow-lg text-sm flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>

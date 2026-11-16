@@ -6,6 +6,7 @@ import type { LedgerRow } from "../server/transactions";
 import { EntryForm, draftFromRow, emptyDraft, type EntryDraft } from "./EntryForm";
 import { Sheet } from "./Sheet";
 import { FlagSheet } from "./FlagSheet";
+import { DupSheet } from "./Duplicates";
 import { EntryRow, LEDGER_COLS, LEDGER_MIN } from "./EntryRow";
 import type { MonthPayload } from "../server/month";
 import { Select } from "./Select";
@@ -31,6 +32,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const isDesktop = typeof matchMedia !== "undefined" && matchMedia("(min-width: 768px)").matches;
   const [menu, setMenu] = useState<string | null>(null);
   const [flagging, setFlagging] = useState<LedgerRow | null>(null);
+  const [dupFocus, setDupFocus] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
   async function confirm(r: LedgerRow) {
@@ -209,7 +211,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                     {masked && "🔒 "}{r.payee || (isTransfer ? transferKind(r) : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
                     {r.flagOpen && <button title="Open question on this entry" onClick={(e) => { e.stopPropagation(); setFlagging(r); }} className="ml-1 text-xs">🚩</button>}
-                    {r.dupe && <a href="#home" title="Possible duplicate — review on Home" onClick={(e) => e.stopPropagation()} className="ml-1 text-[10px] font-bold rounded px-1 leading-4 no-underline" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>DUP?</a>}
+                    {r.dupe && <button title="Possible duplicate — click to review" onClick={(e) => { e.stopPropagation(); setDupFocus(r.id); }} className="ml-1 text-[10px] font-bold rounded px-1 leading-4" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>DUP?</button>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
                     {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? `½ of ${formatMoney(Math.abs(r.half.full.amount ?? 0))}` : "50/50"}</span>}
@@ -239,6 +241,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
       </div>
       </div></div>
       {flagging && <FlagSheet entry={flagging} meId={me.id} open onClose={() => setFlagging(null)} onChanged={() => dispatchEvent(new Event("lists-changed"))} />}
+      {dupFocus && <DupSheet focusId={dupFocus} onClose={() => setDupFocus(null)} />}
     </div>
   );
 }

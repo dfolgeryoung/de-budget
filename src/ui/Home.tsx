@@ -12,6 +12,7 @@ import type { UpcomingBill } from "../server/recurring";
 import type { ReportsPayload } from "../server/reports";
 import type { FlaggedEntry } from "../server/flags";
 import type { DupPair } from "../server/duplicates";
+import { DupPairRow } from "./Duplicates";
 import { FlagSheet } from "./FlagSheet";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -51,14 +52,6 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       let again: number | null = null;
       if (what === "confirm") await api(`/transactions/${id}/confirm`, { method: "POST", json: {} }); else again = (await api<{ landsAgainOn: number | null }>(`/transactions/${id}`, { method: "DELETE" })).landsAgainOn;
       toast(what === "confirm" ? `Confirmed ${label}` : again ? `Removed ${label} — it lands again on the ${again}${again === 1 || again === 21 || again === 31 ? "st" : again === 2 || again === 22 ? "nd" : again === 3 || again === 23 ? "rd" : "th"}` : `Skipped ${label} this month`, what === "skip" ? async () => { await api(`/transactions/${id}?undo=1`, { method: "DELETE" }); setBump((b) => b + 1); } : undefined);
-      setBump((b) => b + 1); dispatchEvent(new Event("lists-changed"));
-    } catch (e) { toast((e as Error).message); }
-  }
-  async function dupAction(pair: DupPair, what: "keep" | "delete", id?: string) {
-    try {
-      if (what === "keep") { await api("/duplicates/keep", { method: "POST", json: { a: pair.a.id, b: pair.b.id } }); toast("Kept both"); }
-      else { await api(`/transactions/${id}`, { method: "DELETE" }); toast(`Deleted the ${pair.a.payee} entry`); }
-      setDupes((ds) => ds.filter((d) => d.key !== pair.key));
       setBump((b) => b + 1); dispatchEvent(new Event("lists-changed"));
     } catch (e) { toast((e as Error).message); }
   }
@@ -136,18 +129,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
               <span className="text-sm font-bold">⚠️ Possible duplicates</span>
               <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{dupes.length} to review</span>
             </div>
-            {dupes.slice(0, 5).map((d, i) => (
-              <div key={d.key} className="px-3.5 py-2.5 flex flex-col gap-1.5" style={{ borderBottom: i < Math.min(dupes.length, 5) - 1 || dupes.length > 5 ? "1px solid var(--border-soft)" : undefined }}>
-                <div className="flex justify-between items-baseline gap-3"><span className="text-sm font-semibold truncate">{d.a.payee}</span><span className="text-sm font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(d.a.amount))}</span></div>
-                {[d.a, d.b].map((e) => (
-                  <div key={e.id} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5" style={{ background: "var(--group)" }}>
-                    <span className="flex-1 min-w-0 flex flex-col"><span className="text-[13px] truncate">{e.date.slice(5).replace("-", "/")} · {e.account}{e.category ? ` · ${e.category}` : ""}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{e.enteredBy ? `Entered by ${e.enteredBy}` : "From the sheet"}{e.memo ? ` · ${e.memo}` : ""}</span></span>
-                    <button onClick={() => dupAction(d, "delete", e.id)} className="text-[12px] font-semibold rounded-md px-2 h-7 shrink-0" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>Delete</button>
-                  </div>
-                ))}
-                <button onClick={() => dupAction(d, "keep")} className="self-start text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>Keep both — not a duplicate</button>
-              </div>
-            ))}
+            {dupes.slice(0, 5).map((d, i) => <DupPairRow key={d.key} pair={d} last={i === Math.min(dupes.length, 5) - 1 && dupes.length <= 5} onDone={(x) => { setDupes((ds) => ds.filter((y) => y.key !== x.key)); setBump((b) => b + 1); }} />)}
             {dupes.length > 5 && <div className="px-3.5 py-2 text-xs" style={{ color: "var(--muted)" }}>+ {dupes.length - 5} more after these</div>}
           </div>
         )}

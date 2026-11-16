@@ -118,6 +118,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
         <section className="grid gap-4 md:grid-cols-2">
           <Card title="Spending" sub={r ? `${monthName(r.month)} so far` : undefined} action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Reports ›</a>}>
             {spendPara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
+            {r && tm && r.daily && <CumulativeChart daily={r.daily} budget={tm.budgeted} onPace={tm.onPace} daysElapsed={r.daysElapsed} month={r.month} prevMonth={r.prevMonth} />}
           </Card>
           <Card title="Saving" sub="income, next month and the cushion" action={<a href="#budget" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Budget ›</a>}>
             {savePara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
@@ -324,5 +325,39 @@ function LineRow({ label, note, amount, signed, onClick }: { label: string; note
       <span className="flex-1 min-w-0 flex flex-col"><span className="text-sm font-medium truncate">{label}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{note}</span></span>
       <span className="text-sm font-semibold tabular-nums shrink-0" style={{ color: amount < 0 ? "var(--neg)" : "var(--green-text)" }}>{signed ? (amount < 0 ? "+" : "−") + formatMoney(Math.abs(amount)) : formatMoney(amount)}</span>
     </button>
+  );
+}
+
+/** Running total of spending by day: this month so far, last month for the shape, and the budget as the line to stay under. */
+function CumulativeChart({ daily, budget, onPace, daysElapsed, month, prevMonth }: { daily: { thisMonth: number[]; lastMonth: number[] }; budget: number; onPace: number; daysElapsed: number; month: string; prevMonth: string }) {
+  const [hot, setHot] = useState<number | null>(null);
+  const W = 520, H = 150, L = 44, R = 10, T = 10, B = 22;
+  const dim = daily.thisMonth.length, pdim = daily.lastMonth.length;
+  const maxY = Math.max(budget, onPace, daily.thisMonth[dim - 1] ?? 0, daily.lastMonth[pdim - 1] ?? 0, 1) * 1.05;
+  const x = (day: number, n: number) => L + ((day - 1) / Math.max(1, n - 1)) * (W - L - R);
+  const y = (v: number) => T + (1 - v / maxY) * (H - T - B);
+  const path = (xs: number[], n: number, upTo: number) => xs.slice(0, upTo).map((v, i) => `${i ? "L" : "M"}${x(i + 1, n).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const ticks = [0.25, 0.5, 0.75, 1].map((f) => Math.round((maxY * f) / 100) * 100);
+  const hover = hot !== null ? { day: hot, now: daily.thisMonth[hot - 1], before: daily.lastMonth[hot - 1] } : null;
+  return (
+    <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
+      <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: "var(--muted)" }}>
+        <span>Running total by day</span>
+        <span className="flex gap-3"><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--navy)" }} />{monthName(month)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--muted)", opacity: 0.7 }} />{monthName(prevMonth)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--navy)", opacity: 0.5 }} />on pace</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--neg)" }} />budget</span></span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }} onMouseLeave={() => setHot(null)} onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; setHot(Math.max(1, Math.min(dim, Math.round(1 + ((px - L) / (W - L - R)) * (dim - 1))))); }}>
+        {ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--border-soft)" /><text x={L - 6} y={y(v) + 3} fontSize="9" textAnchor="end" fill="var(--muted)">{whole(v)}</text></g>)}
+        {budget > 0 && <line x1={L} x2={W - R} y1={y(budget)} y2={y(budget)} stroke="var(--neg)" strokeDasharray="4 3" strokeWidth="1" />}
+        <path d={path(daily.lastMonth, pdim, pdim)} fill="none" stroke="var(--muted)" strokeWidth="1.5" opacity="0.6" strokeDasharray="3 3" />
+        {daysElapsed > 0 && <path d={path(daily.thisMonth, dim, daysElapsed)} fill="none" stroke="var(--navy)" strokeWidth="2.5" strokeLinejoin="round" />}
+        {daysElapsed > 0 && daysElapsed < dim && <line x1={x(daysElapsed, dim)} y1={y(daily.thisMonth[daysElapsed - 1] ?? 0)} x2={x(dim, dim)} y2={y(onPace)} stroke="var(--navy)" strokeWidth="1.5" strokeDasharray="2 3" opacity="0.7" />}
+        {daysElapsed > 0 && <circle cx={x(daysElapsed, dim)} cy={y(daily.thisMonth[daysElapsed - 1] ?? 0)} r="3.5" fill="var(--navy)" />}
+        {[1, 5, 10, 15, 20, 25, dim].map((d) => <text key={d} x={x(d, dim)} y={H - 6} fontSize="9" textAnchor="middle" fill="var(--muted)">{d}</text>)}
+        {hover && <g><line x1={x(hover.day, dim)} x2={x(hover.day, dim)} y1={T} y2={H - B} stroke="var(--text)" opacity="0.25" />
+          <rect x={Math.min(W - R - 150, Math.max(L, x(hover.day, dim) - 75))} y={T} width="150" height="34" rx="6" fill="var(--card)" stroke="var(--border)" />
+          <text x={Math.min(W - R - 150, Math.max(L, x(hover.day, dim) - 75)) + 8} y={T + 14} fontSize="10" fill="var(--text)" fontWeight="700">Day {hover.day}</text>
+          <text x={Math.min(W - R - 150, Math.max(L, x(hover.day, dim) - 75)) + 8} y={T + 27} fontSize="10" fill="var(--muted)">{hover.day <= daysElapsed && hover.now !== undefined ? `${whole(hover.now)} now` : "—"} · {hover.before !== undefined ? `${whole(hover.before)} in ${MON[Number(prevMonth.slice(5, 7)) - 1]}` : "no data"}</text></g>}
+      </svg>
+    </div>
   );
 }

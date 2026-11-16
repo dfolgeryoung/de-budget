@@ -48,6 +48,8 @@ export interface ReportsView {
     billsTotal: Cents;
     explain: { spent: ExplainBox; onPace: ExplainBox; vsLast: ExplainBox; who: ExplainBox };
   };
+  /** cumulative spend by day: this month through today, last month in full */
+  daily: { thisMonth: Cents[]; lastMonth: Cents[] };
   trends: {
     months: { month: MonthKey; spent: Cents; income: Cents; assigned: Cents; byOwner: Record<"shared" | "D" | "E", Cents> }[];
     categories: { id: string; name: string; emoji: string | null; total: Cents; perMonth: Cents[] }[];
@@ -83,6 +85,28 @@ export function spendByCategory(input: BudgetInput, month: MonthKey, through: IS
       out.set(l.categoryId, (out.get(l.categoryId) ?? 0) - l.amount);
     }
   }
+  return out;
+}
+
+/** Cumulative spending by day of the month (index 0 = day 1), through `through` when given; later days repeat the last total. */
+export function cumulativeByDay(input: BudgetInput, month: MonthKey, through: ISODate | null): Cents[] {
+  const kinds = new Map(input.categories.map((c) => [c.id, c.kind]));
+  const dim = daysInMonth(month);
+  const perDay = new Array<Cents>(dim).fill(0);
+  for (const t of input.transactions) {
+    if (monthOf(t.date) !== month || t.confirmed === false || t.transferToAccountId) continue;
+    if (through && t.date > through) continue;
+    const day = Number(t.date.slice(8, 10)) - 1;
+    for (const l of t.lines) {
+      if (!l.categoryId) continue;
+      const k = kinds.get(l.categoryId);
+      if (k && !spendable({ kind: k })) continue;
+      perDay[day]! -= l.amount;
+    }
+  }
+  const out: Cents[] = []; let run = 0;
+  const last = through ? Number(through.slice(8, 10)) : dim;
+  for (let i = 0; i < dim; i++) { if (i < last) run += perDay[i]!; out.push(run); }
   return out;
 }
 
@@ -344,6 +368,7 @@ export function computeReports(r: ReportsInput): ReportsView {
       byCategory, byOwner, movers: movers.slice(0, 6), billsToCome, billsTotal,
       explain: { spent: explainSpent, onPace: explainOnPace, vsLast: explainVs, who: explainWho },
     },
+    daily: { thisMonth: cumulativeByDay(input, month, through), lastMonth: cumulativeByDay(input, prevMonth, null) },
     trends: { months: trendMonths.map(({ full: _f, ...t }) => t), categories: trendCategories, explain: explainTrends },
     projection: { categories: projCats, totalProjected, totalAvailable, totalBudgeted, headingOver, explain: explainProjection },
   };

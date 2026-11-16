@@ -160,7 +160,6 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       <label className="flex flex-col items-center gap-1">
         <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Amount</span>
         <span className="flex items-center gap-1 leading-none" style={{ color: d.outflow ? "var(--neg)" : "var(--green-text)" }}>
-          <span className="text-5xl font-bold">{d.outflow ? "−" : "+"}</span>
           <span className="text-3xl font-semibold mt-1">$</span>
           <input ref={amountRef} inputMode="decimal" value={d.amountText} onChange={(e) => set({ amountText: e.target.value })} placeholder="0.00" className="text-5xl font-bold bg-transparent outline-none tabular-nums" style={{ color: "inherit", width: `${Math.max(4, (d.amountText || "0.00").length) + 0.3}ch`, maxWidth: "70vw" }} />
         </span>

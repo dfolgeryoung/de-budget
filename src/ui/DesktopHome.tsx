@@ -260,7 +260,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
             {m.view.owedOnCards > 0 && <div className="px-4 py-2 text-[12px] flex justify-between" style={{ color: "var(--muted)", borderTop: "1px solid var(--border-soft)" }}><span>Owed on cards</span><span className="tabular-nums">{formatMoney(m.view.owedOnCards)}{m.view.uncoveredCardDebt > 0 ? ` · ${formatMoney(m.view.uncoveredCardDebt)} not covered` : " · covered"}</span></div>}
           </Card>
           {m.check && !m.check.ok && Array.isArray(m.check.diffs) && (
-            <Card title="Sheet check" sub={m.check.source ?? undefined} tone="yellow">
+            <Card title="Sheet check" sub={m.check.source ? prettySource(m.check.source) : undefined} tone="yellow">
               <p className="text-[13px] m-0">{m.check.diffs.length} {m.check.diffs.length === 1 ? "figure differs" : "figures differ"} from the spreadsheet. <a href="#budget" style={{ color: "var(--accent-text)" }}>See which ›</a></p>
             </Card>
           )}
@@ -285,7 +285,7 @@ function Card({ title, sub, action, tone, flush, children }: { title: string; su
         <div className="min-w-0"><h2 className="text-[15px] font-bold m-0 leading-tight">{title}</h2>{sub && <div className="text-[12px] mt-0.5 truncate" style={{ color: "var(--muted)" }}>{sub}</div>}</div>
         {action}
       </div>
-      <div className={flush ? "flex flex-col" : "flex flex-col gap-2.5 px-4 pb-4"} style={flush ? { borderTop: "1px solid var(--border-soft)" } : undefined}>{children}</div>
+      <div className={flush ? "flex flex-col" : tone ? "flex flex-col gap-2.5 px-4 pt-3 pb-4" : "flex flex-col gap-2.5 px-4 pb-4"} style={flush ? { borderTop: "1px solid var(--border-soft)" } : undefined}>{children}</div>
     </section>
   );
 }
@@ -364,4 +364,9 @@ function CumulativeChart({ daily, budget, onPace, daysElapsed, month, prevMonth 
       </svg>
     </div>
   );
+}
+
+/** "sheet read at 2026-11-16T11:25:35.612Z" → "sheet read Nov 16, 6:25 AM" */
+function prettySource(src: string): string {
+  return src.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?)Z/, (_m, d: string) => { const t = new Date(_m); return `${md(d)}, ${t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`; }).replace(" at ", " ");
 }

@@ -54,3 +54,16 @@ describe("classic tab matches the spreadsheet", () => {
     expect(diffs).toEqual([]);
   });
 });
+
+describe("phone_split tags", () => {
+  const base = classicInputFromState(state, c.month, "2026-11-11");
+  const phoneCat = base.categories.find((v) => v.rule === "phone_split")?.id;
+  const line = (v: ReturnType<typeof computeClassic>, name: string) => v.lines.find((l) => l.column === "shared" && l.name === name)!.actual;
+  it.skipIf(!phoneCat)("an Internet tag moves a payee the keywords call Cell Phone onto the Internet line", () => {
+    const entry = { id: "tag-1", date: "2026-11-05", accountId: base.transactions[0]!.accountId, payee: "Some Telecom", hidden: false, masked: false, transferToAccountId: null, sharedFiftyFifty: false, lines: [{ categoryId: phoneCat!, amount: -10500 }] };
+    const without = computeClassic({ ...base, transactions: [...base.transactions, entry] });
+    const withTag = computeClassic({ ...base, transactions: [...base.transactions, { ...entry, tags: ["internet"] }] });
+    expect(line(withTag, "Internet") - line(without, "Internet")).toBe(10500);
+    expect(line(without, "Cell Phone") - line(withTag, "Cell Phone")).toBe(10500);
+  });
+});

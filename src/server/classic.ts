@@ -50,7 +50,7 @@ export async function buildClassicInput(db: Db, month: MonthKey, today: string, 
     transactions: input.transactions.map((x) => {
       const m = txMeta.get(x.id);
       const masked = !!m?.hidden && m.createdBy !== me;
-      return { id: x.id, date: x.date, accountId: x.accountId, payee: m?.payee ?? null, hidden: !!m?.hidden, masked, transferToAccountId: x.transferToAccountId ?? null, sharedFiftyFifty: x.sharedFiftyFifty ?? false, oneOff: !!x.oneOff, lines: x.lines };
+      return { id: x.id, date: x.date, accountId: x.accountId, payee: m?.payee ?? null, hidden: !!m?.hidden, masked, transferToAccountId: x.transferToAccountId ?? null, sharedFiftyFifty: x.sharedFiftyFifty ?? false, oneOff: !!x.oneOff, tags: x.tags, lines: x.lines };
     }),
   };
   return { ci, cmRows };

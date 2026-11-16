@@ -37,6 +37,7 @@ export interface TransactionIn {
   confirmed?: boolean;
   payee?: string | null; // used by reports to tell recurring bills from everyday spending
   oneOff?: boolean; // tagged "one-off": counts as spent, but projections don't extrapolate it
+  tags?: string[]; // tag names, lower-cased (Classic uses "internet" / "cell phone" to route a phone_split category)
 }
 export interface AssignmentIn {
   categoryId: string;

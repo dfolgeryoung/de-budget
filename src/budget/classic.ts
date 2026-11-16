@@ -31,7 +31,7 @@ export interface ClassicInput {
   goalMonthly: Record<string, Cents>; // categoryId -> the goal's monthly amount (every other bucket line shows this)
   typed: Record<string, Cents>; // "<column>:<name>" -> typed budget for this month
   income: Record<"D" | "E", { budget: Cents; actual: Cents }>;
-  transactions: { id: string; date: ISODate; accountId: string; payee: string | null; hidden: boolean; masked: boolean; transferToAccountId: string | null; sharedFiftyFifty: boolean; oneOff?: boolean; lines: { categoryId: string | null; amount: Cents }[] }[];
+  transactions: { id: string; date: ISODate; accountId: string; payee: string | null; hidden: boolean; masked: boolean; transferToAccountId: string | null; sharedFiftyFifty: boolean; oneOff?: boolean; tags?: string[]; lines: { categoryId: string | null; amount: Cents }[] }[];
 }
 
 export interface ClassicEntry { id: string; date: ISODate; payee: string; category: string; amount: Cents; half: boolean; oneOff?: boolean }
@@ -112,7 +112,12 @@ export function computeClassic(input: ClassicInput): ClassicView {
           else add(side === "D" ? byName(FUN, "D") : side === "E" ? byName(FUN, "E") : byName("Misc shared"), spend);
           break;
         case "utilities_split": add(side === "D" ? byName("Power") : byName("Utilities"), spend); break;
-        case "phone_split": add(kws.some((k) => (x.payee ?? "").toLowerCase().includes(k)) ? byName("Internet") : byName("Cell Phone"), spend); break;
+        case "phone_split": {
+          // an "Internet" or "Cell Phone" tag decides outright; otherwise the payee keywords do
+          const tags = x.tags ?? [];
+          const internet = tags.includes("internet") ? true : tags.some((t) => /^(cell ?phone|phone)$/.test(t)) ? false : kws.some((k) => (x.payee ?? "").toLowerCase().includes(k));
+          add(internet ? byName("Internet") : byName("Cell Phone"), spend); break;
+        }
         case "drive_split": add(byName("Google Drive + iCloud", side === "E" ? "E" : "D"), spend); break;
         default: add(bucketLine(c.bucket), spend);
       }

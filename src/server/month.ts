@@ -22,6 +22,9 @@ export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: {
   // an entry tagged "one-off" still counts as spent, but Classic and Reports leave it out when projecting the rest of the month
   const oneOffTags = new Set(tagRows.filter((x) => /^one[\s\-\u2010-\u2015\u2212]?off$/i.test(x.name.trim())).map((x) => x.id));
   const oneOffTxns = new Set(tagLinks.filter((l) => oneOffTags.has(l.tagId)).map((l) => l.transactionId));
+  const tagName = new Map(tagRows.map((x) => [x.id, x.name.trim().toLowerCase()]));
+  const tagsOf = new Map<string, string[]>();
+  for (const l of tagLinks) { const n = tagName.get(l.tagId); if (n) tagsOf.set(l.transactionId, [...(tagsOf.get(l.transactionId) ?? []), n]); }
   const firstMonth = (first[0]?.value as string | undefined) ?? "2026-11-01";
   const linesByTxn = new Map<string, { categoryId: string | null; amount: number }[]>();
   for (const l of lines) {
@@ -36,7 +39,7 @@ export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: {
     openingAvailable,
     accounts: accts.map((a) => ({ id: a.id, type: a.type, onBudget: a.onBudget, owner: a.owner, startingBalance: a.startingBalance, startingDate: a.startingDate })),
     categories: cats.map((c) => ({ id: c.id, groupId: c.groupId, kind: c.kind, accountId: c.accountId, hiddenInBudget: c.hiddenInBudget })),
-    transactions: txns.map((x) => ({ id: x.id, date: x.date, accountId: x.accountId, amount: x.amount, transferToAccountId: x.transferToAccountId, sharedFiftyFifty: x.sharedFiftyFifty, confirmed: x.confirmed, payee: x.payee, oneOff: oneOffTxns.has(x.id), lines: linesByTxn.get(x.id) ?? [] })),
+    transactions: txns.map((x) => ({ id: x.id, date: x.date, accountId: x.accountId, amount: x.amount, transferToAccountId: x.transferToAccountId, sharedFiftyFifty: x.sharedFiftyFifty, confirmed: x.confirmed, payee: x.payee, oneOff: oneOffTxns.has(x.id), tags: tagsOf.get(x.id), lines: linesByTxn.get(x.id) ?? [] })),
     assignments: asgs.map((a) => ({ categoryId: a.categoryId, month: a.month, amount: a.amount })),
     goals: goals.map((g) => ({ categoryId: g.categoryId, validFrom: g.validFrom, type: g.type, amount: g.amount, frequencyMonths: g.frequencyMonths, targetDate: g.targetDate })),
   };

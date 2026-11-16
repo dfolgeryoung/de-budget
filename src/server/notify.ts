@@ -31,6 +31,7 @@ export async function pushToUser(db: Db, userId: string, payload: { title: strin
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   if (!emailConfigured()) return false;
-  const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify({ from: process.env.EMAIL_FROM || "D&E Budget <budget@resend.dev>", to, subject, html }) });
-  return r.ok;
+  const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify({ from: process.env.EMAIL_FROM || "D&E Budget <onboarding@resend.dev>", to, subject, html }) });
+  if (!r.ok) throw new Error(`Resend ${r.status}: ${((await r.json().catch(() => ({}))) as { message?: string }).message ?? "rejected"}`);
+  return true;
 }

@@ -437,6 +437,7 @@ app.get("/push/generate-keys", async (c) => {
 });
 app.post("/push/test", async (c) => c.json({ sent: await pushToUser(db, c.get("user").id, { title: "D&E Budget", body: "Notifications are working on this device.", url: "/#home", tag: "test" }) }));
 app.post("/summary/weekly", async (c) => c.json(await weeklySummary(db, today())));
+app.post("/summary/email-me", async (c) => { try { return c.json(await weeklySummary(db, today(), c.get("user").id)); } catch (e) { return c.json({ error: (e as Error).message }, 500); } });
 
 // ---------- bank CSV reconciliation ----------
 app.post("/reconcile/preview", async (c) => {

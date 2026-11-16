@@ -6,7 +6,8 @@ import { pending } from "./recurring.js";
 import { pushToUser, sendEmail } from "./notify.js";
 import { formatMoney } from "../budget/money.js";
 
-export async function weeklySummary(db: Db, today: string) {
+/** The Monday summary. `onlyUserId` sends it to one person (the "Send me the summary now" button), email only. */
+export async function weeklySummary(db: Db, today: string, onlyUserId?: string) {
   const m = await monthPayload(db, today.slice(0, 7) + "-01", today);
   const cats = m.view.categories.filter((c) => !m.categories[c.categoryId]?.hidden);
   const overspent = cats.filter((c) => c.status === "overspent");
@@ -24,11 +25,12 @@ export async function weeklySummary(db: Db, today: string) {
   ].filter(Boolean);
   const text = lines.join("\n");
   const html = `<div style="font-family:system-ui,sans-serif;max-width:520px"><h2 style="color:#3a4f7d">This week in the budget</h2>${lines.map((l) => `<p style="margin:6px 0">${l}</p>`).join("")}<p><a href="${process.env.AUTH_URL ?? ""}">Open the budget</a></p></div>`;
-  const users = await db.select().from(t.users);
+  const users = (await db.select().from(t.users)).filter((u) => !onlyUserId || u.id === onlyUserId);
   const sent: Record<string, { push: number; email: boolean }> = {};
   for (const u of users) {
-    const push = await pushToUser(db, u.id, { title: "This week in the budget", body: lines.slice(0, 3).join(" · "), url: "/#home", tag: "weekly" });
-    const email = u.weeklyEmail ? await sendEmail(u.email, "This week in the budget", html) : false;
+    const push = onlyUserId ? 0 : await pushToUser(db, u.id, { title: "This week in the budget", body: lines.slice(0, 3).join(" · "), url: "/#home", tag: "weekly" });
+    let email = false;
+    if (u.weeklyEmail || onlyUserId) { if (onlyUserId) email = await sendEmail(u.email, "This week in the budget", html); else email = await sendEmail(u.email, "This week in the budget", html).catch(() => false); }
     sent[u.initial] = { push, email };
   }
   return { text, sent };

@@ -6,6 +6,8 @@
 import { formatMoney } from "../budget/money.js";
 import type { ReportsView } from "../budget/reports.js";
 import type { MonthPayload } from "./month.js";
+import { narrative, monthName } from "../budget/narrative.js";
+export { narrative };
 
 export interface WeeklyEmailInput {
   firstName: string;
@@ -21,8 +23,6 @@ export interface WeeklyEmailInput {
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const money = (c: number) => formatMoney(c);
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const monthName = (m: string) => MONTHS[Number(m.slice(5, 7)) - 1]!;
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 
 const C = { navy: "#3a4f7d", text: "#1a1d23", muted: "#5b6573", faint: "#8b95a2", line: "#e6e9ee", track: "#eef1f5", bar: "#89bdec", barDark: "#3d85c6", red: "#c94b4b", green: "#2f8f5b", amber: "#b7791f", bg: "#f4f6f9", card: "#ffffff" };
@@ -50,33 +50,6 @@ function tile(label: string, value: string, sub: string, color = C.text): string
     <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${C.muted}">${esc(label)}</div>
     <div style="font-size:22px;font-weight:700;color:${color};margin:4px 0 2px">${esc(value)}</div>
     <div style="font-size:12px;color:${C.muted}">${esc(sub)}</div></td></tr></table></td>`;
-}
-
-/** The plain-language paragraph: pace, comparison with last month, and what moved. */
-export function narrative(r: ReportsView, people: { D: string; E: string }, firstName: string): string[] {
-  const tm = r.thisMonth, out: string[] = [];
-  const diff = tm.onPace - tm.budgeted, dayWord = `day ${r.daysElapsed} of ${r.daysInMonth}`;
-  out.push(`Hi ${firstName} — it's ${dayWord} of ${monthName(r.month)}. So far you've spent ${money(tm.spent)} of the ${money(tm.budgeted)} budgeted, which is ${pct(tm.spent, tm.budgeted)}% of the budget with ${Math.round((r.daysElapsed / r.daysInMonth) * 100)}% of the month gone.`);
-  if (r.daysElapsed > 0) {
-    out.push(diff > 0
-      ? `At this pace the month lands at ${money(tm.onPace)} — about ${money(diff)} over budget — so it's worth easing off somewhere, or moving money to cover it.`
-      : `At this pace the month lands at ${money(tm.onPace)}, about ${money(-diff)} under budget. Nice.`);
-  }
-  if (tm.vsLast.pct !== null && tm.vsLast.prevSpent > 0) {
-    const p = Math.round(Math.abs(tm.vsLast.pct) * 100);
-    out.push(tm.vsLast.pct > 0.03 ? `That's ${p}% more than the same point in ${monthName(r.prevMonth)} — ${tm.vsLast.summary.toLowerCase()}.`
-      : tm.vsLast.pct < -0.03 ? `That's ${p}% less than the same point in ${monthName(r.prevMonth)} — ${tm.vsLast.summary.toLowerCase()}.`
-      : `That's almost exactly where you were at this point in ${monthName(r.prevMonth)}.`);
-  }
-  const shared = tm.byOwner.find((o) => o.who === "shared"), d = tm.byOwner.find((o) => o.who === "D"), e = tm.byOwner.find((o) => o.who === "E");
-  if (shared && d && e && shared.spent + d.spent + e.spent > 0) {
-    out.push(`${Math.round(shared.share * 100)}% of it was shared household spending${shared.parts?.[0] ? ` (${shared.parts[0].name} is the biggest piece)` : ""}; ${people.D} spent ${money(d.spent)} and ${people.E} ${money(e.spent)} on their own lines.`);
-  }
-  if (r.projection.headingOver.length) {
-    const top = r.projection.headingOver.slice(0, 3).map((c) => `${c.name} (by ${money(c.over)})`).join(", ");
-    out.push(`Heading over if nothing changes: ${top}${r.projection.headingOver.length > 3 ? ` and ${r.projection.headingOver.length - 3} more` : ""}.`);
-  }
-  return out;
 }
 
 export function weeklyEmailHtml(input: WeeklyEmailInput): { subject: string; html: string; text: string } {

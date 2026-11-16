@@ -9,6 +9,7 @@ import { PHONE_NAV_OPTIONS, DEFAULT_PHONE_NAV, api, apiCached, clearCache, type 
 import { ToastHost, useToast } from "./Toast";
 import { RailAccounts } from "./RailAccounts";
 import { Home } from "./Home";
+import { DesktopHome } from "./DesktopHome";
 import { Classic } from "./Classic";
 import { Reports } from "./Reports";
 import { Tracked } from "./Tracked";
@@ -16,7 +17,7 @@ import { Avatar, ProfilePicker } from "./ProfilePicker";
 import { NavIcon } from "./icons";
 
 const screens = [
-  { id: "home", label: "Home", phoneOnly: true },
+  { id: "home", label: "Home" },
   { id: "budget", label: "Budget" },
   { id: "transactions", label: "Transactions" },
   { id: "classic", label: "Classic" },
@@ -38,7 +39,7 @@ export function Shell({ me }: { me: Me }) {
 
 function ShellInner({ me }: { me: Me }) {
   const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
-  const [screen, setScreen] = useState<string>(location.hash.slice(1) || (isPhone ? "home" : "budget"));
+  const [screen, setScreen] = useState<string>(location.hash.slice(1) || "home");
   const [lists, setLists] = useState<Lists | null>(null);
   const [picker, setPicker] = useState(false);
   const [draft, setDraft] = useState<EntryDraft | null>(null);
@@ -101,7 +102,9 @@ function ShellInner({ me }: { me: Me }) {
       </nav>
 
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-20 md:pb-8" style={(screen === "home" || screen === "budget" || screen === "transactions" || screen === "classic" || screen === "reports" || screen === "tracked") && isPhone ? { paddingTop: 0 } : undefined}>
-        {screen === "home" && lists ? (
+        {screen === "home" && lists && !isPhone ? (
+          <DesktopHome me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} openEdit={async (id) => { const rows = await api<LedgerRow[]>("/transactions?limit=500"); const r = rows.find((x) => x.id === id); if (r) setDraft(draftFromRow(r, lists)); }} />
+        ) : screen === "home" && lists ? (
           <Home me={me} lists={lists} refreshKey={refreshKey} goTransactions={(id) => { setAccount(id); location.hash = "transactions"; }} openEdit={async (id) => { const rows = await api<LedgerRow[]>("/transactions?limit=500"); const r = rows.find((x) => x.id === id); if (r) setDraft(draftFromRow(r, lists)); }} />
         ) : screen === "budget" || screen === "home" ? (
           <Budget me={me} showBarsDefault={me.showBars ?? true} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />

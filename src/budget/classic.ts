@@ -112,7 +112,7 @@ export function computeClassic(input: ClassicInput): ClassicView {
           else add(side === "D" ? byName(FUN, "D") : side === "E" ? byName(FUN, "E") : byName("Misc shared"), spend);
           break;
         case "utilities_split": add(side === "D" ? byName("Power") : byName("Utilities"), spend); break;
-        case "phone_split": add(kws.some((k) => (x.payee ?? "").toLowerCase().includes(k)) ? (byName("Phone & Internet") ?? byName("Internet")) : byName("Cell Phone"), spend); break;
+        case "phone_split": add(kws.some((k) => (x.payee ?? "").toLowerCase().includes(k)) ? byName("Internet") : byName("Cell Phone"), spend); break;
         case "drive_split": add(byName("Google Drive + iCloud", side === "E" ? "E" : "D"), spend); break;
         default: add(bucketLine(c.bucket), spend);
       }

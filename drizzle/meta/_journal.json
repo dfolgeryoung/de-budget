@@ -71,6 +71,13 @@
       "when": 1794829803893,
       "tag": "0009_classic_phone_internet",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794830016417,
+      "tag": "0010_classic_internet_back",
+      "breakpoints": true
     }
   ]
 }

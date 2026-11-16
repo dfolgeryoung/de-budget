@@ -10,7 +10,8 @@ import { eq, and, isNull, desc } from "drizzle-orm";
 import { parseClassic } from "../budget/parseExport.js";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
-import { sheets, driveCopy, serviceAccount } from "./google.js";
+import { sheets, driveCopy, driveUpload, sheetExportXlsx, serviceAccount } from "./google.js";
+import { backupTarget } from "./drive.js";
 import { createTransaction } from "./transactions.js";
 import { notifyDuplicates } from "./duplicates.js";
 import { dt, num } from "../budget/parseExport.js";
@@ -255,10 +256,13 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
 
   // 4. optional Drive backup
   let backup: string | undefined;
-  const folder = process.env.BACKUP_FOLDER_ID;
-  if (opts.backup && folder) {
-    try { backup = await driveCopy(id, `DE Budget backup ${new Date().toISOString().slice(0, 10)}`, folder); }
-    catch (e) { warnings.push(`Backup failed: ${(e as Error).message}`); }
+  if (opts.backup) {
+    try {
+      const target = await backupTarget(db);
+      if ("skipped" in target) warnings.push(`Sheet backup skipped: ${target.skipped}`);
+      else if (target.mode === "service") backup = await driveCopy(target.token, id, `DE Budget backup ${new Date().toISOString().slice(0, 10)}`, target.folderId);
+      else backup = await driveUpload(target.token, `DE Budget backup ${new Date().toISOString().slice(0, 10)}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", await sheetExportXlsx(id), target.folderId);
+    } catch (e) { warnings.push(`Backup failed: ${(e as Error).message}`); }
   }
 
   const result: MirrorResult = { ledgerRows: fit.length, months, moves, inboxAdded: 0, reconciled, backup, warnings, at: new Date().toISOString() };

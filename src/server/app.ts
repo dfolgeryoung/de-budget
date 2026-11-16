@@ -13,6 +13,7 @@ import { reportsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
 import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
+import { driveStatus, connectUrl, finishConnect, disconnect as driveDisconnect } from "./drive.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
@@ -344,7 +345,16 @@ app.put("/tracked/:id", async (c) => {
 app.delete("/tracked/:id", async (c) => c.json({ result: await deleteTracked(db, c.req.param("id")) }));
 
 // ---------- backups ----------
-app.get("/backup/status", async (c) => c.json({ last: await lastBackup(db), driveConfigured: !!process.env.BACKUP_FOLDER_ID && !!process.env.GOOGLE_SERVICE_ACCOUNT_B64 }));
+app.get("/backup/status", async (c) => { const drive = await driveStatus(db); return c.json({ last: await lastBackup(db), driveConfigured: drive.mode !== "off", drive }); });
+// Connect Google Drive as the signed-in person (the service account can't own files). Browser redirects, so the session cookie rides along.
+app.get("/drive/connect", (c) => c.redirect(connectUrl(c.get("user").id)));
+app.get("/drive/callback", async (c) => {
+  const code = c.req.query("code"), state = c.req.query("state") ?? "";
+  if (!code) return c.redirect("/?drive=denied#settings");
+  try { await finishConnect(db, c.get("user").id, code, state); return c.redirect("/?drive=ok#settings"); }
+  catch (e) { return c.redirect(`/?drive=${encodeURIComponent((e as Error).message.slice(0, 200))}#settings`); }
+});
+app.post("/drive/disconnect", async (c) => { await driveDisconnect(db); return c.json({ ok: true }); });
 app.get("/backup.json", async (c) => {
   const snap = await exportSnapshot(db);
   c.header("content-disposition", `attachment; filename="de-budget-backup-${today()}.json"`);

@@ -22,6 +22,7 @@ Nothing runs on cPanel except one DNS record.
    Credentials → OAuth client ID (Web application):
    - Authorised JavaScript origin: `https://budget.davidfolgeryoung.com`
    - Authorised redirect URI: `https://budget.davidfolgeryoung.com/api/auth/callback/google`
+   - Add a second redirect URI for Drive backups: `https://budget.davidfolgeryoung.com/api/drive/callback`
    (For Vercel preview deployments add the `*.vercel.app` URL the same way.)
 5. **cPanel** → DNS Zone Editor → add `CNAME  budget  →  cname.vercel-dns.com`.
    Vercel → Project → Settings → Domains → add `budget.davidfolgeryoung.com`.
@@ -71,7 +72,7 @@ Email (optional, for the Monday summary): create a Resend account, verify a send
 ## Backups
 
 - **Settings › Backup & restore › Download a backup** saves one JSON file with every table; **Ledger as CSV** is the same ledger for a spreadsheet.
-- **Nightly Drive backup**: with `BACKUP_FOLDER_ID` and the service account set (see Sheet mirror), the daily cron uploads `de-budget-backup-YYYY-MM-DD.json` to that folder and prunes to the last 30 nights plus the first backup of each month. The nightly spreadsheet copies (`DE Budget backup YYYY-MM-DD`) are pruned by the same rule. "Back up to Drive now" runs the same step on demand.
+- **Nightly Drive backup**: Google service accounts have no Drive storage quota, so backups are written as one of you. Under Settings › Backup & restore click **Connect Google Drive** (scope `drive.file`: the app only sees files it creates). The app makes a `D&E Budget backups` folder in that Drive; the daily cron uploads `de-budget-backup-YYYY-MM-DD.json` there and prunes to the last 30 nights plus the first backup of each month, and the nightly mirror adds an `.xlsx` export of the sheet (`DE Budget backup YYYY-MM-DD.xlsx`, pruned the same way). The refresh token is kept in the `settings` table; Disconnect revokes it. `BACKUP_FOLDER_ID` + service account still works as a fallback only for shared drives (Workspace).
 - **Restore**: choose a backup file in the same section, check the summary, type RESTORE. It replaces the database contents table by table (the Neon HTTP driver has no transactions); if it stops part way, run it again with the same file.
 - Also worth doing: in the Neon console raise the project's history retention as far as the plan allows, and keep the GitHub, Neon, Vercel and Google logins in a password manager with recovery set up.
 

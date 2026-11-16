@@ -33,6 +33,7 @@ export function Settings() {
     // Home can ask for a section (e.g. the upcoming-bills card → recurring)
     let want: string | null = null;
     try { want = sessionStorage.getItem("settings-section"); if (want) sessionStorage.removeItem("settings-section"); } catch { /* private mode */ }
+    if (new URLSearchParams(location.search).has("drive")) want = "backup"; // back from the Google Drive consent screen
     if (want) setTimeout(() => document.getElementById(`s-${want}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
   }, []);
   return (
@@ -83,13 +84,21 @@ interface MirrorStatus { configured: boolean; sheetId: string | null; backupFold
 
 /** The bridge to the spreadsheet: which sheet, when it last ran, and buttons to run it now. */
 function BackupSection() {
-  const [st, setSt] = useState<{ last: { at: string; name: string; bytes: number } | null; driveConfigured: boolean } | null>(null);
+  const [st, setSt] = useState<{ last: { at: string; name: string; bytes: number } | null; driveConfigured: boolean; drive: { mode: "user" | "service" | "off"; email?: string; folderUrl?: string } } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, setPending] = useState<{ snapshot: unknown; takenAt: string; counts: Record<string, number>; file: string } | null>(null);
   const [confirm, setConfirm] = useState("");
   const load = () => api<typeof st>("/backup/status").then(setSt).catch(() => setSt(null));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const back = new URLSearchParams(location.search).get("drive");
+    if (back) { setMsg(back === "ok" ? { ok: true, text: "Google Drive connected — nightly backups go to the \"D&E Budget backups\" folder in that Drive." } : { ok: false, text: back === "denied" ? "Google Drive wasn't connected." : `Couldn't connect Google Drive: ${back}` }); history.replaceState(null, "", "/#settings"); }
+  }, []);
+  async function disconnectDrive() {
+    if (!window.confirm("Disconnect Google Drive? Nightly backups stop until someone connects it again.")) return;
+    setBusy("drive"); try { await api("/drive/disconnect", { method: "POST" }); setMsg({ ok: true, text: "Google Drive disconnected." }); await load(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setBusy(null); }
+  }
   const when = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   const phone = usePhone();
   async function pick(f: File) {
@@ -123,11 +132,22 @@ function BackupSection() {
       <div className="flex flex-wrap gap-2">
         <a href="/api/backup.json" download className={btn + " inline-flex items-center"} style={{ height: 38, background: "var(--navy)", color: "var(--navy-text)" }}>Download a backup</a>
         <a href="/api/backup.csv" download className={btn + " inline-flex items-center"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>Ledger as CSV</a>
-        <button onClick={runNow} disabled={busy !== null || !st?.driveConfigured} title={st?.driveConfigured ? undefined : "Set BACKUP_FOLDER_ID and the service account on the server first"} className={btn + " disabled:opacity-50"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "run" ? "Backing up…" : "Back up to Drive now"}</button>
+        <button onClick={runNow} disabled={busy !== null || !st?.driveConfigured} title={st?.driveConfigured ? undefined : "Connect Google Drive first"} className={btn + " disabled:opacity-50"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "run" ? "Backing up…" : "Back up to Drive now"}</button>
       </div>
       <p className="text-xs m-0" style={{ color: "var(--muted)" }}>
-        {st === null ? "" : !st.driveConfigured ? "Nightly Drive backups are off: the backup folder isn't configured on the server." : st.last ? `Last Drive backup ${when(st.last.at)} · ${st.last.name} · ${Math.round(st.last.bytes / 1024)} KB` : "No Drive backup yet — the first one lands tonight, or press the button."}
+        {st === null ? "" : !st.driveConfigured ? "Nightly Drive backups are off until Google Drive is connected." : st.last ? `Last Drive backup ${when(st.last.at)} · ${st.last.name} · ${Math.round(st.last.bytes / 1024)} KB` : "No Drive backup yet — the first one lands tonight, or press the button."}
       </p>
+      <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
+        <div className="text-[13px] font-semibold">Google Drive</div>
+        {st?.drive.mode === "user" ? (
+          <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Connected as <strong>{st.drive.email}</strong>. Backups land in {st.drive.folderUrl ? <a href={st.drive.folderUrl} target="_blank" rel="noreferrer" style={{ color: "var(--accent-text)" }}>D&amp;E Budget backups</a> : "the D&E Budget backups folder"} in that Drive — a JSON snapshot every night, plus an .xlsx copy of the sheet when the mirror runs. <button onClick={disconnectDrive} disabled={busy !== null} className="font-semibold" style={{ color: "var(--red-text)" }}>Disconnect</button></p>
+        ) : (
+          <>
+            <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Google won't let the app's service account own files, so backups are saved to one of your Drives instead. Connect once; the app only sees the folder it creates.</p>
+            <a href="/api/drive/connect" className={btn + " inline-flex items-center w-fit"} style={{ height: 38, border: "1px solid var(--field)", background: "var(--card)" }}>Connect Google Drive</a>
+          </>
+        )}
+      </div>
       <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
         <div className="text-[13px] font-semibold">Restore from a backup</div>
         <p className="text-xs m-0" style={{ color: "var(--muted)" }}>Replaces everything in the app with the contents of a backup file. Take a fresh backup first if there's anything here you might want back.</p>

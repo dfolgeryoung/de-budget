@@ -123,22 +123,24 @@ export function filesToPrune(files: { id: string; name: string; date: string }[]
 
 /** Nightly: upload today's snapshot to the backup folder, then prune both the snapshots and the sheet copies. */
 export async function nightlyBackup(db: Db, today: string): Promise<{ uploaded: string; bytes: number; pruned: number } | { skipped: string }> {
-  const folder = process.env.BACKUP_FOLDER_ID;
-  if (!folder) return { skipped: "BACKUP_FOLDER_ID is not set" };
   const { driveUpload, driveList, driveDelete } = await import("./google.js");
+  const { backupTarget } = await import("./drive.js");
+  const target = await backupTarget(db);
+  if ("skipped" in target) return target;
+  const { token, folderId: folder } = target;
   const snap = await exportSnapshot(db);
   const body = JSON.stringify(snap);
   const name = `${BACKUP_PREFIX}${today}.json`;
   // one per day: a rerun the same day replaces that day's file
-  const existing = (await driveList(folder, BACKUP_PREFIX)).filter((f) => f.name === name);
-  for (const f of existing) await driveDelete(f.id);
-  await driveUpload(name, "application/json", body, folder);
+  const existing = (await driveList(token, folder, BACKUP_PREFIX)).filter((f) => f.name === name);
+  for (const f of existing) await driveDelete(token, f.id);
+  await driveUpload(token, name, "application/json", body, folder);
   await db.insert(t.settings).values({ key: "last_backup", value: { at: new Date().toISOString(), name, bytes: body.length } })
     .onConflictDoUpdate({ target: t.settings.key, set: { value: { at: new Date().toISOString(), name, bytes: body.length } } });
   let pruned = 0;
   for (const prefix of [BACKUP_PREFIX, SHEET_COPY_PREFIX]) {
-    const files = (await driveList(folder, prefix)).map((f) => ({ id: f.id, name: f.name, date: (f.name.match(/(\d{4}-\d{2}-\d{2})/)?.[1] ?? f.createdTime.slice(0, 10)) }));
-    for (const id of filesToPrune(files, 30, today)) { await driveDelete(id); pruned++; }
+    const files = (await driveList(token, folder, prefix)).map((f) => ({ id: f.id, name: f.name, date: (f.name.match(/(\d{4}-\d{2}-\d{2})/)?.[1] ?? f.createdTime.slice(0, 10)) }));
+    for (const id of filesToPrune(files, 30, today)) { await driveDelete(token, id); pruned++; }
   }
   return { uploaded: name, bytes: body.length, pruned };
 }

@@ -61,27 +61,24 @@ export const sheets = {
 };
 
 /** Copy the spreadsheet into a Drive folder (a dated backup). Needs the folder shared with the service account. */
-export async function driveCopy(fileId: string, name: string, folderId: string): Promise<string> {
-  const token = await accessToken();
+export async function driveCopy(token: string, fileId: string, name: string, folderId: string): Promise<string> {
   const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy?supportsAllDrives=true`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ name, parents: [folderId] }) });
   if (!r.ok) throw new Error(`Drive copy ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return ((await r.json()) as { id: string }).id;
 }
 
 /** Upload a small file (multipart) into a Drive folder; returns the new file id. */
-export async function driveUpload(name: string, mime: string, body: string, folderId: string): Promise<string> {
-  const token = await accessToken();
+export async function driveUpload(token: string, name: string, mime: string, body: string | Uint8Array, folderId: string): Promise<string> {
   const boundary = "de-budget-" + Date.now().toString(36);
   const meta = JSON.stringify({ name, parents: [folderId] });
-  const payload = `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\ncontent-type: ${mime}\r\n\r\n${body}\r\n--${boundary}--`;
+  const payload = new Blob([`--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\ncontent-type: ${mime}\r\n\r\n`, body as BlobPart, `\r\n--${boundary}--`]);
   const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": `multipart/related; boundary=${boundary}` }, body: payload });
   if (!r.ok) throw new Error(`Drive upload ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return ((await r.json()) as { id: string }).id;
 }
 
 /** Files in a folder whose names start with `prefix` (not trashed). */
-export async function driveList(folderId: string, prefix: string): Promise<{ id: string; name: string; createdTime: string }[]> {
-  const token = await accessToken();
+export async function driveList(token: string, folderId: string, prefix: string): Promise<{ id: string; name: string; createdTime: string }[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and name contains '${prefix.replace(/'/g, "\\'")}' and trashed = false`);
   const out: { id: string; name: string; createdTime: string }[] = [];
   let pageToken = "";
@@ -95,8 +92,15 @@ export async function driveList(folderId: string, prefix: string): Promise<{ id:
   return out;
 }
 
-export async function driveDelete(fileId: string): Promise<void> {
-  const token = await accessToken();
+export async function driveDelete(token: string, fileId: string): Promise<void> {
   const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, { method: "DELETE", headers: { authorization: `Bearer ${token}` } });
   if (!r.ok && r.status !== 404) throw new Error(`Drive delete ${r.status}: ${(await r.text()).slice(0, 300)}`);
+}
+
+/** The spreadsheet as an .xlsx, read by the service account (which can see the sheet but can't own copies of it). */
+export async function sheetExportXlsx(fileId: string): Promise<Uint8Array> {
+  const token = await accessToken();
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}`, { headers: { authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new Error(`Sheet export ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return new Uint8Array(await r.arrayBuffer());
 }

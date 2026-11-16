@@ -10,16 +10,20 @@ import type { LedgerRow } from "../server/transactions";
 import type { TrackedSummary } from "../server/tracked";
 import type { UpcomingBill } from "../server/recurring";
 import type { ReportsPayload } from "../server/reports";
+import type { FlaggedEntry } from "../server/flags";
+import { FlagSheet } from "./FlagSheet";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
+export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
   const [tracked, setTracked] = useState<TrackedSummary[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingBill[]>([]);
+  const [flags, setFlags] = useState<FlaggedEntry[]>([]);
+  const [flagOpen, setFlagOpen] = useState<FlaggedEntry | null>(null);
   const [report, setReport] = useState<ReportsPayload | null>(null);
   const [editing, setEditing] = useState(false);
   type Layout = { order: string[]; hidden: string[]; spendCategories?: string[] };
@@ -32,12 +36,12 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const [bump, setBump] = useState(0);
   const toast = useToast();
   const wantsReport = layout.order.includes("spend") && !layout.hidden.includes("spend");
-  type HomeData = { month: MonthPayload | null; recent: LedgerRow[]; pending: typeof pend; upcoming: UpcomingBill[]; tracked: TrackedSummary[]; report: ReportsPayload | null };
+  type HomeData = { month: MonthPayload | null; recent: LedgerRow[]; pending: typeof pend; upcoming: UpcomingBill[]; tracked: TrackedSummary[]; report: ReportsPayload | null; flags?: FlaggedEntry[] };
   useEffect(() => {
     // one round trip for the whole screen; the last copy shows instantly while the fresh one loads
     apiCached<HomeData>(`/home${wantsReport ? "?report=1" : ""}`, (h) => {
       setM(h.month); setRecent(Array.isArray(h.recent) ? h.recent : []); setPend(Array.isArray(h.pending) ? h.pending : []);
-      setUpcoming(Array.isArray(h.upcoming) ? h.upcoming : []); setTracked(Array.isArray(h.tracked) ? h.tracked : []); setReport(h.report ?? null);
+      setUpcoming(Array.isArray(h.upcoming) ? h.upcoming : []); setTracked(Array.isArray(h.tracked) ? h.tracked : []); setReport(h.report ?? null); setFlags(Array.isArray(h.flags) ? h.flags : []);
     }).catch(() => { /* keep whatever is on screen */ });
   }, [refreshKey, bump, wantsReport]);
   async function act(id: string, what: "confirm" | "skip", label: string) {
@@ -111,6 +115,30 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
               </div>
             </div>
           </button>
+        )}
+      </>
+    ) },
+    flags: { label: "Flagged entries", node: (
+      <>
+        {flags.length > 0 && (
+          <div className="rounded-xl overflow-hidden" style={cs}>
+            <div className="flex justify-between items-center px-3.5 py-2.5 gap-3" style={{ borderBottom: "1px solid var(--border-soft)" }}>
+              <span className="text-sm font-bold">🚩 Flagged entries</span>
+              <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{flags.length} open</span>
+            </div>
+            {flags.map((f, i) => {
+              const last = f.notes[f.notes.length - 1];
+              const mine = last?.userId === me.id;
+              return (
+                <button key={f.id} onClick={() => setFlagOpen(f)} className="w-full text-left px-3.5 py-2.5 flex flex-col gap-1" style={{ borderBottom: i < flags.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
+                  <span className="flex justify-between items-baseline gap-3"><span className="text-sm font-medium truncate">{f.payee || "(no payee)"}</span><span className="text-sm font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(f.amount))}</span></span>
+                  <span className="text-xs truncate" style={{ color: "var(--muted)" }}>{f.date.slice(5).replace("-", "/")}{f.category ? ` · ${f.category}` : ""}</span>
+                  {last && <span className="text-[13px] rounded-lg px-2.5 py-1.5 whitespace-pre-wrap" style={{ background: mine ? "var(--selected)" : "var(--yellow-bg)" }}><strong>{mine ? "You" : last.who}:</strong> {last.text}{f.notes.length > 1 ? <span style={{ color: "var(--muted)" }}> · {f.notes.length} notes</span> : null}</span>}
+                  <span className="text-xs" style={{ color: "var(--accent-text)" }}>{mine ? "Waiting for a reply ›" : "Reply or resolve ›"}</span>
+                </button>
+              );
+            })}
+          </div>
         )}
       </>
     ) },
@@ -220,7 +248,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       </>
     ) },
   };
-  const DEFAULT_ORDER = ["pending", "fun", "tracked", "upcoming", "check", "spend", "recent"];
+  const DEFAULT_ORDER = ["pending", "flags", "fun", "tracked", "upcoming", "check", "spend", "recent"];
   const DEFAULT_HIDDEN = ["spend"]; // optional cards start hidden until switched on in Edit Home
   const order = [...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k))];
   const isHidden = (k: string) => layout.hidden.includes(k) || (DEFAULT_HIDDEN.includes(k) && !layout.order.includes(k));
@@ -273,6 +301,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
 
       <div className="px-3 flex flex-col gap-3 md:px-0">
         {order.filter((k) => !isHidden(k)).map((k) => <Fragment key={k}>{CARDS[k]!.node}</Fragment>)}
+        {flagOpen && <FlagSheet entry={{ id: flagOpen.id, payee: flagOpen.payee, amount: flagOpen.amount, date: flagOpen.date, flagOpen: true }} meId={me.id} open onClose={() => setFlagOpen(null)} onChanged={() => setBump((b) => b + 1)} />}
       </div>
       {editing && (
         <Sheet onClose={() => setEditing(false)}>

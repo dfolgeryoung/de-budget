@@ -5,6 +5,7 @@ import { parseTypedDate } from "../budget/dates";
 import { useToast } from "./Toast";
 import { Select } from "./Select";
 import { Chevron } from "./icons";
+import { FlagSheet } from "./FlagSheet";
 import type { LedgerRow } from "../server/transactions";
 
 export interface EntryDraft {
@@ -78,6 +79,7 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
     return () => clearTimeout(h);
   }, []);
 
+  const [flagging, setFlagging] = useState(false);
   const cents = parseMoney(d.amountText) ?? 0;
   const signed = d.outflow ? -Math.abs(cents) : Math.abs(cents);
   const allCats = useMemo(() => lists.groups.flatMap((g) => g.categories.map((c) => ({ ...c, group: g.name, system: g.system }))), [lists]);
@@ -295,7 +297,13 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
       <button onClick={save} disabled={busy} className="rounded-xl py-3.5 text-[15px] font-semibold disabled:opacity-60" style={{ background: dup ? "var(--yellow)" : "var(--navy)", color: dup ? "#1A1D23" : "var(--navy-text)" }}>
         {busy ? "Saving…" : dup ? "Save anyway" : d.id ? "Save changes" : "Save"}
       </button>
-      {d.id && onDelete && <button onClick={() => onDelete(d.id!)} className="py-2 text-[14px] font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}
+      {d.id && (
+        <div className="flex justify-center gap-6">
+          <button onClick={() => setFlagging(true)} className="py-2 text-[14px] font-semibold" style={{ color: "var(--accent-text)" }}>🚩 Flag…</button>
+          {onDelete && <button onClick={() => onDelete(d.id!)} className="py-2 text-[14px] font-semibold" style={{ color: "var(--red-text)" }}>Delete entry</button>}
+        </div>
+      )}
+      {d.id && flagging && <FlagSheet entry={{ id: d.id, payee: d.payee, amount: signed, date: d.date }} meId={me.id} open onClose={() => setFlagging(false)} onChanged={() => dispatchEvent(new Event("lists-changed"))} />}
     </div>
   );
 }

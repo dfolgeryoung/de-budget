@@ -41,6 +41,7 @@ export interface LedgerRow {
   transferToAccountId: string | null; sharedFiftyFifty: boolean; hidden: boolean; mine: boolean; source: string;
   bankStatus: string; bankNote: string | null; confirmed: boolean; trackedAmountId: string | null;
   lines: { categoryId: string | null; amount: number }[]; tagIds: string[]; balance: number | null;
+  flagOpen: boolean;
   /** a 50/50 entry is shown as two halves, one per checking account; `full` is the stored entry for editing */
   half: { share: "payer" | "other"; otherAccountId: string; full: { accountId: string; amount: number | null; lines: { categoryId: string | null; amount: number }[] } } | null;
 }
@@ -102,7 +103,7 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
       id: r.id, date: r.date, accountId: r.accountId,
       payee: masked ? "[Hidden]" : r.payee, memo: masked ? null : r.memo, amount: masked ? null : r.amount,
       transferToAccountId: r.transferToAccountId, sharedFiftyFifty: r.sharedFiftyFifty, hidden: r.hidden, mine, source: r.source,
-      bankStatus: r.bankStatus, bankNote: r.bankNote, confirmed: r.confirmed, trackedAmountId: r.trackedAmountId,
+      bankStatus: r.bankStatus, bankNote: r.bankNote, confirmed: r.confirmed, trackedAmountId: r.trackedAmountId, flagOpen: r.flagOpen,
       lines, tagIds: tagsBy.get(r.id) ?? [], balance: withBalance(r), half: null,
     };
     const other = otherHalfAccount(r);

@@ -11,6 +11,7 @@ import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory 
 import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
+import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
@@ -131,11 +132,11 @@ app.get("/month", async (c) => c.json(await monthPayload(db, today().slice(0, 7)
 app.get("/home", async (c) => {
   const me = c.get("user").id, t0 = today(), month = t0.slice(0, 7) + "-01";
   const withReport = c.req.query("report") === "1";
-  const [m, recent, pend, upcoming, tracked, report] = await Promise.all([
+  const [m, recent, pend, upcoming, tracked, report, flags] = await Promise.all([
     monthPayload(db, month, t0), listTransactions(db, me, { limit: 4 }), pending(db), upcomingBills(db, t0), listTracked(db),
-    withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null),
+    withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null), flagged(db),
   ]);
-  return c.json({ month: m, recent, pending: pend, upcoming, tracked, report });
+  return c.json({ month: m, recent, pending: pend, upcoming, tracked, report, flags });
 });
 
 // ---- phase 2: ledger ----
@@ -155,6 +156,20 @@ app.get("/payees/nearby", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return c.json({ error: "lat and lng" }, 400);
   return c.json({ payees: await nearbyPayees(db, lat, lng) });
+});
+// ---------- flags (a question on an entry) ----------
+app.get("/flags", async (c) => c.json({ flagged: await flagged(db) }));
+app.get("/transactions/:id/notes", async (c) => c.json({ notes: await notesFor(db, c.req.param("id")) }));
+app.post("/transactions/:id/notes", async (c) => {
+  const p = z.object({ text: z.string().trim().min(1).max(1000) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Write something first" }, 400);
+  try { return c.json({ notes: await addNote(db, c.get("user").id, c.req.param("id"), p.data.text) }); } catch (e) { return c.json({ error: (e as Error).message }, 400); }
+});
+app.put("/transactions/:id/flag", async (c) => {
+  const p = z.object({ open: z.boolean() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "bad body" }, 400);
+  await resolveFlag(db, c.get("user").id, c.req.param("id"), p.data.open);
+  return c.json({ ok: true });
 });
 app.post("/transactions", async (c) => {
   const parsed = entrySchema.safeParse(await c.req.json());

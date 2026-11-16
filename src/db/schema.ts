@@ -144,6 +144,7 @@ export const transactions = pgTable(
     amount: bigint("amount", { mode: "number" }).notNull(), // cents, signed: outflow negative, inflow positive
     bankStatus: bankStatus("bank_status").notNull().default("unchecked"),
     bankNote: text("bank_note"), // e.g. "Bank shows $218.24 on Nov 7"
+    flagOpen: boolean("flag_open").notNull().default(false), // a question about this entry is waiting (see transactionNotes)
     source: txnSource("source").notNull().default("manual"),
     recurringId: text("recurring_id"),
     trackedAmountId: text("tracked_amount_id"),
@@ -224,6 +225,15 @@ export const payees = pgTable("payees", {
   lng: doublePrecision("lng"),
   fixes: integer("fixes").notNull().default(0),
   ...audit,
+});
+
+// ---------- notes on an entry (a question from one of you, replies, until it's resolved) ----------
+export const transactionNotes = pgTable("transaction_notes", {
+  id: text("id").primaryKey(),
+  transactionId: text("transaction_id").notNull().references(() => transactions.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ---------- tags ----------

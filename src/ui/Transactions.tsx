@@ -5,6 +5,7 @@ import { useToast } from "./Toast";
 import type { LedgerRow } from "../server/transactions";
 import { EntryForm, draftFromRow, emptyDraft, type EntryDraft } from "./EntryForm";
 import { Sheet } from "./Sheet";
+import { FlagSheet } from "./FlagSheet";
 import { EntryRow, LEDGER_COLS, LEDGER_MIN } from "./EntryRow";
 import type { MonthPayload } from "../server/month";
 import { Select } from "./Select";
@@ -29,6 +30,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [onlyMismatch, setOnlyMismatch] = useState(false);
   const isDesktop = typeof matchMedia !== "undefined" && matchMedia("(min-width: 768px)").matches;
   const [menu, setMenu] = useState<string | null>(null);
+  const [flagging, setFlagging] = useState<LedgerRow | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
   async function confirm(r: LedgerRow) {
@@ -130,6 +132,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                         {masked && <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
                         <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? transferKind(r) : "—")}</span>
                         {r.hidden && r.mine && <span title="Hidden from the other person" className="text-xs">🔒</span>}
+                        {r.flagOpen && <span title="Open question on this entry" className="text-xs">🚩</span>}
                         {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} className="text-xs" style={{ color: "var(--neg)" }}>⚠</span>}
                         {!r.confirmed && <PendingBadge r={r} />}
                       </span>
@@ -148,6 +151,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
             </div>
           </div>
         ))}
+        {flagging && <FlagSheet entry={flagging} meId={me.id} open onClose={() => setFlagging(null)} onChanged={() => dispatchEvent(new Event("lists-changed"))} />}
       </div>
     );
   }
@@ -203,6 +207,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                   <span className="min-w-0 text-left font-medium truncate flex items-center gap-1.5" style={{ color: masked ? "var(--muted)" : undefined }}>
                     {masked && "🔒 "}{r.payee || (isTransfer ? transferKind(r) : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
+                    {r.flagOpen && <button title="Open question on this entry" onClick={(e) => { e.stopPropagation(); setFlagging(r); }} className="ml-1 text-xs">🚩</button>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
                     {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? `½ of ${formatMoney(Math.abs(r.half.full.amount ?? 0))}` : "50/50"}</span>}
@@ -219,6 +224,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                     <div className="absolute right-4 top-9 z-10 rounded-lg shadow-lg text-sm flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                       <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); setEditing(r.id + (r.half?.share ?? "")); }}>Edit</button>
                       <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); const d = draftFromRow(r, lists); delete d.id; setPrefill({ ...d, more: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Duplicate</button>
+                      <button className="px-4 py-2 text-left" onClick={() => { setMenu(null); setFlagging(r); }}>🚩 {r.flagOpen ? "View flag…" : "Flag…"}</button>
                       <button className="px-4 py-2 text-left" style={{ color: "var(--red-text)" }} onClick={() => del(r)}>Delete</button>
                     </div>
                   )}
@@ -230,6 +236,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
         ))}
       </div>
       </div></div>
+      {flagging && <FlagSheet entry={flagging} meId={me.id} open onClose={() => setFlagging(null)} onChanged={() => dispatchEvent(new Event("lists-changed"))} />}
     </div>
   );
 }

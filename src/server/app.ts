@@ -12,6 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
+import { possibleDuplicates, keepBoth } from "./duplicates.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
@@ -132,11 +133,11 @@ app.get("/month", async (c) => c.json(await monthPayload(db, today().slice(0, 7)
 app.get("/home", async (c) => {
   const me = c.get("user").id, t0 = today(), month = t0.slice(0, 7) + "-01";
   const withReport = c.req.query("report") === "1";
-  const [m, recent, pend, upcoming, tracked, report, flags] = await Promise.all([
+  const [m, recent, pend, upcoming, tracked, report, flags, duplicates] = await Promise.all([
     monthPayload(db, month, t0), listTransactions(db, me, { limit: 4 }), pending(db), upcomingBills(db, t0), listTracked(db),
-    withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null), flagged(db),
+    withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null), flagged(db), possibleDuplicates(db),
   ]);
-  return c.json({ month: m, recent, pending: pend, upcoming, tracked, report, flags });
+  return c.json({ month: m, recent, pending: pend, upcoming, tracked, report, flags, duplicates });
 });
 
 // ---- phase 2: ledger ----
@@ -159,6 +160,13 @@ app.get("/payees/nearby", async (c) => {
 });
 // ---------- flags (a question on an entry) ----------
 app.get("/flags", async (c) => c.json({ flagged: await flagged(db) }));
+app.get("/duplicates", async (c) => c.json({ duplicates: await possibleDuplicates(db) }));
+app.post("/duplicates/keep", async (c) => {
+  const p = z.object({ a: z.string().min(1), b: z.string().min(1) }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "Two entry ids are needed" }, 400);
+  await keepBoth(db, p.data.a, p.data.b);
+  return c.json({ ok: true });
+});
 app.get("/transactions/:id/notes", async (c) => c.json({ notes: await notesFor(db, c.req.param("id")) }));
 app.post("/transactions/:id/notes", async (c) => {
   const p = z.object({ text: z.string().trim().min(1).max(1000) }).safeParse(await c.req.json());

@@ -133,6 +133,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                         <span className="truncate">{masked ? "[Hidden]" : r.payee || (isTransfer ? transferKind(r) : "—")}</span>
                         {r.hidden && r.mine && <span title="Hidden from the other person" className="text-xs">🔒</span>}
                         {r.flagOpen && <span title="Open question on this entry" className="text-xs">🚩</span>}
+                        {r.dupe && <span title="Possible duplicate — review on Home" className="text-[10px] font-bold rounded px-1 leading-4" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>DUP?</span>}
                         {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} className="text-xs" style={{ color: "var(--neg)" }}>⚠</span>}
                         {!r.confirmed && <PendingBadge r={r} />}
                       </span>
@@ -208,6 +209,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
                     {masked && "🔒 "}{r.payee || (isTransfer ? transferKind(r) : "—")}
                     {r.hidden && r.mine && <span title="Hidden from the other person">🔒</span>}
                     {r.flagOpen && <button title="Open question on this entry" onClick={(e) => { e.stopPropagation(); setFlagging(r); }} className="ml-1 text-xs">🚩</button>}
+                    {r.dupe && <a href="#home" title="Possible duplicate — review on Home" onClick={(e) => e.stopPropagation()} className="ml-1 text-[10px] font-bold rounded px-1 leading-4 no-underline" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>DUP?</a>}
                     {r.source === "recurring" && <span className="inline-flex w-4 h-4 rounded-full text-[9px] font-bold items-center justify-center" style={{ border: "1.5px solid var(--muted)", color: "var(--muted)" }}>R</span>}
                     {r.bankStatus === "mismatch" && <span title={r.bankNote ?? "Doesn't match the bank"} style={{ color: "var(--neg)" }}>⚠</span>}
                     {r.sharedFiftyFifty && <span title={r.half ? `Half of ${formatMoney(Math.abs(r.half.full.amount ?? 0))} paid from ${acctName.get(r.half.full.accountId)}; the other half is on ${acctName.get(r.half.otherAccountId)}` : undefined} className="px-1.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--group)", color: "var(--text-2)" }}>{r.half ? `½ of ${formatMoney(Math.abs(r.half.full.amount ?? 0))}` : "50/50"}</span>}

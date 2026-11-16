@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { loadBudget } from "./month.js";
+import { pairUp, dismissedPairs } from "./duplicates.js";
 import { accountBalance } from "../budget/engine.js";
 import { monthOf } from "../budget/dates.js";
 
@@ -42,6 +43,8 @@ export interface LedgerRow {
   bankStatus: string; bankNote: string | null; confirmed: boolean; trackedAmountId: string | null;
   lines: { categoryId: string | null; amount: number }[]; tagIds: string[]; balance: number | null;
   flagOpen: boolean;
+  /** part of a possible-duplicate pair (same payee and amount within 3 days) that nobody has cleared */
+  dupe: boolean;
   /** a 50/50 entry is shown as two halves, one per checking account; `full` is the stored entry for editing */
   half: { share: "payer" | "other"; otherAccountId: string; full: { accountId: string; amount: number | null; lines: { categoryId: string | null; amount: number }[] } } | null;
 }
@@ -51,6 +54,8 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
   const rows = await db.select().from(t.transactions).where(isNull(t.transactions.deletedAt)).orderBy(desc(t.transactions.date), desc(t.transactions.createdAt));
   const lines = await db.select().from(t.transactionLines);
   const tags = await db.select().from(t.transactionTags);
+  const dupeIds = new Set<string>();
+  for (const p of pairUp(rows.filter((r) => !r.transferToAccountId).map((r) => ({ id: r.id, date: r.date, payee: r.payee, memo: null, amount: r.amount, account: "", category: null, enteredBy: null, createdAt: r.createdAt.toISOString() })), await dismissedPairs(db))) { dupeIds.add(p.a.id); dupeIds.add(p.b.id); }
   const byTxn = new Map<string, { categoryId: string | null; amount: number }[]>();
   for (const l of lines) byTxn.set(l.transactionId, [...(byTxn.get(l.transactionId) ?? []), { categoryId: l.categoryId, amount: l.amount }]);
   const tagsBy = new Map<string, string[]>();
@@ -103,7 +108,7 @@ export async function listTransactions(db: Db, me: string, q: { accountId?: stri
       id: r.id, date: r.date, accountId: r.accountId,
       payee: masked ? "[Hidden]" : r.payee, memo: masked ? null : r.memo, amount: masked ? null : r.amount,
       transferToAccountId: r.transferToAccountId, sharedFiftyFifty: r.sharedFiftyFifty, hidden: r.hidden, mine, source: r.source,
-      bankStatus: r.bankStatus, bankNote: r.bankNote, confirmed: r.confirmed, trackedAmountId: r.trackedAmountId, flagOpen: r.flagOpen,
+      bankStatus: r.bankStatus, bankNote: r.bankNote, confirmed: r.confirmed, trackedAmountId: r.trackedAmountId, flagOpen: r.flagOpen, dupe: dupeIds.has(r.id),
       lines, tagIds: tagsBy.get(r.id) ?? [], balance: withBalance(r), half: null,
     };
     const other = otherHalfAccount(r);

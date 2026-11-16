@@ -60,8 +60,12 @@ export async function possibleDuplicates(db: Db): Promise<DupPair[]> {
       enteredBy: x.createdBy ? who.get(x.createdBy) ?? null : null, createdAt: x.createdAt.toISOString(),
     };
   });
-  const dismissed = new Set(((ok[0]?.value as string[] | undefined) ?? []));
-  return pairUp(entries, dismissed);
+  return pairUp(entries, new Set(((ok[0]?.value as string[] | undefined) ?? [])));
+}
+
+export async function dismissedPairs(db: Db): Promise<Set<string>> {
+  const row = (await db.select().from(t.settings).where(eq(t.settings.key, KEY)))[0];
+  return new Set((row?.value as string[] | undefined) ?? []);
 }
 
 /** Remember that these two are both real, so the pair stops showing. */

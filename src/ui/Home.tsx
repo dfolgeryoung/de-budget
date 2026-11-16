@@ -179,13 +179,18 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
               <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Spend by category</span><span className="text-xs" style={{ color: "var(--muted)" }}>{formatMoney(report.thisMonth.spent)} so far · day {report.daysElapsed} ›</span></div>
               <div className="flex flex-col gap-1.5">
                 {cats.map((c) => {
-                  const over = c.budget > 0 && c.spent > c.budget;
+                  // same bar as Reports: dark tick = this month's budget, hatched band = carried over, red only past both
+                  const room = Math.max(c.budget, c.available), carry = Math.max(0, c.available - c.budget);
+                  const pct = (v: number) => Math.max(0, Math.min(100, (v / scale) * 100));
+                  const over = room > 0 ? c.spent > room : c.spent > 0;
                   return (
                     <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: "110px minmax(0,1fr) 62px" }}>
                       <span className="truncate" style={{ color: "var(--text-2)" }}>{c.emoji ? c.emoji + " " : ""}{c.name}</span>
                       <span className="relative block rounded" style={{ height: 10, background: "var(--track)" }}>
-                        <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${Math.min(100, (c.spent / scale) * 100)}%`, background: over ? "var(--red)" : "var(--classic-shared-2)" }} />
-                        {c.budget > 0 && <span className="absolute" style={{ left: `calc(${Math.min(100, (c.budget / scale) * 100)}% - 1px)`, top: -2, width: 2, height: 14, background: "var(--text)" }} />}
+                        {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(c.budget)}%`, width: `${pct(c.available) - pct(c.budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
+                        <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${pct(c.spent)}%`, background: over ? "var(--red)" : "var(--classic-shared-2)" }} />
+                        {c.budget > 0 && <span className="absolute" style={{ left: `calc(${pct(c.budget)}% - 1px)`, top: -2, width: 2, height: 14, background: "var(--text)" }} />}
+                        {carry > 0 && c.available <= scale && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 12, background: "var(--muted)", opacity: 0.7 }} />}
                       </span>
                       <span className="text-right font-semibold tabular-nums">{formatMoney(c.spent)}</span>
                     </div>

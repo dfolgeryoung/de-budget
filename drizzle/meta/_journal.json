@@ -78,6 +78,13 @@
       "when": 1794830016417,
       "tag": "0010_classic_internet_back",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794833397554,
+      "tag": "0011_classic_shared_order",
+      "breakpoints": true
     }
   ]
 }

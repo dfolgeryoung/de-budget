@@ -41,7 +41,7 @@ export function Settings() {
         <h1 className="text-xl font-bold">Settings</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>Shared settings change the budget for both of you; the ones marked "per person" only change your own app.</p>
       </div>
-      <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto pb-1 text-[13px] font-semibold">
+      <nav aria-label="Settings sections" className="no-bar flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible pb-1 text-[13px] font-semibold">
         {[["accounts", "Accounts"], ["categories", "Categories & groups"], ["recurring", "Recurring bills"], ["csv", "Import CSV"], ["notifications", "Notifications"], ["tags", "Tags"], ["appearance", "Appearance & profile"], ["backup", "Backup & restore"], ["import", "Import"], ["mirror", "Sheet mirror"]].map(([id, label]) => <a key={id} href={`#settings/${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="pill" style={{ background: "var(--card)", color: "var(--text-2)", border: "1px solid var(--field)" }}><span className="tb">{label}</span></a>)}
       </nav>
       <AccountsSection />

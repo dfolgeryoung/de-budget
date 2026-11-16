@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /** Bottom sheet on the phone, side panel on desktop; slides in, dims the page, closes on backdrop tap, Escape, or dragging the handle down. */
 export function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
@@ -32,8 +33,9 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose: () 
     else setDrag({ y: 0, moving: false });
   };
   const transform = !open ? "translate(0, 100%)" : drag ? `translate(0, ${drag.y}px)` : "translate(0,0)";
-  return (
-    <div className="fixed inset-x-0 z-40 flex items-end md:items-stretch md:justify-end" onClick={onClose} style={{ top: vv?.top ?? 0, height: vv?.height ?? "100%", background: `rgba(20,28,40,${open ? 0.55 : 0})`, transition: "background 200ms" }}>
+  // portaled to <body>: a sticky or transformed ancestor (the budget inspector, the sticky toolbar) would otherwise trap the overlay beneath its siblings
+  return createPortal(
+    <div className="fixed inset-x-0 z-50 flex items-end md:items-stretch md:justify-end" onClick={onClose} style={{ top: vv?.top ?? 0, height: vv?.height ?? "100%", background: `rgba(20,28,40,${open ? 0.55 : 0})`, transition: "background 200ms" }}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full md:w-[440px] max-h-[92%] md:max-h-none md:h-full overflow-y-auto rounded-t-[22px] md:rounded-none px-5 pb-8 md:p-6 pt-0 md:pt-6"
@@ -47,6 +49,7 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose: () 
         <div className="md:hidden h-1" />
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -11,6 +11,7 @@ import { CategoryPanel } from "./CategoryPanel";
 import { Sheet } from "./Sheet";
 import { MonthPanel } from "./MonthPanel";
 import { AddCategory } from "./AddCategory";
+import { ZeroCheckSheet } from "./ZeroCheck";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
@@ -59,6 +60,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<string | "rta" | "summary" | null>(null);
+  const [zeroOpen, setZeroOpen] = useState(false);
   const [bars, setBars] = useState(showBarsDefault);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
@@ -487,11 +489,12 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
           <div>Owed {formatMoney(view.owedOnCards)} · Set aside {formatMoney(view.setAsideForCards)}</div>
           <div style={{ color: view.uncoveredCardDebt > 0 ? "var(--red-text)" : "var(--muted)" }}>Uncovered {formatMoney(view.uncoveredCardDebt)}</div>
         </div>
-        <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <button onClick={() => setZeroOpen(true)} className="rounded-xl p-4 text-left" style={{ background: "var(--card)", border: `1px solid ${view.zeroCheck === 0 ? "var(--border)" : "var(--red)"}` }} title={view.zeroCheck === 0 ? "What the zero check is" : "Why it's off, and how to fix it"}>
           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Zero check</div>
           <div className="text-xl font-bold" style={{ color: view.zeroCheck === 0 ? "var(--green-text)" : "var(--red-text)" }}>{view.zeroCheck === 0 ? "✓ $0.00" : formatMoney(view.zeroCheck)}</div>
-          <div style={{ color: "var(--muted)" }}>cash − (available + ready to assign)</div>
-        </div>
+          <div style={{ color: view.zeroCheck === 0 ? "var(--muted)" : "var(--red-text)" }}>{view.zeroCheck === 0 ? "cash − (available + ready to assign)" : "Tap to see why and how to fix it ›"}</div>
+        </button>
+        {zeroOpen && <ZeroCheckSheet month={view.month} onClose={() => setZeroOpen(false)} />}
       </div>
     </div>
   );

@@ -297,3 +297,57 @@ export function weeklyAllowance(left: Cents, today: ISODate): { perWeek: Cents; 
   const weeks = (daysInMonth(m) - dayOf(today) + 1) / 7;
   return { perWeek: Math.round(left / weeks), weeksLeft: Math.round(weeks * 10) / 10 };
 }
+
+// ---------- zero check diagnosis ----------
+export interface ZeroCause {
+  kind: "card_uncategorized" | "off_budget_categorized" | "excluded_category" | "before_first_month" | "lines_mismatch";
+  transactionId: string;
+  date: ISODate;
+  accountId: string;
+  amount: Cents; // the transaction amount
+  effect: Cents; // what this entry adds to the zero check
+  why: string;
+  fix: string;
+}
+export interface ZeroDiagnosis { zeroCheck: Cents; causes: ZeroCause[]; unexplained: Cents }
+
+/**
+ * Why the zero check isn't zero. Each cause is one entry whose cash side and category side don't move together; the
+ * effects should add up to the zero check, and whatever is left over is flagged as unexplained (usually starting
+ * balances vs opening category balances).
+ */
+export function diagnoseZeroCheck(input: BudgetInput, month: MonthKey): ZeroDiagnosis {
+  const view = computeMonth(input, month);
+  const acct = byId(input.accounts);
+  const catKind = new Map(input.categories.map((c) => [c.id, c.kind]));
+  const lastDay = `${month.slice(0, 7)}-${String(daysInMonth(month)).padStart(2, "0")}`;
+  const causes: ZeroCause[] = [];
+  for (const t of input.transactions) {
+    if (t.confirmed === false || t.date > lastDay) continue;
+    const a = acct.get(t.accountId); if (!a) continue;
+    const base = { transactionId: t.id, date: t.date, accountId: t.accountId, amount: t.amount };
+    const lineSum = t.lines.reduce((s, l) => s + l.amount, 0);
+    if (t.date < input.firstMonth) {
+      if (!t.transferToAccountId && a.onBudget && a.type !== "credit_card" && t.amount !== 0) causes.push({ ...base, kind: "before_first_month", effect: t.amount, why: `Dated before the budget's first month (${input.firstMonth.slice(0, 7)}), so it moves cash but no category.`, fix: "Move it into the first month, or fold it into the account's starting balance and delete it." });
+      continue;
+    }
+    if (t.transferToAccountId) continue;
+    const isCard = a.type === "credit_card";
+    if (!a.onBudget) {
+      for (const l of t.lines) if (l.categoryId) causes.push({ ...base, kind: "off_budget_categorized", effect: -l.amount, why: "A categorised entry on an off-budget account: the category moved but no budget cash did.", fix: "Give it no category (off-budget money isn't budgeted), or move the entry to an on-budget account." });
+      continue;
+    }
+    if (isCard) {
+      for (const l of t.lines) if (!l.categoryId && l.amount !== 0) causes.push({ ...base, kind: "card_uncategorized", effect: -l.amount, why: l.amount > 0 ? "A refund or credit on a credit card with no category went to Ready to Assign, but no cash arrived — the card just owes less." : "A card charge with no category took money from Ready to Assign without holding it in the card's payment category.", fix: l.amount > 0 ? "Give the refund the category of the original purchase (or wherever you want the money). The card's payment category then drops by the same amount." : "Give the charge a category so the card's payment category holds the money for it." });
+    } else if (t.amount !== lineSum && t.lines.length) {
+      causes.push({ ...base, kind: "lines_mismatch", effect: t.amount - lineSum, why: `The split lines add up to ${lineSum} but the entry is ${t.amount}.`, fix: "Open the entry and make the split lines add up to the total." });
+    }
+    for (const l of t.lines) {
+      if (!l.categoryId) continue;
+      const k = catKind.get(l.categoryId);
+      if (k === undefined || k === "savings_mirror") causes.push({ ...base, kind: "excluded_category", effect: isCard ? l.amount : l.amount, why: k === undefined ? "Its category no longer exists, so the activity isn't counted anywhere." : "It's categorised to a savings-mirror line, which the budget doesn't count.", fix: "Pick a real budget category for it." });
+    }
+  }
+  const explained = causes.reduce((s, c) => s + c.effect, 0);
+  return { zeroCheck: view.zeroCheck, causes, unexplained: view.zeroCheck - explained };
+}

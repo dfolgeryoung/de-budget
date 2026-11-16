@@ -5,7 +5,7 @@ import { handleAuth, getSessionUser } from "./auth.js";
 import { db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { importSheetExport } from "./importer.js";
-import { monthPayload } from "./month.js";
+import { monthPayload, zeroCheckPayload } from "./month.js";
 import { entrySchema, nearbyPayees, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
@@ -130,6 +130,7 @@ app.get("/month/:key", async (c) => {
   return c.json(await monthPayload(db, key, today()));
 });
 app.get("/month", async (c) => c.json(await monthPayload(db, today().slice(0, 7) + "-01", today())));
+app.get("/zero-check/:month", async (c) => c.json(await zeroCheckPayload(db, c.req.param("month"))));
 // everything the Home screen shows, in one round trip (the pieces run in parallel server-side)
 app.get("/home", async (c) => {
   const me = c.get("user").id, t0 = today(), month = t0.slice(0, 7) + "-01";

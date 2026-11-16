@@ -23,7 +23,7 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const [rows, setRows] = useState<LedgerRow[] | null>(null);
   const [q, setQ] = useState("");
   // a report can hand over a category + month to open (see goToTransactions in Reports)
-  const handed = (() => { try { const v = sessionStorage.getItem("txn-filter"); if (v) sessionStorage.removeItem("txn-filter"); return v ? (JSON.parse(v) as { category?: string | null; month?: string | null }) : null; } catch { return null; } })();
+  const handed = (() => { try { const v = sessionStorage.getItem("txn-filter"); if (v) sessionStorage.removeItem("txn-filter"); return v ? (JSON.parse(v) as { category?: string | null; month?: string | null; open?: string }) : null; } catch { return null; } })();
   const [category, setCategory] = useState<string | null>(handed?.category ?? null);
   const [month, setMonth] = useState<string>(handed?.month ?? "");
   const [tag, setTag] = useState<string | null>(null);
@@ -67,6 +67,15 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
     (q ? api<LedgerRow[]>(`/transactions?${p}`).then(setRows) : apiCached<LedgerRow[]>(`/transactions?${p}`, setRows)).catch((e) => toast(String(e)));
   };
   useEffect(load, [account, category, month, q, refreshKey]);
+  // handed an entry to open (from the zero-check sheet): open it once the rows are in
+  const [toOpen, setToOpen] = useState<string | null>(handed?.open ?? null);
+  useEffect(() => {
+    if (!toOpen || !rows) return;
+    const r = rows.find((x) => x.id === toOpen); if (!r) return;
+    setToOpen(null);
+    if (isDesktop) setEditing(r.id + (r.half?.share ?? "")); else openEntry(draftFromRow(r, lists));
+    setTimeout(() => document.querySelector(`[data-row="${r.id}"]`)?.scrollIntoView({ block: "center" }), 50);
+  }, [rows, toOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown = (rows ?? []).filter((r) => (!tag || r.tagIds.includes(tag)) && (!onlyHidden || r.hidden) && (!onlyMismatch || r.bankStatus === "mismatch"));
   const monthOptions = (() => { const out: string[] = []; const d = new Date(); for (let i = 0; i < 14; i++) { const m = new Date(d.getFullYear(), d.getMonth() + 1 - i, 1); out.push(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-01`); } return out; })();
 

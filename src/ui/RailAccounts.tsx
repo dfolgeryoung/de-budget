@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { ZeroCheckSheet } from "./ZeroCheck";
 import { api } from "./api";
 import { formatMoney } from "../budget/money";
 import type { MonthPayload } from "../server/month";
 
 export function RailAccounts({ refreshKey, onPick, selected }: { refreshKey: number; onPick: (id: string) => void; selected: string | null }) {
   const [m, setM] = useState<MonthPayload | null>(null);
+  const [zeroOpen, setZeroOpen] = useState(false);
   useEffect(() => { api<MonthPayload>("/month").then(setM).catch(() => setM(null)); }, [refreshKey]);
   if (!m || !m.accounts.length) return null;
   const onBudget = m.accounts.filter((a) => a.onBudget && a.type !== "credit_card");
@@ -34,7 +36,8 @@ export function RailAccounts({ refreshKey, onPick, selected }: { refreshKey: num
       <div className="flex flex-col mt-3 pt-2 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}>
         <div className="flex justify-between text-[13px] font-semibold px-2.5"><span>Cash on budget</span><span>{formatMoney(m.view.cashOnBudget)}</span></div>
         <div className="flex justify-between text-[13px] font-semibold px-2.5"><span>Days of buffer</span><span>{Number.isFinite(m.daysOfBuffer) ? m.daysOfBuffer : "∞"}</span></div>
-        <div className="flex justify-between text-[13px] font-semibold px-2.5" style={{ color: m.view.zeroCheck === 0 ? "#7EF0A5" : "#F2A09A" }}><span>Zero check</span><span>{m.view.zeroCheck === 0 ? "✓ $0.00" : formatMoney(m.view.zeroCheck)}</span></div>
+        <button onClick={() => setZeroOpen(true)} className="flex justify-between text-[13px] font-semibold px-2.5 w-full text-left rounded-md hover:bg-white/10" title={m.view.zeroCheck === 0 ? "What the zero check is" : "Why it's off, and how to fix it"} style={{ color: m.view.zeroCheck === 0 ? "#7EF0A5" : "#F2A09A" }}><span>Zero check</span><span>{m.view.zeroCheck === 0 ? "✓ $0.00" : formatMoney(m.view.zeroCheck)}</span></button>
+        {zeroOpen && <ZeroCheckSheet month={m.month} onClose={() => setZeroOpen(false)} />}
       </div>
     </div>
   );

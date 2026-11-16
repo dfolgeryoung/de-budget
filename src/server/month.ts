@@ -3,7 +3,7 @@ import { dueDatesInMonth, dayStillToCome } from "../budget/recurringDates.js";
 import { eq, isNull } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
-import { computeMonth, accountBalance, daysOfBuffer, type BudgetInput, type MonthView } from "../budget/engine.js";
+import { computeMonth, accountBalance, daysOfBuffer, diagnoseZeroCheck, type BudgetInput, type MonthView, type ZeroCause } from "../budget/engine.js";
 import { addMonths, daysInMonth, type MonthKey } from "../budget/dates.js";
 
 export async function loadBudget(db: Db): Promise<{ input: BudgetInput; names: { accounts: Map<string, string>; categories: Map<string, string> }; groups: typeof t.categoryGroups.$inferSelect[]; cats: typeof t.categories.$inferSelect[]; accts: typeof t.accounts.$inferSelect[] }> {
@@ -116,4 +116,14 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
     billsToCome,
     check,
   };
+}
+
+export interface ZeroCheckPayload { zeroCheck: number; unexplained: number; causes: (ZeroCause & { payee: string | null; account: string })[] }
+
+/** Why the zero check is off, with names for the screen. */
+export async function zeroCheckPayload(db: Db, month: MonthKey): Promise<ZeroCheckPayload> {
+  const { input, names } = await loadBudget(db);
+  const d = diagnoseZeroCheck(input, month);
+  const payee = new Map(input.transactions.map((x) => [x.id, x.payee ?? null]));
+  return { zeroCheck: d.zeroCheck, unexplained: d.unexplained, causes: d.causes.map((c) => ({ ...c, payee: payee.get(c.transactionId) ?? null, account: names.accounts.get(c.accountId) ?? "?" })) };
 }

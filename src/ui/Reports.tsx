@@ -19,7 +19,7 @@ const money = (c: number, phone: boolean) => (phone ? (c < 0 ? "−" : "") + "$"
 const signed = (c: number, phone: boolean) => (c > 0 ? "+" : c < 0 ? "−" : "") + money(Math.abs(c), phone);
 
 /** Jump to the ledger filtered to one category and month. */
-export function goToTransactions(filter: { category?: string | null; month?: string | null }) {
+export function goToTransactions(filter: { category?: string | null; month?: string | null; open?: string }) {
   try { sessionStorage.setItem("txn-filter", JSON.stringify(filter)); } catch { /* private mode */ }
   location.hash = "transactions";
 }

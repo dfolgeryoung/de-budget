@@ -213,7 +213,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
           {recent?.map((r) => (
             <div key={r.id} className="grid items-center px-3.5 py-2" style={{ gridTemplateColumns: "1fr 84px", borderBottom: "1px solid var(--border-soft)" }}>
               <span className="flex flex-col min-w-0"><span className="text-sm font-medium truncate">{r.payee ?? (r.transferToAccountId ? "Transfer" : "—")}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{MON[Number(r.date.slice(5, 7)) - 1]} {Number(r.date.slice(8, 10))} · {r.lines.length > 1 ? "Split" : r.transferToAccountId ? "Transfer" : catName(r.lines[0]?.categoryId ?? null)} · {acctName(r.accountId)}</span></span>
-              <span className="text-right text-sm font-semibold" style={{ color: r.amount === null ? "var(--faint)" : r.amount < 0 ? "var(--neg)" : "var(--green-text)" }}>{r.amount === null ? "—" : formatMoney(r.amount)}</span>
+              <span className="text-right text-sm font-semibold" style={{ color: r.amount === null ? "var(--faint)" : r.amount < 0 ? "var(--neg)" : "var(--green-text)" }}>{r.amount === null ? "—" : (r.amount > 0 ? "+" : "") + formatMoney(r.amount)}</span>
             </div>
           ))}
         </div>

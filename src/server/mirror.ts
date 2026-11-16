@@ -12,6 +12,7 @@ import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { sheets, driveCopy, serviceAccount } from "./google.js";
 import { createTransaction } from "./transactions.js";
+import { notifyDuplicates } from "./duplicates.js";
 import { dt, num } from "../budget/parseExport.js";
 
 const LEDGER_FIRST = 5; // row 4 is the sheet's entry row
@@ -162,6 +163,7 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
     const acct = new Map(accts.map((a) => [a.id, a.name])), cat = new Map(cats.map((c) => [c.id, c.name]));
     const acctId = new Map(accts.map((a) => [a.name.trim().toLowerCase(), a.id])), catId = new Map(cats.map((c) => [c.name.trim().toLowerCase(), c.id]));
     const appGroups = encodeLedgerGroups(txns.map((x) => ({ ...x, lines: (byTxn.get(x.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder) })), acct, cat);
+    const addedIds: string[] = [];
     for (const { entry: e } of newInSheet(parsed, appGroups, acctId, catId, acct, cat)) {
       const accountId = acctId.get(e.account.toLowerCase());
       if (!accountId) { warnings.push(`Sheet row ${usDate(e.date)} ${e.payee || "—"}: unknown account "${e.account}"`); continue; }
@@ -177,9 +179,10 @@ export async function mirrorToSheet(db: Db, me: string, opts: { backup?: boolean
       // the same bill is waiting as a pending recurring entry: confirm that one with the sheet's figures instead of adding a twin
       const twin = pendingTxns.find((x) => x.accountId === accountId && (x.payee ?? "").trim().toLowerCase() === e.payee.trim().toLowerCase() && x.date.slice(0, 7) === e.date.slice(0, 7));
       if (twin) { await db.update(t.transactions).set({ confirmed: true, amount: e.amount, date: e.date, updatedBy: me, updatedAt: new Date() }).where(eq(t.transactions.id, twin.id)); const tl = lines.filter((l) => l.transactionId === twin.id); if (tl.length === 1) await db.update(t.transactionLines).set({ amount: e.amount }).where(eq(t.transactionLines.id, tl[0]!.id)); pendingTxns.splice(pendingTxns.indexOf(twin), 1); reconciled++; continue; }
-      await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [], location: null });
+      addedIds.push(await createTransaction(db, me, { date: e.date, accountId, payee: e.payee, memo: e.memo, amount: e.transferTo ? -Math.abs(e.amount) : e.amount, categoryId: ls.length === 1 ? ls[0]!.categoryId : null, lines: ls.length > 1 ? ls : [], transferToAccountId, sharedFiftyFifty: e.split, hidden: e.hidden, trackedAmountId: null, tagIds: [], location: null }));
       reconciled++;
     }
+    await notifyDuplicates(db, addedIds);
   } catch (e) { warnings.push(`Couldn't read the sheet's Ledger back (nothing was overwritten): ${(e as Error).message}`); throw e; }
 
   // 1. Ledger

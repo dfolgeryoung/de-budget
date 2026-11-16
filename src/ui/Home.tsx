@@ -283,9 +283,10 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       </>
     ) },
   };
-  const DEFAULT_ORDER = ["pending", "dupes", "flags", "fun", "tracked", "upcoming", "check", "spend", "recent"];
+  const DEFAULT_ORDER = ["dupes", "flags", "pending", "fun", "tracked", "upcoming", "check", "spend", "recent"];
   const DEFAULT_HIDDEN = ["spend"]; // optional cards start hidden until switched on in Edit Home
-  const order = [...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k))];
+  const TOP = ["dupes", "flags"]; // things to review sit above everything unless you've moved them yourself
+  const order = [...TOP.filter((k) => !layout.order.includes(k)), ...layout.order.filter((k) => CARDS[k]), ...DEFAULT_ORDER.filter((k) => !layout.order.includes(k) && !TOP.includes(k))];
   const isHidden = (k: string) => layout.hidden.includes(k) || (DEFAULT_HIDDEN.includes(k) && !layout.order.includes(k));
   async function saveLayout(next: Layout) {
     setLayout(next);

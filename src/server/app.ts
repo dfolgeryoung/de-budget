@@ -12,7 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
-import { possibleDuplicates, keepBoth } from "./duplicates.js";
+import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
@@ -183,6 +183,7 @@ app.post("/transactions", async (c) => {
   const parsed = entrySchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") }, 400);
   const id = await createTransaction(db, c.get("user").id, parsed.data);
+  void notifyDuplicates(db, [id], c.get("user").id);
   return c.json({ id });
 });
 app.put("/transactions/:id", async (c) => {

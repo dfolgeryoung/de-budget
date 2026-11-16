@@ -6,6 +6,8 @@
 import { eq, isNull } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
+import { pushToUser } from "./notify.js";
+import { formatMoney } from "../budget/money.js";
 
 export const DUP_WINDOW_DAYS = 3;
 const KEY = "dupes_ok";
@@ -68,4 +70,19 @@ export async function keepBoth(db: Db, a: string, b: string): Promise<void> {
   const list = new Set((row?.value as string[] | undefined) ?? []);
   list.add(pairKey(a, b));
   await db.insert(t.settings).values({ key: KEY, value: [...list] }).onConflictDoUpdate({ target: t.settings.key, set: { value: [...list], updatedAt: new Date() } });
+}
+
+/** Push everyone (except `except`) about any pair that one of `newIds` just formed. Never throws. */
+export async function notifyDuplicates(db: Db, newIds: string[], except?: string): Promise<number> {
+  if (!newIds.length) return 0;
+  try {
+    const fresh = (await possibleDuplicates(db)).filter((p) => newIds.includes(p.a.id) || newIds.includes(p.b.id));
+    if (!fresh.length) return 0;
+    const users = await db.select({ id: t.users.id }).from(t.users);
+    const first = fresh[0]!;
+    const title = fresh.length === 1 ? `Possible duplicate: ${first.a.payee} ${formatMoney(Math.abs(first.a.amount))}` : `${fresh.length} possible duplicates`;
+    const body = fresh.length === 1 ? `Two entries on ${first.a.date.slice(5).replace("-", "/")} and ${first.b.date.slice(5).replace("-", "/")}. Review on Home.` : fresh.slice(0, 3).map((p) => `${p.a.payee} ${formatMoney(Math.abs(p.a.amount))}`).join(", ") + " — review on Home.";
+    for (const u of users) if (u.id !== except) await pushToUser(db, u.id, { title, body, url: "/#home", tag: "dupes" });
+    return fresh.length;
+  } catch { return 0; }
 }

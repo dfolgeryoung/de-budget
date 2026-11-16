@@ -5,6 +5,10 @@ import { monthPayload } from "./month.js";
 import { pending } from "./recurring.js";
 import { pushToUser, sendEmail } from "./notify.js";
 import { formatMoney } from "../budget/money.js";
+import { reportsPayload } from "./reports.js";
+import { buildClassicInput } from "./classic.js";
+import { computeClassic } from "../budget/classic.js";
+import { weeklyEmailHtml } from "./weeklyEmail.js";
 
 /** The Monday summary. `onlyUserId` sends it to one person (the "Send me the summary now" button), email only. */
 export async function weeklySummary(db: Db, today: string, onlyUserId?: string) {
@@ -27,10 +31,20 @@ export async function weeklySummary(db: Db, today: string, onlyUserId?: string) 
   const html = `<div style="font-family:system-ui,sans-serif;max-width:520px"><h2 style="color:#3a4f7d">This week in the budget</h2>${lines.map((l) => `<p style="margin:6px 0">${l}</p>`).join("")}<p><a href="${process.env.AUTH_URL ?? ""}">Open the budget</a></p></div>`;
   const users = (await db.select().from(t.users)).filter((u) => !onlyUserId || u.id === onlyUserId);
   const sent: Record<string, { push: number; email: boolean }> = {};
+  void html;
   for (const u of users) {
     const push = onlyUserId ? 0 : await pushToUser(db, u.id, { title: "This week in the budget", body: lines.slice(0, 3).join(" · "), url: "/#home", tag: "weekly" });
     let email = false;
-    if (u.weeklyEmail || onlyUserId) { if (onlyUserId) email = await sendEmail(u.email, "This week in the budget", html); else email = await sendEmail(u.email, "This week in the budget", html).catch(() => false); }
+    if (u.weeklyEmail || onlyUserId) {
+      // the newsletter: the same report the Reports screen shows, plus each person's fun money from Classic
+      const month = today.slice(0, 7) + "-01";
+      const report = await reportsPayload(db, month, today, u.id);
+      const { ci } = await buildClassicInput(db, month, today, u.id);
+      const classic = computeClassic(ci);
+      const fun = classic.lines.filter((l) => l.fun && (l.column === "D" || l.column === "E")).map((l) => ({ who: l.column as "D" | "E", name: `${l.column === "D" ? report.people.D : report.people.E}'s fun money`, available: l.fun!.remaining, weekly: l.fun!.perWeek, weeksLeft: l.fun!.weeksLeft }));
+      const mail = weeklyEmailHtml({ firstName: u.displayName.split(" ")[0] ?? u.displayName, initial: u.initial, people: report.people, today, report, month: m, pendingCount: pend.length, fun, appUrl: process.env.AUTH_URL ?? "" });
+      if (onlyUserId) email = await sendEmail(u.email, mail.subject, mail.html); else email = await sendEmail(u.email, mail.subject, mail.html).catch(() => false);
+    }
     sent[u.initial] = { push, email };
   }
   return { text, sent };

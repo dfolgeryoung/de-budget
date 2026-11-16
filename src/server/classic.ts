@@ -66,7 +66,8 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
   if (expected && expected.month === month) {
     const diffs: string[] = [];
     for (const l of expected.layout) {
-      const got = result.lines.find((x) => x.column === l.column && x.name === l.name);
+      const name = l.name === "Internet" ? "Phone & Internet" : l.name; // the sheet still calls the line Internet
+      const got = result.lines.find((x) => x.column === l.column && x.name === name);
       if (!got) { diffs.push(`${l.column} ${l.name}: missing`); continue; }
       const b = Math.round(l.budget * 100), a = Math.round(l.actual * 100);
       if (got.budget !== b) diffs.push(`${l.column} ${l.name} budget: app ${(got.budget / 100).toFixed(2)} vs sheet ${l.budget.toFixed(2)}`);

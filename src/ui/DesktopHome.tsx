@@ -195,11 +195,11 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
         {/* column 2: where the money went */}
         <div className="flex flex-col gap-4 min-w-0">
           {spendCats.length > 0 && (
-            <Card title="Spend by category" sub="this month, against each line's budget" action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>All ›</a>}>
+            <Card title="Spend by category" sub="tick = budget · hatched = carried over" action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>All ›</a>}>
               {spendCats.map((c) => (
-                <button key={c.id} onClick={() => goToTransactions({ category: c.id, month: m.month })} className="text-left flex flex-col gap-1">
+                <button key={c.id} onClick={() => goToTransactions({ category: c.id, month: m.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted${c.available > c.budget ? ` + ${formatMoney(c.available - c.budget)} carried over = ${formatMoney(c.available)} to spend` : ""}`} className="text-left flex flex-col gap-1">
                   <span className="flex justify-between gap-3 text-[13px]"><span className="truncate">{c.emoji ? `${c.emoji} ` : ""}{c.name}</span><span className="tabular-nums shrink-0"><strong>{whole(c.spent)}</strong>{c.budget ? <span style={{ color: "var(--muted)" }}> / {whole(c.budget)}</span> : null}</span></span>
-                  <Bar pct={c.spent / spendScale} tick={c.budget ? c.budget / spendScale : undefined} color={c.budget && c.spent > c.budget ? "var(--neg)" : "var(--bar, #89bdec)"} thin />
+                  <CarryBar spent={c.spent} budget={c.budget} available={c.available} scale={spendScale} />
                 </button>
               ))}
             </Card>
@@ -369,4 +369,20 @@ function CumulativeChart({ daily, budget, onPace, daysElapsed, month, prevMonth 
 /** "sheet read at 2026-11-16T11:25:35.612Z" → "sheet read Nov 16, 6:25 AM" */
 function prettySource(src: string): string {
   return src.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?)Z/, (_m, d: string) => { const t = new Date(_m); return `${md(d)}, ${t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`; }).replace(" at ", " ");
+}
+
+/** The Reports bar: spent, a dark tick at this month's budget, and a hatched band for room carried over from before. Red when past everything it can spend. */
+function CarryBar({ spent, budget, available, scale }: { spent: number; budget: number; available: number; scale: number }) {
+  const pct = (v: number) => Math.max(0, Math.min(100, (v / scale) * 100));
+  const carry = Math.max(0, available - budget);
+  const room = Math.max(budget, available);
+  const over = room > 0 ? spent > room : spent > 0;
+  return (
+    <span className="relative block rounded w-full" style={{ height: 10, background: "var(--track)" }}>
+      {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(budget)}%`, width: `${pct(available) - pct(budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
+      <span className="absolute left-0 top-0 h-full rounded" style={{ width: `${pct(spent)}%`, background: over ? "var(--red)" : "var(--classic-shared-2)" }} />
+      {budget > 0 && <span className="absolute" style={{ left: `calc(${pct(budget)}% - 1px)`, top: -3, width: 2, height: 16, background: "var(--text)" }} />}
+      {carry > 0 && available <= scale && <span className="absolute" style={{ left: `calc(${pct(available)}% - 1px)`, top: -1, width: 2, height: 12, background: "var(--muted)", opacity: 0.7 }} />}
+    </span>
+  );
 }

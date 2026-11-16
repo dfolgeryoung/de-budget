@@ -135,7 +135,7 @@ app.get("/home", async (c) => {
   const me = c.get("user").id, t0 = today(), month = t0.slice(0, 7) + "-01";
   const withReport = c.req.query("report") === "1";
   const [m, recent, pend, upcoming, tracked, report, flags, duplicates] = await Promise.all([
-    monthPayload(db, month, t0), listTransactions(db, me, { limit: 4 }), pending(db), upcomingBills(db, t0), listTracked(db),
+    monthPayload(db, month, t0), listTransactions(db, me, { limit: 10 }), pending(db), upcomingBills(db, t0), listTracked(db),
     withReport ? reportsPayload(db, month, t0, me) : Promise.resolve(null), flagged(db), possibleDuplicates(db),
   ]);
   return c.json({ month: m, recent, pending: pend, upcoming, tracked, report, flags, duplicates });

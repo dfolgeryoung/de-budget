@@ -220,7 +220,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
 
   const { view } = data;
   const rta = view.readyToAssign;
-  const rtaColor = rta === 0 ? { bg: "var(--group)", fg: "var(--muted)", glow: "none" } : rta > 0 ? { bg: "var(--yellow-bg)", fg: "var(--yellow-text)", glow: "none" } : { bg: "var(--red-bg)", fg: "var(--red-text)", glow: "none" };
+  const rtaColor = rta === 0 ? { bg: "var(--group)", fg: "var(--muted)", glow: "none" } : rta > 0 ? { bg: "var(--green-solid)", fg: "#fff", glow: "0 0 0 3px rgba(47,191,98,0.18), 0 4px 14px rgba(47,191,98,0.35)" } : { bg: "var(--red-bg)", fg: "var(--red-text)", glow: "none" };
   const visibleIds = data.groups.flatMap((g) => g.categories).filter((id) => !data.categories[id]?.hidden);
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
   const tb = "tb-btn inline-flex items-center gap-1.5 rounded-md px-2.5 h-7 text-[13px] font-semibold leading-none";

@@ -5,6 +5,7 @@ import * as t from "../db/schema.js";
 import { computeReports, type ReportsView } from "../budget/reports.js";
 import { loadBudget } from "./month.js";
 import { computeSavings, isContribution, type SavingsView } from "../budget/savings.js";
+import { monthOf } from "../budget/dates.js";
 import { computeClassic } from "../budget/classic.js";
 import { buildClassicInput } from "./classic.js";
 import { attributeSpend } from "../budget/classic.js";
@@ -62,8 +63,8 @@ export async function savingsPayload(db: Db, today: string, me: string): Promise
     for (const p of ["D", "E"] as const) {
       const x = cv.people[p];
       const income = x.incomeActualTyped ? x.incomeActual : x.incomeBudget;
-      // what actually went to retirement/529 lines this month: own lines in full, shared lines by half
-      const contributions = cv.lines.filter((l) => isContribution(l.name) && (l.column === p || l.column === "shared")).reduce((s, l) => s + (l.column === "shared" ? Math.round(l.actual / 2) : l.actual), 0);
+      // what actually went to retirement/529 categories this month, by who paid: own accounts in full, shared accounts by half
+      const contributions = contribByPerson(input, cats, m.month, m.partial ? today : null)[p];
       const spending = x.totalActual - contributions; // Classic counts contributions inside its actuals
       row[p] = { income, incomeTyped: x.incomeActualTyped, spending, contributions, putAway: income - spending, leftover: income - x.totalActual };
     }
@@ -71,4 +72,22 @@ export async function savingsPayload(db: Db, today: string, me: string): Promise
   }
   const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;
   return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, byPerson };
+}
+
+/** Contribution spending split the Classic way: the paying account's owner, a shared account half each. */
+function contribByPerson(input: Awaited<ReturnType<typeof loadBudget>>["input"], cats: { id: string; name: string }[], month: string, through: string | null): { D: number; E: number } {
+  const ids = new Set(cats.filter((c) => isContribution(c.name)).map((c) => c.id));
+  const owner = new Map(input.accounts.map((a) => [a.id, a.owner]));
+  const out = { D: 0, E: 0 };
+  for (const x of input.transactions) {
+    if (monthOf(x.date) !== month || x.confirmed === false || x.transferToAccountId || (through && x.date > through)) continue;
+    const who = owner.get(x.accountId);
+    for (const l of x.lines) {
+      if (!l.categoryId || !ids.has(l.categoryId)) continue;
+      const v = -l.amount;
+      if (x.sharedFiftyFifty || who === "shared") { out.D += Math.round(v / 2); out.E += v - Math.round(v / 2); }
+      else if (who === "D" || who === "E") out[who] += v;
+    }
+  }
+  return out;
 }

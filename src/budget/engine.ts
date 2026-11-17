@@ -156,11 +156,12 @@ export function activityByCategory(input: BudgetInput, month: MonthKey): Map<str
   return out;
 }
 
-/** Income to Ready to Assign in a month: lines with no category. */
+/** Income to Ready to Assign in a month: lines with no category on on-budget accounts. Interest or dividends landing in an off-budget account never enter the budget. */
 export function incomeToRTA(input: BudgetInput, month: MonthKey): Cents {
+  const onBudget = new Set(input.accounts.filter((a) => a.onBudget).map((a) => a.id));
   let s = 0;
   for (const t of input.transactions) {
-    if (monthOf(t.date) !== month || t.confirmed === false || t.transferToAccountId) continue;
+    if (monthOf(t.date) !== month || t.confirmed === false || t.transferToAccountId || !onBudget.has(t.accountId)) continue;
     for (const l of t.lines) if (!l.categoryId) s += l.amount;
   }
   return s;

@@ -41,3 +41,13 @@ describe("zero check diagnosis", () => {
     expect(d.unexplained).toBe(0);
   });
 });
+
+describe("off-budget income", () => {
+  it("interest paid into the money market stays out of Ready to Assign and keeps the zero check", () => {
+    const input = { ...base, transactions: [...base.transactions, { id: "int", date: "2026-11-12", accountId: "sav", amount: 41022, payee: "CD interest", lines: [{ categoryId: null, amount: 41022 }] }] };
+    const v = computeMonth(input, "2026-11-01");
+    expect(v.readyToAssign).toBe(computeMonth(base, "2026-11-01").readyToAssign);
+    expect(v.zeroCheck).toBe(0);
+    expect(diagnoseZeroCheck(input, "2026-11-01").causes).toEqual([]);
+  });
+});

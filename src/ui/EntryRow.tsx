@@ -56,7 +56,8 @@ export function EntryRow({ lists, me, initial, mode, onSaved, onCancel, onDelete
   const splitTotal = d.split.reduce((s, l) => s + (parseMoney(l.amountText) ?? 0), 0);
   const remainder = Math.abs(cents) - splitTotal;
 
-  const catOptions = useMemo<SelectOption[]>(() => categoryOptions(lists, { income: true }), [lists]);
+  const offBudget = !!d.accountId && lists.accounts.find((a) => a.id === d.accountId)?.onBudget === false;
+  const catOptions = useMemo<SelectOption[]>(() => categoryOptions(lists, { income: true, offBudget }), [lists, offBudget]);
   const acctOptions = useMemo<SelectOption[]>(() => lists.accounts.map((a) => ({ value: a.id, label: a.name })), [lists]);
   const trackedOptions = useMemo<SelectOption[]>(() => lists.tracked.map((t) => ({ value: t.id, label: `${t.emoji ? t.emoji + " " : ""}${t.name}` })), [lists]);
   const payeeMatches = d.payee.length >= 1 ? lists.payees.filter((p) => p.name.toLowerCase().includes(d.payee.toLowerCase()) && p.name !== d.payee).slice(0, 6) : [];

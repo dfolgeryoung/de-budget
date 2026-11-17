@@ -83,7 +83,8 @@ export function EntryForm({ lists, me, initial, onSaved, onClose, onDelete }: { 
   const cents = parseMoney(d.amountText) ?? 0;
   const signed = d.outflow ? -Math.abs(cents) : Math.abs(cents);
   const allCats = useMemo(() => lists.groups.flatMap((g) => g.categories.map((c) => ({ ...c, group: g.name, system: g.system }))), [lists]);
-  const catOptions = useMemo(() => categoryOptions(lists, { income: true }), [lists]);
+  const offBudget = !!d.accountId && lists.accounts.find((a) => a.id === d.accountId)?.onBudget === false;
+  const catOptions = useMemo(() => categoryOptions(lists, { income: true, offBudget }), [lists, offBudget]);
   const cat = (id: string | null) => allCats.find((c) => c.id === id);
   const payeeMatches = d.payee.length >= 1 ? lists.payees.filter((p) => p.name.toLowerCase().includes(d.payee.toLowerCase())).slice(0, 6) : [];
   const splitTotal = d.split.reduce((s, l) => s + (parseMoney(l.amountText) ?? 0), 0);

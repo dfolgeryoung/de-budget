@@ -50,6 +50,21 @@ function ShellInner({ me }: { me: Me }) {
   // "Updating…" while a screen is showing its cached copy and waiting for the server
   const [syncing, setSyncing] = useState(false);
   useEffect(() => { const on = (e: Event) => setSyncing((e as CustomEvent<boolean>).detail); addEventListener("syncing", on); return () => removeEventListener("syncing", on); }, []);
+  // On the phone the keyboard covers the bottom half of the screen: once it's up, bring whatever field was tapped into the visible part.
+  useEffect(() => {
+    if (!isPhone) return;
+    const on = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) || el.classList.contains("decoy")) return;
+      setTimeout(() => {
+        const vv = window.visualViewport; const r = el.getBoundingClientRect();
+        const top = vv?.offsetTop ?? 0, bottom = top + (vv?.height ?? innerHeight);
+        if (r.top < top + 8 || r.bottom > bottom - 8) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 350);
+    };
+    document.addEventListener("focusin", on);
+    return () => document.removeEventListener("focusin", on);
+  }, [isPhone]);
   useEffect(() => {
     const onHash = () => setScreen(location.hash.slice(1) || "budget");
     addEventListener("hashchange", onHash);
@@ -148,7 +163,7 @@ function ShellInner({ me }: { me: Me }) {
 
       {/* Add entry: floating button on the phone; on desktop the ledger has the entry row */}
       {syncing && <div aria-live="polite" className="fixed left-1/2 -translate-x-1/2 z-40 rounded-full px-3 text-[11px] font-semibold inline-flex items-center gap-1.5" style={{ top: "calc(6px + env(safe-area-inset-top))", height: 24, background: "var(--card)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}><span className="inline-block rounded-full" style={{ width: 6, height: 6, background: "var(--accent-text)", animation: "pulse 1s ease-in-out infinite" }} />Updating…</div>}
-      <input ref={decoy} inputMode="decimal" aria-hidden="true" tabIndex={-1} className="md:hidden" style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", fontSize: 16 }} />
+      <input ref={decoy} inputMode="decimal" aria-hidden="true" tabIndex={-1} className="md:hidden decoy" style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", fontSize: 16 }} />
       <button onClick={openNew} aria-label="Add entry" className="fixed right-5 w-14 h-14 rounded-full text-3xl font-medium z-30 md:hidden" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))", background: "var(--navy)", color: "var(--navy-text)", boxShadow: "0 6px 16px rgba(30,58,95,0.35)" }}>+</button>
       {picker && <ProfilePicker me={me} onClose={() => setPicker(false)} />}
       {lists && <EntrySheet lists={lists} me={me} draft={draft} onClose={() => setDraft(null)} onSaved={onSaved} onDeleted={() => setRefreshKey((k) => k + 1)} />}

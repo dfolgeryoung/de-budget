@@ -17,7 +17,6 @@ import { pickGreeting, allClearLine } from "./greeting";
 import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
 
-const whole = (c: number) => (c < 0 ? "−" : "") + "$" + Math.round(Math.abs(c) / 100).toLocaleString("en-US");
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -227,6 +226,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
           const chosen = layout.spendCategories ?? [];
           const cats = chosen.length ? chosen.map((id) => report.thisMonth.byCategory.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c) : report.thisMonth.byCategory.filter((c) => c.spent > 0).slice(0, 5);
           const scale = Math.max(1, ...cats.map((c) => Math.max(c.spent, c.budget)));
+          const amtCol = `${Math.max(5, ...cats.map((c) => formatMoney(c.spent).length)) * 6.6 + 2}px`; // one width for every row, so the bars line up
           return (
             <a href="#reports" className={card} style={cs}>
               <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Spend by category</span><span className="text-xs" style={{ color: "var(--muted)" }}>{formatMoney(report.thisMonth.spent)} so far · day {report.daysElapsed} ›</span></div>
@@ -237,7 +237,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                   const pct = (v: number) => Math.max(0, Math.min(100, (v / scale) * 100));
                   const over = room > 0 ? c.spent > room : c.spent > 0;
                   return (
-                    <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: "104px minmax(0,1fr) auto" }}>
+                    <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: `104px minmax(0,1fr) ${amtCol}` }}>
                       <span className="truncate" style={{ color: "var(--text-2)" }}>{c.emoji ? c.emoji + " " : ""}{c.name}</span>
                       <span className="relative block rounded" style={{ height: 10, background: "var(--track)" }}>
                         {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(c.budget)}%`, width: `${pct(c.available) - pct(c.budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
@@ -245,7 +245,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                         {c.budget > 0 && <span className="absolute" style={{ left: `calc(${pct(c.budget)}% - 1px)`, top: -2, width: 2, height: 14, background: "var(--text)" }} />}
                         {carry > 0 && c.available <= scale && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 12, background: "var(--muted)", opacity: 0.7 }} />}
                       </span>
-                      <span className="text-right tabular-nums whitespace-nowrap"><span className="font-semibold">{formatMoney(c.spent)}</span>{room > 0 && <span style={{ color: "var(--muted)" }}> / {whole(room)}</span>}</span>
+                      <span className="text-right font-semibold tabular-nums">{formatMoney(c.spent)}</span>
                     </div>
                   );
                 })}

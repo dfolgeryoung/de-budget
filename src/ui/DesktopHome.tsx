@@ -30,11 +30,26 @@ const whole = (c: number) => (c < 0 ? "−" : "") + "$" + Math.round(Math.abs(c)
 type Pending = { id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null };
 type HomeData = { month: MonthPayload | null; recent: LedgerRow[]; pending: Pending[]; upcoming: UpcomingBill[]; tracked: TrackedSummary[]; report: ReportsPayload | null; flags?: FlaggedEntry[]; duplicates?: DupPair[] };
 
-export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
+export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[]; desktop?: string[][] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [d, setD] = useState<HomeData | null>(null);
   const [bump, setBump] = useState(0);
   const [flagOpen, setFlagOpen] = useState<FlaggedEntry | null>(null);
   const toast = useToast();
+  // where each card lives: three columns, yours to rearrange by dragging; new cards join their default column
+  const [cols, setCols] = useState<string[][]>(() => withDefaults(me.homeLayout?.desktop));
+  useEffect(() => { setCols(withDefaults(me.homeLayout?.desktop)); }, [me.homeLayout?.desktop]);
+  const [drag, setDrag] = useState<string | null>(null);
+  const [over, setOver] = useState<{ col: number; idx: number } | null>(null);
+  async function moveCard(key: string, toCol: number, toIdx: number) {
+    const next = cols.map((c) => c.filter((k) => k !== key));
+    const fromCol = cols.findIndex((c) => c.includes(key)), fromIdx = cols[fromCol]?.indexOf(key) ?? -1;
+    let at = toIdx; if (fromCol === toCol && fromIdx !== -1 && fromIdx < toIdx) at -= 1; // the hole it left shifts the target up one
+    next[toCol]!.splice(Math.max(0, Math.min(at, next[toCol]!.length)), 0, key);
+    if (next.every((c, i) => c.join() === cols[i]!.join())) return;
+    setCols(next);
+    try { await api("/me", { method: "PUT", json: { homeLayout: { order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [], spendCategories: me.homeLayout?.spendCategories, desktop: next } } }); dispatchEvent(new Event("me-changed")); }
+    catch (e) { toast(`Layout not saved: ${(e as Error).message}`); }
+  }
   useEffect(() => { apiCached<HomeData>("/home?report=1", setD).catch(() => { /* keep what's on screen */ }); }, [refreshKey, bump]);
   const refresh = () => { setBump((b) => b + 1); dispatchEvent(new Event("lists-changed")); };
 
@@ -94,6 +109,127 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
   const keptScale = Math.max(1, ...months.map((x) => Math.abs(x.income - x.spent)));
   const onBudget = m.accounts.filter((a) => a.onBudget);
 
+  const cards: Record<string, ReactNode | null> = {
+    pending: pending.length > 0 ? (
+<Card title="To confirm" sub={`${pending.length} recurring ${pending.length === 1 ? "bill" : "bills"} landed`} tone="yellow">
+              {pending.map((p) => (
+                <Row key={p.id} main={p.payee ?? "—"} sub={`${md(p.date)} · ${catName(p.categoryId)} · ${acctName(p.accountId)}`} amount={p.amount}>
+                  <button onClick={() => act(p.id, "confirm", p.payee ?? "entry")} className="rounded-full px-2.5 h-7 text-[12px] font-semibold" style={{ background: "var(--green-solid)", color: "#fff" }}>Confirm</button>
+                  {openEdit && <button onClick={() => openEdit(p.id)} className="rounded-full px-2.5 h-7 text-[12px] font-semibold" style={{ border: "1px solid var(--field)" }}>Adjust</button>}
+                  <button onClick={() => act(p.id, "skip", p.payee ?? "entry")} className="rounded-full px-2 h-7 text-[12px] font-semibold" style={{ color: "var(--muted)" }}>Skip</button>
+                </Row>
+              ))}
+            </Card>
+    ) : null,
+    dupes: dupes.length > 0 ? (
+<Card title="⚠️ Possible duplicates" sub="same payee and amount within 3 days" flush>
+              {dupes.map((p, i) => <DupPairRow key={p.key} pair={p} last={i === dupes.length - 1} onDone={refresh} />)}
+            </Card>
+    ) : null,
+    flags: flags.length > 0 ? (
+<Card title="🚩 Flagged entries" sub={`${flags.length} open`} flush>
+              {flags.map((f, i) => { const last = f.notes[f.notes.length - 1]; const mine = last?.userId === me.id; return (
+                <button key={f.id} onClick={() => setFlagOpen(f)} className="w-full text-left px-4 py-2.5 flex flex-col gap-1" style={{ borderBottom: i < flags.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
+                  <span className="flex justify-between items-baseline gap-3"><span className="text-sm font-medium truncate">{f.payee || "(no payee)"}</span><span className="text-sm font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(f.amount))}</span></span>
+                  <span className="text-xs truncate" style={{ color: "var(--muted)" }}>{md(f.date)}{f.category ? ` · ${f.category}` : ""}</span>
+                  {last && <span className="text-[13px] rounded-lg px-2.5 py-1.5 whitespace-pre-wrap" style={{ background: mine ? "var(--selected)" : "var(--yellow-bg)" }}><strong>{mine ? "You" : last.who}:</strong> {last.text}</span>}
+                  <span className="text-xs" style={{ color: "var(--accent-text)" }}>{mine ? "Waiting for a reply ›" : "Reply or resolve ›"}</span>
+                </button>
+              ); })}
+            </Card>
+    ) : null,
+    check: (overspent.length > 0 || under.length > 0) ? (
+<Card title="Budget check" sub="tap a line to fix it in the budget" flush>
+              {overspent.map((c) => <LineRow key={c.categoryId} label={catName(c.categoryId)} note="overspent" amount={c.available} onClick={() => goCategory(c.categoryId)} />)}
+              {under.map((c) => <LineRow key={c.categoryId} label={catName(c.categoryId)} note={c.status === "not_enough" ? "not enough for its goal" : "underfunded"} amount={-c.short} onClick={() => goCategory(c.categoryId)} />)}
+            </Card>
+    ) : null,
+    allclear: attention === 0 ? (
+<Card title="Nothing needs a decision" sub="no bills to confirm, no flags, no duplicates"><p className="text-sm m-0">{allClearLine(now, first)}</p></Card>
+    ) : null,
+    recent: (
+<Card title="Recent entries" action={<button onClick={() => goTransactions(null)} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>All ›</button>} flush>
+            {d.recent.slice(0, 10).map((x, i) => (
+              <button key={x.id + (x.half?.share ?? "")} onClick={() => openEdit?.(x.id)} className="w-full text-left px-4 py-2 flex items-center gap-3" style={{ borderBottom: i < Math.min(d.recent.length, 10) - 1 ? "1px solid var(--border-soft)" : undefined }}>
+                <span className="w-12 shrink-0 text-[12px] tabular-nums" style={{ color: "var(--muted)" }}>{md(x.date)}</span>
+                <span className="flex-1 min-w-0 flex flex-col"><span className="text-sm font-medium truncate">{x.payee ?? (x.transferToAccountId ? "Transfer" : "—")}{x.flagOpen ? " 🚩" : ""}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{x.transferToAccountId ? `${acctName(x.accountId)} → ${acctName(x.transferToAccountId)}` : `${x.lines.length > 1 ? "Split" : catName(x.lines[0]?.categoryId ?? null)} · ${acctName(x.accountId)}`}</span></span>
+                <span className="text-sm font-semibold tabular-nums shrink-0" style={{ color: (x.amount ?? 0) > 0 ? "var(--green-text)" : undefined }}>{x.amount === null ? "—" : (x.amount < 0 ? "−" : "+") + formatMoney(Math.abs(x.amount))}</span>
+              </button>
+            ))}
+          </Card>
+    ),
+    spend: spendCats.length > 0 ? (
+<Card title="Spend by category" sub="tick = budget · hatched = carried over" action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>All ›</a>}>
+              {spendCats.map((c) => (
+                <button key={c.id} onClick={() => goToTransactions({ category: c.id, month: m.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted${c.available > c.budget ? ` + ${formatMoney(c.available - c.budget)} carried over = ${formatMoney(c.available)} to spend` : ""}`} className="text-left flex flex-col gap-1">
+                  <span className="flex justify-between gap-3 text-[13px]"><span className="truncate">{c.emoji ? `${c.emoji} ` : ""}{c.name}</span><span className="tabular-nums shrink-0"><strong>{whole(c.spent)}</strong>{c.budget ? <span style={{ color: "var(--muted)" }}> / {whole(c.budget)}</span> : null}</span></span>
+                  <CarryBar spent={c.spent} budget={c.budget} available={c.available} scale={spendScale} />
+                </button>
+              ))}
+            </Card>
+    ) : null,
+    owners: owners.length > 0 && tm && tm.spent > 0 ? (
+<Card title="Whose spending" sub="shared household lines vs each person's own">
+              <div className="flex h-3 rounded-full overflow-hidden" style={{ background: "var(--track)" }}>
+                {owners.map((o) => <div key={o.who} style={{ width: `${o.share * 100}%`, background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} title={`${o.who}: ${formatMoney(o.spent)}`} />)}
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+                {owners.map((o) => <span key={o.who} className="inline-flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} />{o.who === "shared" ? "Shared" : r?.people[o.who]} <strong className="tabular-nums">{whole(o.spent)}</strong><span style={{ color: "var(--muted)" }}>{Math.round(o.share * 100)}%</span></span>)}
+              </div>
+            </Card>
+    ) : null,
+    movers: movers.length > 0 && r ? (
+<Card title="Moved most vs last month" sub={`same point in ${monthName(r.prevMonth)}`} flush>
+              {movers.map((x) => <LineRow key={x.id} label={`${x.emoji ? `${x.emoji} ` : ""}${x.name}`} note={`${whole(x.before)} → ${whole(x.now)}`} amount={-x.delta} signed onClick={() => goToTransactions({ category: x.id, month: m.month })} />)}
+            </Card>
+    ) : null,
+    fun: fun.length > 0 ? (
+<Card title="Fun money" sub="what's left, and what that is per week">
+              <div className="grid grid-cols-2 gap-3">
+                {fun.map((f) => (
+                  <button key={f.who} onClick={() => goCategory(f.id)} className="rounded-xl p-3 text-left flex flex-col gap-0.5" style={{ background: f.who === (me.initial ?? "D") ? "var(--selected)" : "var(--group)" }}>
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--muted)" }}>{f.person}{f.who === (me.initial ?? "D") ? " (you)" : ""}</span>
+                    <span className="text-[22px] font-bold tabular-nums" style={{ color: f.available < 0 ? "var(--neg)" : undefined }}>{formatMoney(f.available)}</span>
+                    <span className="text-[12px]" style={{ color: "var(--muted)" }}>{f.available > 0 ? `${formatMoney(f.perWeek)} a week for ${f.weeksLeft} weeks` : f.available < 0 ? "in the red" : "spent for the month"}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+    ) : null,
+    upcoming: (
+<Card title="Upcoming bills" sub={upcoming.length ? `next 3 weeks · ${formatMoney(-upcomingTotal)}` : "next 3 weeks"} flush action={<button onClick={() => { try { sessionStorage.setItem("settings-section", "recurring"); } catch { /* private */ } location.hash = "settings"; }} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>Repeats ›</button>}>
+            {upcoming.length === 0 ? <p className="text-sm m-0 px-4 py-3" style={{ color: "var(--muted)" }}>Nothing due in the next three weeks.</p> : upcoming.map((b, i) => (
+              <Row key={b.id + b.date} main={`${b.payee}${b.pending ? " · landed, to confirm" : ""}`} sub={`${dayLabel(b.date, todayIso)} · ${catName(b.categoryId)} · ${acctName(b.accountId)}`} amount={b.amount} last={i === upcoming.length - 1} muted={b.pending} />
+            ))}
+          </Card>
+    ),
+    tracked: openTracked_.length > 0 ? (
+<Card title="Tracked amounts" sub="gifts, refunds and windfalls being spent down" flush>
+              {openTracked_.map((x, i) => (
+                <button key={x.id} onClick={() => openTracked(x.id)} className="w-full text-left px-4 py-2.5 flex flex-col gap-1.5" style={{ borderBottom: i < openTracked_.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
+                  <span className="flex justify-between gap-3 text-sm"><span className="font-medium truncate">{x.emoji ? `${x.emoji} ` : ""}{x.name}</span><span className="tabular-nums shrink-0"><strong>{formatMoney(x.left)}</strong><span style={{ color: "var(--muted)" }}> left of {formatMoney(x.amount)}</span></span></span>
+                  <Bar pct={x.amount ? x.spent / x.amount : 0} color="var(--ink)" thin />
+                </button>
+              ))}
+            </Card>
+    ) : null,
+    accounts: (
+<Card title="Accounts" sub="balances today" flush>
+            {onBudget.map((a, i) => (
+              <button key={a.id} onClick={() => goTransactions(a.id)} className="w-full text-left px-4 py-2 flex justify-between items-center gap-3" style={{ borderBottom: i < onBudget.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
+                <span className="text-sm truncate">{a.name}</span><span className="text-sm font-semibold tabular-nums" style={{ color: a.balance < 0 ? "var(--neg)" : undefined }}>{formatMoney(a.balance)}</span>
+              </button>
+            ))}
+            {m.view.owedOnCards > 0 && <div className="px-4 py-2 text-[12px] flex justify-between" style={{ color: "var(--muted)", borderTop: "1px solid var(--border-soft)" }}><span>Owed on cards</span><span className="tabular-nums">{formatMoney(m.view.owedOnCards)}{m.view.uncoveredCardDebt > 0 ? ` · ${formatMoney(m.view.uncoveredCardDebt)} not covered` : " · covered"}</span></div>}
+          </Card>
+    ),
+    sheet: m.check && !m.check.ok && Array.isArray(m.check.diffs) ? (
+<Card title="Sheet check" sub={m.check.source ? prettySource(m.check.source) : undefined} tone="yellow">
+              <p className="text-[13px] m-0">{m.check.diffs.length} {m.check.diffs.length === 1 ? "figure differs" : "figures differ"} from the spreadsheet. <a href="#budget" style={{ color: "var(--accent-text)" }}>See which ›</a></p>
+            </Card>
+    ) : null,
+  };
+
   return (
     <div className="max-w-[1180px] mx-auto flex flex-col gap-5">
       {flagOpen && <FlagSheet entry={{ id: flagOpen.id, payee: flagOpen.payee, amount: flagOpen.amount, date: flagOpen.date, flagOpen: true }} meId={me.id} open onClose={() => setFlagOpen(null)} onChanged={refresh} />}
@@ -148,127 +284,24 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
       )}
 
       <section id="attention" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 items-start">
-        {/* column 1: decisions */}
-        <div className="flex flex-col gap-4 min-w-0">
-          {pending.length > 0 && (
-            <Card title="To confirm" sub={`${pending.length} recurring ${pending.length === 1 ? "bill" : "bills"} landed`} tone="yellow">
-              {pending.map((p) => (
-                <Row key={p.id} main={p.payee ?? "—"} sub={`${md(p.date)} · ${catName(p.categoryId)} · ${acctName(p.accountId)}`} amount={p.amount}>
-                  <button onClick={() => act(p.id, "confirm", p.payee ?? "entry")} className="rounded-full px-2.5 h-7 text-[12px] font-semibold" style={{ background: "var(--green-solid)", color: "#fff" }}>Confirm</button>
-                  {openEdit && <button onClick={() => openEdit(p.id)} className="rounded-full px-2.5 h-7 text-[12px] font-semibold" style={{ border: "1px solid var(--field)" }}>Adjust</button>}
-                  <button onClick={() => act(p.id, "skip", p.payee ?? "entry")} className="rounded-full px-2 h-7 text-[12px] font-semibold" style={{ color: "var(--muted)" }}>Skip</button>
-                </Row>
-              ))}
-            </Card>
-          )}
-          {dupes.length > 0 && (
-            <Card title="⚠️ Possible duplicates" sub="same payee and amount within 3 days" flush>
-              {dupes.map((p, i) => <DupPairRow key={p.key} pair={p} last={i === dupes.length - 1} onDone={refresh} />)}
-            </Card>
-          )}
-          {flags.length > 0 && (
-            <Card title="🚩 Flagged entries" sub={`${flags.length} open`} flush>
-              {flags.map((f, i) => { const last = f.notes[f.notes.length - 1]; const mine = last?.userId === me.id; return (
-                <button key={f.id} onClick={() => setFlagOpen(f)} className="w-full text-left px-4 py-2.5 flex flex-col gap-1" style={{ borderBottom: i < flags.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
-                  <span className="flex justify-between items-baseline gap-3"><span className="text-sm font-medium truncate">{f.payee || "(no payee)"}</span><span className="text-sm font-semibold tabular-nums shrink-0">{formatMoney(Math.abs(f.amount))}</span></span>
-                  <span className="text-xs truncate" style={{ color: "var(--muted)" }}>{md(f.date)}{f.category ? ` · ${f.category}` : ""}</span>
-                  {last && <span className="text-[13px] rounded-lg px-2.5 py-1.5 whitespace-pre-wrap" style={{ background: mine ? "var(--selected)" : "var(--yellow-bg)" }}><strong>{mine ? "You" : last.who}:</strong> {last.text}</span>}
-                  <span className="text-xs" style={{ color: "var(--accent-text)" }}>{mine ? "Waiting for a reply ›" : "Reply or resolve ›"}</span>
-                </button>
-              ); })}
-            </Card>
-          )}
-          {(overspent.length > 0 || under.length > 0) && (
-            <Card title="Budget check" sub="tap a line to fix it in the budget" flush>
-              {overspent.map((c) => <LineRow key={c.categoryId} label={catName(c.categoryId)} note="overspent" amount={c.available} onClick={() => goCategory(c.categoryId)} />)}
-              {under.map((c) => <LineRow key={c.categoryId} label={catName(c.categoryId)} note={c.status === "not_enough" ? "not enough for its goal" : "underfunded"} amount={-c.short} onClick={() => goCategory(c.categoryId)} />)}
-            </Card>
-          )}
-          {attention === 0 && <Card title="Nothing needs a decision" sub="no bills to confirm, no flags, no duplicates"><p className="text-sm m-0">{allClearLine(now, first)}</p></Card>}
-          <Card title="Recent entries" action={<button onClick={() => goTransactions(null)} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>All ›</button>} flush>
-            {d.recent.slice(0, 10).map((x, i) => (
-              <button key={x.id + (x.half?.share ?? "")} onClick={() => openEdit?.(x.id)} className="w-full text-left px-4 py-2 flex items-center gap-3" style={{ borderBottom: i < Math.min(d.recent.length, 10) - 1 ? "1px solid var(--border-soft)" : undefined }}>
-                <span className="w-12 shrink-0 text-[12px] tabular-nums" style={{ color: "var(--muted)" }}>{md(x.date)}</span>
-                <span className="flex-1 min-w-0 flex flex-col"><span className="text-sm font-medium truncate">{x.payee ?? (x.transferToAccountId ? "Transfer" : "—")}{x.flagOpen ? " 🚩" : ""}</span><span className="text-[11px] truncate" style={{ color: "var(--muted)" }}>{x.transferToAccountId ? `${acctName(x.accountId)} → ${acctName(x.transferToAccountId)}` : `${x.lines.length > 1 ? "Split" : catName(x.lines[0]?.categoryId ?? null)} · ${acctName(x.accountId)}`}</span></span>
-                <span className="text-sm font-semibold tabular-nums shrink-0" style={{ color: (x.amount ?? 0) > 0 ? "var(--green-text)" : undefined }}>{x.amount === null ? "—" : (x.amount < 0 ? "−" : "+") + formatMoney(Math.abs(x.amount))}</span>
-              </button>
-            ))}
-          </Card>
-        </div>
-
-        {/* column 2: where the money went */}
-        <div className="flex flex-col gap-4 min-w-0">
-          {spendCats.length > 0 && (
-            <Card title="Spend by category" sub="tick = budget · hatched = carried over" action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>All ›</a>}>
-              {spendCats.map((c) => (
-                <button key={c.id} onClick={() => goToTransactions({ category: c.id, month: m.month })} title={`${c.name}: spent ${formatMoney(c.spent)} of ${formatMoney(c.budget)} budgeted${c.available > c.budget ? ` + ${formatMoney(c.available - c.budget)} carried over = ${formatMoney(c.available)} to spend` : ""}`} className="text-left flex flex-col gap-1">
-                  <span className="flex justify-between gap-3 text-[13px]"><span className="truncate">{c.emoji ? `${c.emoji} ` : ""}{c.name}</span><span className="tabular-nums shrink-0"><strong>{whole(c.spent)}</strong>{c.budget ? <span style={{ color: "var(--muted)" }}> / {whole(c.budget)}</span> : null}</span></span>
-                  <CarryBar spent={c.spent} budget={c.budget} available={c.available} scale={spendScale} />
-                </button>
-              ))}
-            </Card>
-          )}
-          {owners.length > 0 && tm && tm.spent > 0 && (
-            <Card title="Whose spending" sub="shared household lines vs each person's own">
-              <div className="flex h-3 rounded-full overflow-hidden" style={{ background: "var(--track)" }}>
-                {owners.map((o) => <div key={o.who} style={{ width: `${o.share * 100}%`, background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} title={`${o.who}: ${formatMoney(o.spent)}`} />)}
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-                {owners.map((o) => <span key={o.who} className="inline-flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} />{o.who === "shared" ? "Shared" : r?.people[o.who]} <strong className="tabular-nums">{whole(o.spent)}</strong><span style={{ color: "var(--muted)" }}>{Math.round(o.share * 100)}%</span></span>)}
-              </div>
-            </Card>
-          )}
-          {movers.length > 0 && r && (
-            <Card title="Moved most vs last month" sub={`same point in ${monthName(r.prevMonth)}`} flush>
-              {movers.map((x) => <LineRow key={x.id} label={`${x.emoji ? `${x.emoji} ` : ""}${x.name}`} note={`${whole(x.before)} → ${whole(x.now)}`} amount={-x.delta} signed onClick={() => goToTransactions({ category: x.id, month: m.month })} />)}
-            </Card>
-          )}
-          {fun.length > 0 && (
-            <Card title="Fun money" sub="what's left, and what that is per week">
-              <div className="grid grid-cols-2 gap-3">
-                {fun.map((f) => (
-                  <button key={f.who} onClick={() => goCategory(f.id)} className="rounded-xl p-3 text-left flex flex-col gap-0.5" style={{ background: f.who === (me.initial ?? "D") ? "var(--selected)" : "var(--group)" }}>
-                    <span className="text-[12px] font-semibold" style={{ color: "var(--muted)" }}>{f.person}{f.who === (me.initial ?? "D") ? " (you)" : ""}</span>
-                    <span className="text-[22px] font-bold tabular-nums" style={{ color: f.available < 0 ? "var(--neg)" : undefined }}>{formatMoney(f.available)}</span>
-                    <span className="text-[12px]" style={{ color: "var(--muted)" }}>{f.available > 0 ? `${formatMoney(f.perWeek)} a week for ${f.weeksLeft} weeks` : f.available < 0 ? "in the red" : "spent for the month"}</span>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* column 3: what's coming */}
-        <div className="flex flex-col gap-4 min-w-0 md:col-span-2 xl:col-span-1">
-          <Card title="Upcoming bills" sub={upcoming.length ? `next 3 weeks · ${formatMoney(-upcomingTotal)}` : "next 3 weeks"} flush action={<button onClick={() => { try { sessionStorage.setItem("settings-section", "recurring"); } catch { /* private */ } location.hash = "settings"; }} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>Repeats ›</button>}>
-            {upcoming.length === 0 ? <p className="text-sm m-0 px-4 py-3" style={{ color: "var(--muted)" }}>Nothing due in the next three weeks.</p> : upcoming.map((b, i) => (
-              <Row key={b.id + b.date} main={`${b.payee}${b.pending ? " · landed, to confirm" : ""}`} sub={`${dayLabel(b.date, todayIso)} · ${catName(b.categoryId)} · ${acctName(b.accountId)}`} amount={b.amount} last={i === upcoming.length - 1} muted={b.pending} />
-            ))}
-          </Card>
-          {openTracked_.length > 0 && (
-            <Card title="Tracked amounts" sub="gifts, refunds and windfalls being spent down" flush>
-              {openTracked_.map((x, i) => (
-                <button key={x.id} onClick={() => openTracked(x.id)} className="w-full text-left px-4 py-2.5 flex flex-col gap-1.5" style={{ borderBottom: i < openTracked_.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
-                  <span className="flex justify-between gap-3 text-sm"><span className="font-medium truncate">{x.emoji ? `${x.emoji} ` : ""}{x.name}</span><span className="tabular-nums shrink-0"><strong>{formatMoney(x.left)}</strong><span style={{ color: "var(--muted)" }}> left of {formatMoney(x.amount)}</span></span></span>
-                  <Bar pct={x.amount ? x.spent / x.amount : 0} color="var(--ink)" thin />
-                </button>
-              ))}
-            </Card>
-          )}
-          <Card title="Accounts" sub="balances today" flush>
-            {onBudget.map((a, i) => (
-              <button key={a.id} onClick={() => goTransactions(a.id)} className="w-full text-left px-4 py-2 flex justify-between items-center gap-3" style={{ borderBottom: i < onBudget.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
-                <span className="text-sm truncate">{a.name}</span><span className="text-sm font-semibold tabular-nums" style={{ color: a.balance < 0 ? "var(--neg)" : undefined }}>{formatMoney(a.balance)}</span>
-              </button>
-            ))}
-            {m.view.owedOnCards > 0 && <div className="px-4 py-2 text-[12px] flex justify-between" style={{ color: "var(--muted)", borderTop: "1px solid var(--border-soft)" }}><span>Owed on cards</span><span className="tabular-nums">{formatMoney(m.view.owedOnCards)}{m.view.uncoveredCardDebt > 0 ? ` · ${formatMoney(m.view.uncoveredCardDebt)} not covered` : " · covered"}</span></div>}
-          </Card>
-          {m.check && !m.check.ok && Array.isArray(m.check.diffs) && (
-            <Card title="Sheet check" sub={m.check.source ? prettySource(m.check.source) : undefined} tone="yellow">
-              <p className="text-[13px] m-0">{m.check.diffs.length} {m.check.diffs.length === 1 ? "figure differs" : "figures differ"} from the spreadsheet. <a href="#budget" style={{ color: "var(--accent-text)" }}>See which ›</a></p>
-            </Card>
-          )}
-        </div>
+        {cols.map((col, ci) => (
+          <div key={ci} className={"flex flex-col gap-4 min-w-0 " + (ci === 2 ? "md:col-span-2 xl:col-span-1" : "")} style={{ minHeight: 80 }}
+            onDragOver={(e) => { if (!drag) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver({ col: ci, idx: dropIndex(e.currentTarget, e.clientY) }); }}
+            onDrop={(e) => { e.preventDefault(); if (drag && over) moveCard(drag, over.col, over.idx); setDrag(null); setOver(null); }}>
+            {col.map((k, i) => {
+              const node = cards[k]; if (!node) return null;
+              return (
+                <div key={k} data-card={k} draggable onDragStart={(e) => { setDrag(k); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", k); }} onDragEnd={() => { setDrag(null); setOver(null); }}
+                  className="relative group" style={{ opacity: drag === k ? 0.4 : 1 }}>
+                  {over && over.col === ci && over.idx === i && drag !== k && <div className="absolute -top-2.5 left-0 right-0 h-1 rounded-full" style={{ background: "var(--ink)" }} />}
+                  <span className="absolute left-1/2 -translate-x-1/2 top-1 text-[13px] leading-none select-none cursor-grab opacity-0 group-hover:opacity-70 transition-opacity" title="Drag to move this card" style={{ color: "var(--muted)" }}>⠿</span>
+                  {node}
+                </div>
+              );
+            })}
+            {over && over.col === ci && drag && over.idx >= col.length && <div className="h-1 rounded-full" style={{ background: "var(--ink)" }} />}
+          </div>
+        ))}
       </section>
     </div>
   );
@@ -389,4 +422,20 @@ function CarryBar({ spent, budget, available, scale }: { spent: number; budget: 
       {carry > 0 && available <= scale && <span className="absolute" style={{ left: `calc(${pct(available)}% - 1px)`, top: -1, width: 2, height: 12, background: "var(--muted)", opacity: 0.7 }} />}
     </span>
   );
+}
+
+const DEFAULT_COLS: string[][] = [["pending", "dupes", "flags", "check", "allclear", "recent"], ["spend", "owners", "movers", "fun"], ["upcoming", "tracked", "accounts", "sheet"]];
+/** The saved columns, with any card that didn't exist when they were saved slotted into its default column. */
+function withDefaults(saved: string[][] | undefined): string[][] {
+  const known = new Set(DEFAULT_COLS.flat());
+  const cols = (saved && saved.length === 3 ? saved : DEFAULT_COLS).map((c) => c.filter((k) => known.has(k)));
+  const placed = new Set(cols.flat());
+  DEFAULT_COLS.forEach((c, i) => c.forEach((k) => { if (!placed.has(k)) cols[i]!.push(k); }));
+  return cols;
+}
+/** Which slot in a column the pointer is over: before the first card whose middle is below it. */
+function dropIndex(col: HTMLElement, y: number): number {
+  const items = [...col.querySelectorAll<HTMLElement>(":scope > [data-card]")];
+  const i = items.findIndex((el) => { const r = el.getBoundingClientRect(); return y < r.top + r.height / 2; });
+  return i === -1 ? items.length : i;
 }

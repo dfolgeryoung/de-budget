@@ -20,7 +20,7 @@ import { FlagSheet } from "./FlagSheet";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
+export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[]; desktop?: string[][] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [m, setM] = useState<MonthPayload | null>(null);
   const [recent, setRecent] = useState<LedgerRow[] | null>(null);
   const [pend, setPend] = useState<{ id: string; date: string; accountId: string; payee: string | null; amount: number; categoryId: string | null }[]>([]);
@@ -280,7 +280,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const isHidden = (k: string) => layout.hidden.includes(k) || (DEFAULT_HIDDEN.includes(k) && !layout.order.includes(k));
   async function saveLayout(next: Layout) {
     setLayout(next);
-    try { await api("/me", { method: "PUT", json: { homeLayout: next } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
+    try { await api("/me", { method: "PUT", json: { homeLayout: { ...next, desktop: me.homeLayout?.desktop } } }); dispatchEvent(new Event("me-changed")); } catch (e) { toast(`Not saved: ${(e as Error).message}`); }
   }
   // drag to reorder in the Edit Home sheet: hold the grip, slide; rows swap as the lifted one crosses them
   const [drag, setDrag] = useState<{ key: string; dy: number } | null>(null);

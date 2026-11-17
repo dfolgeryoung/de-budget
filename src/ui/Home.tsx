@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, apiCached, todayISO, type Lists } from "./api";
+import { api, apiCached, todayISO, tidyNotifications, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
 import { useToast } from "./Toast";
@@ -46,7 +46,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
     // one round trip for the whole screen; the last copy shows instantly while the fresh one loads
     apiCached<HomeData>(`/home${wantsReport ? "?report=1" : ""}`, (h) => {
       setM(h.month); setRecent(Array.isArray(h.recent) ? h.recent : []); setPend(Array.isArray(h.pending) ? h.pending : []);
-      setUpcoming(Array.isArray(h.upcoming) ? h.upcoming : []); setTracked(Array.isArray(h.tracked) ? h.tracked : []); setReport(h.report ?? null); setFlags(Array.isArray(h.flags) ? h.flags : []); setDupes(Array.isArray(h.duplicates) ? h.duplicates : []);
+      setUpcoming(Array.isArray(h.upcoming) ? h.upcoming : []); setTracked(Array.isArray(h.tracked) ? h.tracked : []); setReport(h.report ?? null); setFlags(Array.isArray(h.flags) ? h.flags : []); setDupes(Array.isArray(h.duplicates) ? h.duplicates : []); void tidyNotifications((h.flags ?? []).map((f) => f.id), (h.duplicates ?? []).length > 0);
     }).catch(() => { /* keep whatever is on screen */ });
   }, [refreshKey, bump, wantsReport]);
   async function act(id: string, what: "confirm" | "skip", label: string) {

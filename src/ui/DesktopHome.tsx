@@ -4,7 +4,7 @@
  * /home bundle the phone uses, so the two screens never disagree.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { api, apiCached, todayISO, type Lists } from "./api";
+import { api, apiCached, todayISO, tidyNotifications, type Lists } from "./api";
 import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
 import { narrative, savingFacts, savingNarrative, monthName } from "../budget/narrative";
@@ -50,7 +50,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
     try { await api("/me", { method: "PUT", json: { homeLayout: { order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [], spendCategories: me.homeLayout?.spendCategories, desktop: next } } }); dispatchEvent(new Event("me-changed")); }
     catch (e) { toast(`Layout not saved: ${(e as Error).message}`); }
   }
-  useEffect(() => { apiCached<HomeData>("/home?report=1", setD).catch(() => { /* keep what's on screen */ }); }, [refreshKey, bump]);
+  useEffect(() => { apiCached<HomeData>("/home?report=1", (h) => { setD(h); void tidyNotifications((h.flags ?? []).map((f) => f.id), (h.duplicates ?? []).length > 0); }).catch(() => { /* keep what's on screen */ }); }, [refreshKey, bump]);
   const refresh = () => { setBump((b) => b + 1); dispatchEvent(new Event("lists-changed")); };
 
   async function act(id: string, what: "confirm" | "skip", label: string) {

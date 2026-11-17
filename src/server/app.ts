@@ -13,13 +13,21 @@ import { reportsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
 import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
+/** When the last possible duplicate is dealt with, quietly replace the "possible duplicate" alert on the other phone. */
+async function settledDuplicates(by: string) {
+  try {
+    if ((await possibleDuplicates(db)).length) return;
+    const who = (await db.select({ n: t.users.displayName }).from(t.users).where(eq(t.users.id, by)))[0]?.n.split(" ")[0] ?? "Someone";
+    await pushResolved(db, by, "dupes", "Duplicates sorted", `${who} took care of them — nothing left to review.`);
+  } catch { /* best effort */ }
+}
 import { driveStatus, connectUrl, finishConnect, disconnect as driveDisconnect } from "./drive.js";
 import { trackedInput, listTracked, trackedEntries, createTracked, updateTracked, deleteTracked } from "./tracked.js";
 import { mirrorToSheet, pickUpInbox, mirrorConfigured, sheetId } from "./mirror.js";
 import { createDueRecurring, pending, confirmEntry, realignPending, skippedPending, upcomingBills } from "./recurring.js";
 import { nextDue, dueDatesInMonth } from "../budget/recurringDates.js";
 import { previewReconcile, applyReconcile } from "./reconcile.js";
-import { pushConfigured, emailConfigured, pushToUser, vapidPublic } from "./notify.js";
+import { pushConfigured, emailConfigured, pushToUser, vapidPublic, pushResolved } from "./notify.js";
 import webpush from "web-push";
 import { weeklySummary } from "./summary.js";
 import { z } from "zod";
@@ -167,6 +175,7 @@ app.post("/duplicates/keep", async (c) => {
   const p = z.object({ a: z.string().min(1), b: z.string().min(1) }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "Two entry ids are needed" }, 400);
   await keepBoth(db, p.data.a, p.data.b);
+  void settledDuplicates(c.get("user").id);
   return c.json({ ok: true });
 });
 app.get("/transactions/:id/notes", async (c) => c.json({ notes: await notesFor(db, c.req.param("id")) }));
@@ -179,6 +188,7 @@ app.put("/transactions/:id/flag", async (c) => {
   const p = z.object({ open: z.boolean() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   await resolveFlag(db, c.get("user").id, c.req.param("id"), p.data.open);
+  if (!p.data.open) { const who = (await db.select({ n: t.users.displayName }).from(t.users).where(eq(t.users.id, c.get("user").id)))[0]?.n.split(" ")[0] ?? "Someone"; void pushResolved(db, c.get("user").id, `flag-${c.req.param("id")}`, "Flag resolved", `${who} marked it resolved — nothing left to answer.`); }
   return c.json({ ok: true });
 });
 app.post("/transactions", async (c) => {
@@ -197,6 +207,7 @@ app.put("/transactions/:id", async (c) => {
 app.delete("/transactions/:id", async (c) => {
   const again = c.req.query("undo") === "1" ? { landsAgainOn: null } : await skippedPending(db, c.req.param("id"), today());
   await deleteTransaction(db, c.get("user").id, c.req.param("id"), c.req.query("undo") === "1");
+  void settledDuplicates(c.get("user").id);
   return c.json({ ok: true, ...again });
 });
 

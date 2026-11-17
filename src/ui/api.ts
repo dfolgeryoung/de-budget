@@ -81,3 +81,14 @@ export function apiCached<T>(path: string, apply: (data: T, fresh: boolean) => v
 export function cachedAt(path: string): number | null {
   try { const raw = localStorage.getItem(`cache:${cacheUser}:${path}`); return raw ? (JSON.parse(raw) as { at: number }).at : null; } catch { return null; }
 }
+
+/** Close push notifications on this device that are about things already dealt with (duplicates reviewed, flags resolved). */
+export async function tidyNotifications(openFlagIds: string[], hasDupes: boolean): Promise<void> {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    for (const n of await reg.getNotifications()) {
+      if ((n.tag === "dupes" && !hasDupes) || (n.tag.startsWith("flag-") && !openFlagIds.includes(n.tag.slice(5)))) n.close();
+    }
+  } catch { /* no service worker here */ }
+}

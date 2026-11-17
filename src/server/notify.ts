@@ -17,7 +17,15 @@ function setup() {
 }
 
 /** Send a push to every device of a user; dead subscriptions are removed. */
-export async function pushToUser(db: Db, userId: string, payload: { title: string; body: string; url?: string; tag?: string }): Promise<number> {
+export interface PushPayload { title: string; body: string; url?: string; tag?: string; /** replace a notification with this tag quietly (no sound, no re-alert) */ silent?: boolean }
+
+/** Quietly replace an earlier alert (same tag) on everyone's phone but the person who dealt with it, so nobody acts on stale news. */
+export async function pushResolved(db: Db, except: string, tag: string, title: string, body: string): Promise<void> {
+  const users = await db.select({ id: t.users.id }).from(t.users);
+  for (const u of users) if (u.id !== except) await pushToUser(db, u.id, { title, body, url: "/#home", tag, silent: true }).catch(() => 0);
+}
+
+export async function pushToUser(db: Db, userId: string, payload: PushPayload): Promise<number> {
   if (!pushConfigured()) return 0;
   setup();
   const subs = await db.select().from(t.pushSubscriptions).where(eq(t.pushSubscriptions.userId, userId));

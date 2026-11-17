@@ -27,7 +27,8 @@ self.addEventListener("push", (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch { data = { title: "D&E Budget", body: e.data ? e.data.text() : "" }; }
   const title = data.title || "D&E Budget";
-  e.waitUntil(self.registration.showNotification(title, { body: data.body || "", icon: "/icon-192.png", badge: "/icon-192.png", tag: data.tag || "de-budget", renotify: !!data.tag, data: { url: data.url || "/" } }));
+  // a "silent" push replaces an earlier alert with the same tag (e.g. "Resolved by David") without a sound or a fresh banner
+  e.waitUntil(self.registration.showNotification(title, { body: data.body || "", icon: "/icon-192.png", badge: "/icon-192.png", tag: data.tag || "de-budget", renotify: !!data.tag && !data.silent, silent: !!data.silent, data: { url: data.url || "/" } }));
 });
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();

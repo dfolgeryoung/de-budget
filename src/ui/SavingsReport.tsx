@@ -105,3 +105,30 @@ export function SavingsReport({ refreshKey, phone }: { refreshKey: number; phone
     </div>
   );
 }
+
+/** Month rows as stacked bars: income over spending + contributions, with put away at the right. Shared with Home. */
+export function SavingsBars({ rows }: { rows: { month: string; partial: boolean; income: number; spending: number; contributions: number; putAway: number }[] }) {
+  const scale = Math.max(1, ...rows.map((r) => Math.max(r.income, r.spending + r.contributions)));
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-[11px] flex gap-3" style={{ color: "var(--muted)" }}>
+        <span><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style={{ background: "var(--green-solid)" }} />income</span>
+        <span><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style={{ background: "var(--ink)" }} />spending</span>
+        <span><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style={{ background: "var(--hue-4)" }} />contributions</span>
+      </div>
+      {rows.map((r) => (
+        <div key={r.month} className="grid items-center gap-3" style={{ gridTemplateColumns: "72px minmax(0,1fr) 80px" }}>
+          <div className="text-[13px] font-semibold leading-tight">{label(r.month)}{r.partial && <div className="text-[10px] font-normal" style={{ color: "var(--muted)" }}>so far</div>}</div>
+          <div className="flex flex-col gap-1">
+            <div className="h-3 rounded" style={{ width: `${(r.income / scale) * 100}%`, background: "var(--green-solid)" }} title={`Income ${formatMoney(r.income)}`} />
+            <div className="h-3 flex" style={{ width: `${((r.spending + r.contributions) / scale) * 100}%` }}>
+              <div className="rounded-l" style={{ flex: `${r.spending} 1 0`, background: "var(--ink)" }} title={`Spending ${formatMoney(r.spending)}`} />
+              {r.contributions > 0 && <div className="rounded-r" style={{ flex: `${r.contributions} 1 0`, minWidth: 8, background: "var(--hue-4)", boxShadow: "inset 0 0 0 1px var(--card)" }} title={`Contributions ${formatMoney(r.contributions)}`} />}
+            </div>
+          </div>
+          <div className="text-right text-[13px] font-semibold tabular-nums" style={{ color: r.putAway >= 0 ? "var(--green-text)" : "var(--neg)" }}>{signed(r.putAway)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}

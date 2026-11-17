@@ -14,6 +14,8 @@ import { pickGreeting, allClearLine } from "./greeting";
 import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
 import { goToTransactions } from "./Reports";
+import { SavingsBars } from "./SavingsReport";
+import type { SavingsPayload } from "../server/reports";
 import type { MonthPayload } from "../server/month";
 import type { LedgerRow } from "../server/transactions";
 import type { TrackedSummary } from "../server/tracked";
@@ -32,6 +34,7 @@ type HomeData = { month: MonthPayload | null; recent: LedgerRow[]; pending: Pend
 
 export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }: { me: { id: string; name: string; initial?: string; homeLayout?: { order: string[]; hidden: string[]; spendCategories?: string[]; desktop?: string[][] } | null }; lists: Lists; refreshKey: number; goTransactions: (account: string | null) => void; openEdit?: (id: string) => void }) {
   const [d, setD] = useState<HomeData | null>(null);
+  const [savings, setSavings] = useState<SavingsPayload | null>(null);
   const [bump, setBump] = useState(0);
   const [flagOpen, setFlagOpen] = useState<FlaggedEntry | null>(null);
   const toast = useToast();
@@ -50,6 +53,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
     try { await api("/me", { method: "PUT", json: { homeLayout: { order: me.homeLayout?.order ?? [], hidden: me.homeLayout?.hidden ?? [], spendCategories: me.homeLayout?.spendCategories, desktop: next } } }); dispatchEvent(new Event("me-changed")); }
     catch (e) { toast(`Layout not saved: ${(e as Error).message}`); }
   }
+  useEffect(() => { apiCached<SavingsPayload>("/reports/savings", setSavings).catch(() => { /* card just stays away */ }); }, [refreshKey, bump]);
   useEffect(() => { apiCached<HomeData>("/home?report=1", (h) => { setD(h); void tidyNotifications((h.flags ?? []).map((f) => f.id), (h.duplicates ?? []).length > 0); }).catch(() => { /* keep what's on screen */ }); }, [refreshKey, bump]);
   const refresh = () => { setBump((b) => b + 1); dispatchEvent(new Event("lists-changed")); };
 
@@ -105,8 +109,6 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
   const spendScale = Math.max(1, ...spendCats.map((c) => Math.max(c.spent, c.budget)));
   const movers = (tm?.movers ?? []).filter((x) => Math.abs(x.delta) >= 2000).slice(0, 5);
   const owners = tm?.byOwner ?? [];
-  const months = (r?.trends.months ?? []).slice(-6);
-  const keptScale = Math.max(1, ...months.map((x) => Math.abs(x.income - x.spent)));
   const onBudget = m.accounts.filter((a) => a.onBudget);
 
   const cards: Record<string, ReactNode | null> = {
@@ -255,32 +257,28 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
       )}
 
       {(spendPara.length > 0 || savePara.length > 0) && (
-        <section className="grid gap-4 md:grid-cols-2">
-          <Card title="Spending" sub={r ? `${monthName(r.month)} so far` : undefined} action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Reports ›</a>}>
-            {spendPara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
-          </Card>
-          <Card title="Saving" sub="income, next month and the cushion" action={<a href="#budget" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Budget ›</a>}>
-            {savePara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
-            {months.length > 1 && (
-              <div className="mt-2 pt-3 flex items-end gap-2" style={{ borderTop: "1px solid var(--border-soft)", height: 92 }}>
-                {months.map((x) => { const kept = x.income - x.spent; const h = Math.max(3, Math.round((Math.abs(kept) / keptScale) * 48)); return (
-                  <div key={x.month} className="flex-1 flex flex-col items-center gap-1 min-w-0" title={`${monthName(x.month)}: ${formatMoney(x.income)} in, ${formatMoney(x.spent)} out`}>
-                    <span className="text-[11px] tabular-nums" style={{ color: kept >= 0 ? "var(--green-text)" : "var(--neg)" }}>{kept >= 0 ? "+" : "−"}{whole(Math.abs(kept)).slice(1)}</span>
-                    <div className="w-full rounded-sm" style={{ height: h, background: kept >= 0 ? "var(--green-solid)" : "var(--neg)", opacity: x.month === r?.month ? 1 : 0.55 }} />
-                    <span className="text-[11px]" style={{ color: "var(--muted)" }}>{MON[Number(x.month.slice(5, 7)) - 1]}</span>
-                  </div>
-                ); })}
-              </div>
+        <section className="grid gap-4 md:grid-cols-2 items-start">
+          <div className="flex flex-col gap-4 min-w-0">
+            <Card title="Spending" sub={r ? `${monthName(r.month)} so far` : undefined} action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Reports ›</a>}>
+              {spendPara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
+            </Card>
+            {r && tm && r.daily && (
+              <Card title="Running total by day" sub={`${monthName(r.month)} against ${monthName(r.prevMonth)}, the pace you're on, and the budget`}>
+                <CumulativeChart daily={r.daily} budget={tm.budgeted} onPace={tm.onPace} daysElapsed={r.daysElapsed} month={r.month} prevMonth={r.prevMonth} />
+              </Card>
             )}
-            {months.length > 1 && <div className="text-[11px] -mt-1" style={{ color: "var(--muted)" }}>Kept after spending, by month (this month so far is lighter)</div>}
-          </Card>
+          </div>
+          <div className="flex flex-col gap-4 min-w-0">
+            <Card title="Saving" sub="income, next month and the cushion" action={<a href="#budget" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Budget ›</a>}>
+              {savePara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
+            </Card>
+            {savings && (
+              <Card title="Savings by month" sub="put away = income − spending; contributions are retirement & 529s" action={<button onClick={() => { try { sessionStorage.setItem("reports-tab", "savings"); } catch { /* private */ } location.hash = "reports"; }} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>Savings report ›</button>}>
+                <SavingsBars rows={savings.months} />
+              </Card>
+            )}
+          </div>
         </section>
-      )}
-
-      {r && tm && r.daily && (
-        <Card title="Running total by day" sub={`${monthName(r.month)} against ${monthName(r.prevMonth)}, the pace you're on, and the budget`}>
-          <CumulativeChart daily={r.daily} budget={tm.budgeted} onPace={tm.onPace} daysElapsed={r.daysElapsed} month={r.month} prevMonth={r.prevMonth} />
-        </Card>
       )}
 
       <section id="attention" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 items-start">
@@ -373,7 +371,7 @@ function LineRow({ label, note, amount, signed, onClick }: { label: string; note
 /** Running total of spending by day: this month so far, last month for the shape, and the budget as the line to stay under. */
 function CumulativeChart({ daily, budget, onPace, daysElapsed, month, prevMonth }: { daily: { thisMonth: number[]; lastMonth: number[] }; budget: number; onPace: number; daysElapsed: number; month: string; prevMonth: string }) {
   const [hot, setHot] = useState<number | null>(null);
-  const W = 1100, H = 220, L = 52, R = 12, T = 12, B = 24;
+  const W = 560, H = 200, L = 46, R = 10, T = 12, B = 24;
   const dim = daily.thisMonth.length, pdim = daily.lastMonth.length;
   const maxY = Math.max(budget, onPace, daily.thisMonth[dim - 1] ?? 0, daily.lastMonth[pdim - 1] ?? 0, 1) * 1.05;
   const x = (day: number, n: number) => L + ((day - 1) / Math.max(1, n - 1)) * (W - L - R);

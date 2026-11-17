@@ -29,7 +29,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const [month, setMonth] = useState<string | null>(null);
   const [data, setData] = useState<ReportsPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("month");
+  const [tab, setTab] = useState<Tab>(() => { try { const t = sessionStorage.getItem("reports-tab"); sessionStorage.removeItem("reports-tab"); return (t as Tab) || "month"; } catch { return "month"; } });
   const [explain, setExplain] = useState<ExplainBox | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [hot, setHot] = useState<string | null>(null); // legend row under the pointer → its donut slice stands out

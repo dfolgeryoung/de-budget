@@ -4,6 +4,8 @@ import type { Db } from "../db/client.js";
 import * as t from "../db/schema.js";
 import { computeReports, type ReportsView } from "../budget/reports.js";
 import { loadBudget } from "./month.js";
+import { computeSavings, isContribution, type SavingsView } from "../budget/savings.js";
+import { computeClassic } from "../budget/classic.js";
 import { buildClassicInput } from "./classic.js";
 import { attributeSpend } from "../budget/classic.js";
 import { dueDatesInMonth, dayStillToCome } from "../budget/recurringDates.js";
@@ -40,4 +42,33 @@ export async function reportsPayload(db: Db, month: MonthKey, today: string, me 
   const accountNames: Record<string, string> = {};
   for (const a of await db.select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)) accountNames[a.id] = a.name;
   return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, accountNames };
+}
+
+export interface SavingsPayload extends SavingsView {
+  people: { D: string; E: string };
+  /** Classic's per-person figures for each month: income typed, savings so far, contributions, put away */
+  byPerson: Record<string, { D: PersonSavings; E: PersonSavings }>;
+}
+export interface PersonSavings { income: number; incomeTyped: boolean; spending: number; contributions: number; putAway: number; leftover: number }
+
+export async function savingsPayload(db: Db, today: string, me: string): Promise<SavingsPayload> {
+  const [{ input, cats }, users] = await Promise.all([loadBudget(db), db.select({ name: t.users.displayName, initial: t.users.initial }).from(t.users)]);
+  const view = computeSavings(input, cats.map((c) => ({ id: c.id, name: c.name })), today);
+  const byPerson: SavingsPayload["byPerson"] = {};
+  for (const m of view.months) {
+    const { ci } = await buildClassicInput(db, m.month, today, me);
+    const cv = computeClassic(ci);
+    const row = {} as { D: PersonSavings; E: PersonSavings };
+    for (const p of ["D", "E"] as const) {
+      const x = cv.people[p];
+      const income = x.incomeActualTyped ? x.incomeActual : x.incomeBudget;
+      // what actually went to retirement/529 lines this month: own lines in full, shared lines by half
+      const contributions = cv.lines.filter((l) => isContribution(l.name) && (l.column === p || l.column === "shared")).reduce((s, l) => s + (l.column === "shared" ? Math.round(l.actual / 2) : l.actual), 0);
+      const spending = x.totalActual - contributions; // Classic counts contributions inside its actuals
+      row[p] = { income, incomeTyped: x.incomeActualTyped, spending, contributions, putAway: income - spending, leftover: income - x.totalActual };
+    }
+    byPerson[m.month] = row;
+  }
+  const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;
+  return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, byPerson };
 }

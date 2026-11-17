@@ -7,11 +7,12 @@ import type { ExplainBox, CategorySpend, ProjectedCategory } from "../budget/rep
 import { Chevron } from "./icons";
 import { Sheet } from "./Sheet";
 import { monthLabel } from "./Budget";
+import { SavingsReport } from "./SavingsReport";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const mon = (m: string) => MON[Number(m.slice(5, 7)) - 1]!;
-type Tab = "month" | "trends" | "projection";
-const TABS: { id: Tab; label: string }[] = [{ id: "month", label: "This month" }, { id: "trends", label: "Trends" }, { id: "projection", label: "Projection" }];
+type Tab = "month" | "trends" | "projection" | "savings";
+const TABS: { id: Tab; label: string }[] = [{ id: "month", label: "This month" }, { id: "trends", label: "Trends" }, { id: "projection", label: "Projection" }, { id: "savings", label: "Savings" }];
 const WHO = { shared: { label: "Shared", color: "var(--classic-shared)" }, D: { label: "David", color: "var(--classic-david)" }, E: { label: "Elizabeth", color: "var(--classic-eliz)" } } as const;
 const BAR = "var(--classic-shared-2)";
 /** Whole dollars on the phone, cents on desktop. */
@@ -320,7 +321,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
         </div>
       </>
     )
-  ) : tab === "trends" ? trendsView : projectionView;
+  ) : tab === "trends" ? trendsView : tab === "savings" ? <SavingsReport refreshKey={refreshKey} phone={ph} /> : projectionView;
 
   if (ph) {
     return (

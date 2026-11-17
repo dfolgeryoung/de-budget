@@ -9,7 +9,7 @@ import { monthPayload, zeroCheckPayload } from "./month.js";
 import { entrySchema, nearbyPayees, listTransactions, createTransaction, updateTransaction, deleteTransaction, findDuplicate, lists } from "./transactions.js";
 import { move, typeAssigned, undoMove, recentMoves, autoAssign, categoryHistory } from "./assign.js";
 import { classicPayload, saveClassicTyped } from "./classic.js";
-import { reportsPayload } from "./reports.js";
+import { reportsPayload, savingsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
 import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
@@ -386,6 +386,7 @@ app.post("/backup/restore", async (c) => {
 app.post("/backup/run", async (c) => { try { return c.json(await nightlyBackup(db, today())); } catch (e) { return c.json({ error: (e as Error).message }, 500); } });
 
 // ---------- reports ----------
+app.get("/reports/savings", async (c) => c.json(await savingsPayload(db, today(), c.get("user").id)));
 app.get("/reports/:month", async (c) => {
   const m = validMonth(c.req.param("month"));
   if (!m) return c.json({ error: "month must be YYYY-MM-01" }, 400);

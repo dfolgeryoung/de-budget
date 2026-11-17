@@ -57,17 +57,22 @@ export function SavingsReport({ refreshKey, phone }: { refreshKey: number; phone
         {tile("Since the start", signed(total), `${whole(contribTotal)} of it in contributions`, total >= 0 ? "var(--green-text)" : "var(--neg)")}
       </div>
 
+      {phone && (
+        <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <SavingsBars rows={withRun} />
+        </div>
+      )}
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="px-4 py-2.5 text-[12px]" style={{ color: "var(--muted)", borderBottom: "1px solid var(--border-soft)" }}>
+        {!phone && <div className="px-4 py-2.5 text-[12px]" style={{ color: "var(--muted)", borderBottom: "1px solid var(--border-soft)" }}>
           <span className="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style={{ background: "var(--green-solid)" }} />income
           <span className="inline-block w-2.5 h-2.5 rounded-sm ml-3 mr-1 align-middle" style={{ background: "var(--ink)" }} />spending
           <span className="inline-block w-2.5 h-2.5 rounded-sm ml-3 mr-1 align-middle" style={{ background: "var(--hue-4)" }} />contributions
-        </div>
+        </div>}
         <div className={phone ? "overflow-x-auto" : ""}>
           <table className="w-full text-[13px]" style={{ borderCollapse: "collapse", minWidth: phone ? 560 : undefined }}>
             <thead>
               <tr style={{ color: "var(--muted)" }}>
-                {["Month", "", "Income", "Spending", "Contributions", "Put away", "Leftover", "Running"].map((h, i) => <th key={i} className={"px-3 py-2 font-semibold text-[11px] uppercase tracking-wider " + (i <= 1 ? "text-left" : "text-right")} style={{ borderBottom: "1px solid var(--border-soft)", width: i === 1 ? (phone ? 150 : "28%") : undefined }}>{h}</th>)}
+                {["Month", "", "Income", "Spending", "Contributions", "Put away", "Leftover", "Running"].filter((_, i) => !(phone && i === 1)).map((h, i) => <th key={i} className={"px-3 py-2 font-semibold text-[11px] uppercase tracking-wider " + (i <= (phone ? 0 : 1) ? "text-left" : "text-right")} style={{ borderBottom: "1px solid var(--border-soft)", width: !phone && i === 1 ? "28%" : undefined }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -77,7 +82,7 @@ export function SavingsReport({ refreshKey, phone }: { refreshKey: number; phone
                     <div className="font-semibold">{label(r.month)}{r.partial ? <span className="font-normal text-[11px]" style={{ color: "var(--muted)" }}> so far</span> : ""}</div>
                     {!r.typed && who !== "all" && <div className="text-[10px]" style={{ color: "var(--yellow-text)" }}>income not typed in Classic — using its budget</div>}
                   </td>
-                  <td className="px-3 py-2 align-middle">
+                  {!phone && <td className="px-3 py-2 align-middle">
                     <div className="flex flex-col gap-1">
                       <div className="h-3 rounded" style={{ width: `${(r.income / scale) * 100}%`, background: "var(--green-solid)" }} title={`Income ${formatMoney(r.income)}`} />
                       <div className="h-3 flex" style={{ width: `${((r.spending + r.contributions) / scale) * 100}%` }}>
@@ -85,7 +90,7 @@ export function SavingsReport({ refreshKey, phone }: { refreshKey: number; phone
                         {r.contributions > 0 && <div className="rounded-r" style={{ flex: `${r.contributions} 1 0`, minWidth: 8, background: "var(--hue-4)", boxShadow: "inset 0 0 0 1px var(--card)" }} title={`Contributions ${formatMoney(r.contributions)}`} />}
                       </div>
                     </div>
-                  </td>
+                  </td>}
                   <td className="px-3 py-2 text-right tabular-nums align-top">{whole(r.income)}</td>
                   <td className="px-3 py-2 text-right tabular-nums align-top">{whole(r.spending)}</td>
                   <td className="px-3 py-2 text-right tabular-nums align-top">{whole(r.contributions)}</td>

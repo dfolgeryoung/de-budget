@@ -257,26 +257,28 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
       )}
 
       {(spendPara.length > 0 || savePara.length > 0) && (
-        <section className="grid gap-4 md:grid-cols-2 items-start">
+        <section className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-4 min-w-0">
             <Card title="Spending" sub={r ? `${monthName(r.month)} so far` : undefined} action={<a href="#reports" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Reports ›</a>}>
               {spendPara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
+              {r && tm && r.daily && (
+                <div className="mt-auto pt-3 flex flex-col gap-1" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                  <div className="text-[12px] font-semibold">Running total by day <span className="font-normal" style={{ color: "var(--muted)" }}>· {monthName(r.month)} against {monthName(r.prevMonth)}, the pace you're on, and the budget</span></div>
+                  <CumulativeChart daily={r.daily} budget={tm.budgeted} onPace={tm.onPace} daysElapsed={r.daysElapsed} month={r.month} prevMonth={r.prevMonth} />
+                </div>
+              )}
             </Card>
-            {r && tm && r.daily && (
-              <Card title="Running total by day" sub={`${monthName(r.month)} against ${monthName(r.prevMonth)}, the pace you're on, and the budget`}>
-                <CumulativeChart daily={r.daily} budget={tm.budgeted} onPace={tm.onPace} daysElapsed={r.daysElapsed} month={r.month} prevMonth={r.prevMonth} />
-              </Card>
-            )}
           </div>
           <div className="flex flex-col gap-4 min-w-0">
             <Card title="Saving" sub="income, next month and the cushion" action={<a href="#budget" className="text-[12px] font-semibold no-underline" style={{ color: "var(--accent-text)" }}>Budget ›</a>}>
               {savePara.map((p, i) => <p key={i} className="text-[15px] leading-relaxed m-0">{p}</p>)}
+              {savings && (
+                <div className="mt-auto pt-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                  <div className="flex justify-between items-baseline gap-3"><div className="text-[12px] font-semibold">Savings by month <span className="font-normal" style={{ color: "var(--muted)" }}>· put away = income − spending</span></div><button onClick={() => { try { sessionStorage.setItem("reports-tab", "savings"); } catch { /* private */ } location.hash = "reports"; }} className="text-[12px] font-semibold shrink-0" style={{ color: "var(--accent-text)" }}>Savings report ›</button></div>
+                  <SavingsBars rows={savings.months} />
+                </div>
+              )}
             </Card>
-            {savings && (
-              <Card title="Savings by month" sub="put away = income − spending; contributions are retirement & 529s" action={<button onClick={() => { try { sessionStorage.setItem("reports-tab", "savings"); } catch { /* private */ } location.hash = "reports"; }} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>Savings report ›</button>}>
-                <SavingsBars rows={savings.months} />
-              </Card>
-            )}
           </div>
         </section>
       )}
@@ -315,12 +317,12 @@ function dayLabel(iso: string, todayIso: string): string {
 
 function Card({ title, sub, action, tone, flush, children }: { title: string; sub?: string; action?: ReactNode; tone?: "yellow"; flush?: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-2xl overflow-hidden flex flex-col" style={{ background: "var(--card)", border: `1px solid ${tone === "yellow" ? "var(--yellow)" : "var(--border)"}` }}>
+    <section className="rounded-2xl overflow-hidden flex flex-col h-full" style={{ background: "var(--card)", border: `1px solid ${tone === "yellow" ? "var(--yellow)" : "var(--border)"}` }}>
       <div className="flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5" style={tone === "yellow" ? { background: "var(--yellow-row)" } : undefined}>
         <div className="min-w-0"><h2 className="text-[15px] font-bold m-0 leading-tight">{title}</h2>{sub && <div className="text-[12px] mt-0.5 truncate" style={{ color: "var(--muted)" }}>{sub}</div>}</div>
         {action}
       </div>
-      <div className={flush ? "flex flex-col" : tone ? "flex flex-col gap-2.5 px-4 pt-3 pb-4" : "flex flex-col gap-2.5 px-4 pb-4"} style={flush ? { borderTop: "1px solid var(--border-soft)" } : undefined}>{children}</div>
+      <div className={(flush ? "flex flex-col" : tone ? "flex flex-col gap-2.5 px-4 pt-3 pb-4" : "flex flex-col gap-2.5 px-4 pb-4") + " flex-1"} style={flush ? { borderTop: "1px solid var(--border-soft)" } : undefined}>{children}</div>
     </section>
   );
 }

@@ -9,7 +9,12 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose: () 
   const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
   useEffect(() => {
     const v = window.visualViewport; if (!v) return;
-    const upd = () => setVv({ top: v.offsetTop, height: v.height });
+    let lastH = v.height;
+    const upd = () => {
+      setVv({ top: v.offsetTop, height: v.height });
+      // the keyboard just changed the sheet's height: keep the field being typed in on screen
+      if (Math.abs(v.height - lastH) > 80) { lastH = v.height; const el = document.activeElement as HTMLElement | null; if (el && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) setTimeout(() => el.scrollIntoView({ block: "center" }), 50); }
+    };
     upd(); v.addEventListener("resize", upd); v.addEventListener("scroll", upd);
     return () => { v.removeEventListener("resize", upd); v.removeEventListener("scroll", upd); };
   }, []);

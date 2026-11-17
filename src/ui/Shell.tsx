@@ -56,11 +56,13 @@ function ShellInner({ me }: { me: Me }) {
     const on = (e: FocusEvent) => {
       const el = e.target as HTMLElement | null;
       if (!el || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) || el.classList.contains("decoy")) return;
-      setTimeout(() => {
+      const check = () => {
+        if (document.activeElement !== el) return;
         const vv = window.visualViewport; const r = el.getBoundingClientRect();
         const top = vv?.offsetTop ?? 0, bottom = top + (vv?.height ?? innerHeight);
-        if (r.top < top + 8 || r.bottom > bottom - 8) el.scrollIntoView({ block: "center", behavior: "smooth" });
-      }, 350);
+        if (r.top < top + 8 || r.bottom > bottom - 8) el.scrollIntoView({ block: "center" });
+      };
+      setTimeout(check, 350); setTimeout(check, 750); // the keyboard animation takes a beat; check twice
     };
     document.addEventListener("focusin", on);
     return () => document.removeEventListener("focusin", on);

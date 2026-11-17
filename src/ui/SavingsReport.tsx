@@ -67,19 +67,24 @@ export function SavingsReport({ refreshKey, phone }: { refreshKey: number; phone
           <table className="w-full text-[13px]" style={{ borderCollapse: "collapse", minWidth: phone ? 560 : undefined }}>
             <thead>
               <tr style={{ color: "var(--muted)" }}>
-                {["Month", "Income", "Spending", "Contributions", "Put away", "Leftover", "Running"].map((h, i) => <th key={h} className={"px-3 py-2 font-semibold text-[11px] uppercase tracking-wider " + (i === 0 ? "text-left" : "text-right")} style={{ borderBottom: "1px solid var(--border-soft)" }}>{h}</th>)}
+                {["Month", "", "Income", "Spending", "Contributions", "Put away", "Leftover", "Running"].map((h, i) => <th key={i} className={"px-3 py-2 font-semibold text-[11px] uppercase tracking-wider " + (i <= 1 ? "text-left" : "text-right")} style={{ borderBottom: "1px solid var(--border-soft)", width: i === 1 ? (phone ? 150 : "28%") : undefined }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {withRun.map((r) => (
                 <tr key={r.month} style={{ borderBottom: "1px solid var(--border-soft)", opacity: r.partial ? 0.85 : 1 }}>
-                  <td className="px-3 py-2 align-top">
+                  <td className="px-3 py-2 align-middle whitespace-nowrap">
                     <div className="font-semibold">{label(r.month)}{r.partial ? <span className="font-normal text-[11px]" style={{ color: "var(--muted)" }}> so far</span> : ""}</div>
-                    <div className="mt-1 flex flex-col gap-0.5" style={{ width: phone ? 90 : 140 }}>
-                      <div className="h-1.5 rounded-full" style={{ width: `${(r.income / scale) * 100}%`, background: "var(--green-solid)" }} />
-                      <div className="h-1.5 rounded-full flex overflow-hidden" style={{ width: `${((r.spending + r.contributions) / scale) * 100}%` }}><div style={{ width: `${r.spending + r.contributions ? (r.spending / (r.spending + r.contributions)) * 100 : 0}%`, background: "var(--ink)" }} /><div className="flex-1" style={{ background: "var(--hue-4)" }} /></div>
-                    </div>
                     {!r.typed && who !== "all" && <div className="text-[10px]" style={{ color: "var(--yellow-text)" }}>income not typed in Classic — using its budget</div>}
+                  </td>
+                  <td className="px-3 py-2 align-middle">
+                    <div className="flex flex-col gap-1">
+                      <div className="h-3 rounded" style={{ width: `${(r.income / scale) * 100}%`, background: "var(--green-solid)" }} title={`Income ${formatMoney(r.income)}`} />
+                      <div className="h-3 flex" style={{ width: `${((r.spending + r.contributions) / scale) * 100}%` }}>
+                        <div className="rounded-l" style={{ flex: `${r.spending} 1 0`, background: "var(--ink)" }} title={`Spending ${formatMoney(r.spending)}`} />
+                        {r.contributions > 0 && <div className="rounded-r" style={{ flex: `${r.contributions} 1 0`, minWidth: 8, background: "var(--hue-4)", boxShadow: "inset 0 0 0 1px var(--card)" }} title={`Contributions ${formatMoney(r.contributions)}`} />}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums align-top">{whole(r.income)}</td>
                   <td className="px-3 py-2 text-right tabular-nums align-top">{whole(r.spending)}</td>

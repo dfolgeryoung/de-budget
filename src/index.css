@@ -194,3 +194,13 @@ select.sel {
 select.sel.on { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>"); }
 
 @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+/* iOS zooms the page into any field smaller than 16px when it gets focus. On touch screens every text field is at
+   least 16px (the big amount on the entry sheet sets its own size). */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]):not(.text-5xl),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}

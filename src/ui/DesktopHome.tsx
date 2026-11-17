@@ -10,6 +10,8 @@ import { weeklyAllowance } from "../budget/engine";
 import { narrative, savingFacts, savingNarrative, monthName } from "../budget/narrative";
 import { useToast } from "./Toast";
 import { DupPairRow } from "./Duplicates";
+import { pickGreeting, allClearLine } from "./greeting";
+import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
 import { goToTransactions } from "./Reports";
 import type { MonthPayload } from "../server/month";
@@ -46,7 +48,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
   const first = me.name.split(" ")[0] ?? me.name;
   const now = new Date();
   const hour = now.getHours();
-  const greet = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greet = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"; // before the data is in
   const todayIso = todayISO();
   const dateLine = `${DAYS[now.getDay()]}, ${monthName(todayIso)} ${now.getDate()}`;
 
@@ -57,6 +59,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
   const catName = (id: string | null) => (id ? `${m.categories[id]?.emoji ?? ""} ${m.categories[id]?.name ?? ""}`.trim() : "Ready to Assign");
   const acctName = (id: string) => lists.accounts.find((a) => a.id === id)?.name ?? "";
   const facts = r ? savingFacts(r, m.view, kinds, m.daysOfBuffer) : null;
+  const hello = pickGreeting(now, { first, initial: me.initial }, r, { fullyFunded: !!facts?.nextMonth && facts.nextMonth.needed > 0 && facts.nextMonth.available >= facts.nextMonth.needed });
   const spendPara = r ? narrative(r, r.people, null) : [];
   const savePara = facts ? savingNarrative(facts) : [];
   const elapsedPct = r ? r.daysElapsed / r.daysInMonth : 0;
@@ -97,8 +100,9 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
 
       <header className="flex items-end justify-between gap-6 flex-wrap">
         <div>
-          <h1 className="text-[30px] font-bold m-0 leading-tight">{greet}, {first}.</h1>
-          <div className="text-[14px] mt-1" style={{ color: "var(--muted)" }}>{dateLine}{r ? ` · day ${r.daysElapsed} of ${r.daysInMonth} in ${monthName(r.month)}` : ""}</div>
+          <h1 className="text-[30px] font-bold m-0 leading-tight">{hello.line}{/[.!?…]$/.test(hello.line) ? "" : "."}</h1>
+          <div className="text-[14px] mt-1" style={{ color: "var(--muted)" }}>{hello.sub ? `${hello.sub} · ` : ""}{dateLine}{r ? ` · day ${r.daysElapsed} of ${r.daysInMonth} in ${monthName(r.month)}` : ""}</div>
+          {hello.confetti && <Confetti dayKey={todayIso} />}
         </div>
         {attention > 0 && <button onClick={() => document.getElementById("attention")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="rounded-full px-3.5 h-9 inline-flex items-center text-[13px] font-semibold" style={{ background: "var(--yellow-bg)", color: "var(--yellow-text)" }}>{attention} {attention === 1 ? "thing" : "things"} to look at ↓</button>}
       </header>
@@ -180,7 +184,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
               {under.map((c) => <LineRow key={c.categoryId} label={catName(c.categoryId)} note={c.status === "not_enough" ? "not enough for its goal" : "underfunded"} amount={-c.short} onClick={() => goCategory(c.categoryId)} />)}
             </Card>
           )}
-          {attention === 0 && <Card title="Nothing needs a decision" sub="no bills to confirm, no flags, no duplicates, and every line is funded"><p className="text-sm m-0" style={{ color: "var(--muted)" }}>Enjoy the quiet.</p></Card>}
+          {attention === 0 && <Card title="Nothing needs a decision" sub="no bills to confirm, no flags, no duplicates"><p className="text-sm m-0">{allClearLine(now, first)}</p></Card>}
           <Card title="Recent entries" action={<button onClick={() => goTransactions(null)} className="text-[12px] font-semibold" style={{ color: "var(--accent-text)" }}>All ›</button>} flush>
             {d.recent.slice(0, 10).map((x, i) => (
               <button key={x.id + (x.half?.share ?? "")} onClick={() => openEdit?.(x.id)} className="w-full text-left px-4 py-2 flex items-center gap-3" style={{ borderBottom: i < Math.min(d.recent.length, 10) - 1 ? "1px solid var(--border-soft)" : undefined }}>

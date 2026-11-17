@@ -46,6 +46,8 @@ export interface ReportsView {
     movers: Mover[];
     billsToCome: BillToCome[];
     billsTotal: Cents;
+    /** moved from on-budget accounts into off-budget savings (money market, retirement, 529s) this month so far */
+    toSavings: Cents;
     explain: { spent: ExplainBox; onPace: ExplainBox; vsLast: ExplainBox; who: ExplainBox };
   };
   /** cumulative spend by day: this month through today, last month in full */
@@ -175,6 +177,8 @@ export function computeReports(r: ReportsInput): ReportsView {
     .map((b) => ({ id: b.id, payee: b.payee, amount: Math.abs(b.amount), day: b.day, categoryId: b.categoryId, accountId: b.accountId ?? null, overdue: isCurrent && b.day !== null && b.day < daysElapsed }))
     .sort((a, b) => (a.day ?? 99) - (b.day ?? 99) || a.payee.localeCompare(b.payee));
   const billsTotal = sum(billsToCome.map((b) => b.amount));
+  const onBudgetIds = new Set(input.accounts.filter((a) => a.onBudget).map((a) => a.id));
+  const toSavings = sum(input.transactions.filter((t) => t.transferToAccountId && monthOf(t.date) === month && (!through || t.date <= through) && t.confirmed !== false && onBudgetIds.has(t.accountId) && !onBudgetIds.has(t.transferToAccountId)).map((t) => -t.amount));
 
   // on pace: spent so far + bills still to come + everyday spending at its average daily rate for the days left
   const recurringPayees = new Set(r.recurring.map((b) => b.payee.trim().toLowerCase()));
@@ -365,7 +369,7 @@ export function computeReports(r: ReportsInput): ReportsView {
     thisMonth: {
       spent, budgeted, onPace,
       vsLast: { pct: vsPct, prevSpent, prevDay, summary },
-      byCategory, byOwner, movers: movers.slice(0, 6), billsToCome, billsTotal,
+      byCategory, byOwner, movers: movers.slice(0, 6), billsToCome, billsTotal, toSavings: Math.max(0, toSavings),
       explain: { spent: explainSpent, onPace: explainOnPace, vsLast: explainVs, who: explainWho },
     },
     daily: { thisMonth: cumulativeByDay(input, month, through), lastMonth: cumulativeByDay(input, prevMonth, null) },

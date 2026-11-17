@@ -13,8 +13,11 @@ import type { ReportsPayload } from "../server/reports";
 import type { FlaggedEntry } from "../server/flags";
 import type { DupPair } from "../server/duplicates";
 import { DupPairRow } from "./Duplicates";
+import { pickGreeting, allClearLine } from "./greeting";
+import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
 
+const whole = (c: number) => (c < 0 ? "−" : "") + "$" + Math.round(Math.abs(c) / 100).toLocaleString("en-US");
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -62,8 +65,12 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
   const fun = funId ? m?.view.categories.find((c) => c.categoryId === funId) ?? null : null;
   const today = new Date();
   const hour = today.getHours();
-  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  void hour;
+  const first = me.name.split(" ")[0] ?? me.name;
   const cats = m?.view.categories.filter((c) => !m.categories[c.categoryId]?.hidden) ?? [];
+  const nmId = m ? Object.entries(m.categories).find(([, c]) => c.kind === "next_month")?.[0] : undefined;
+  const nm = nmId ? m?.view.categories.find((c) => c.categoryId === nmId) : undefined;
+  const hello = pickGreeting(today, { first, initial: me.initial }, report, { fullyFunded: !!nm && nm.needed > 0 && nm.available >= nm.needed });
   const overspent = cats.filter((c) => c.status === "overspent").sort((a, b) => a.available - b.available);
   const under = cats.filter((c) => c.status === "underfunded" || c.status === "not_enough").sort((a, b) => b.short - a.short);
   const catName = (id: string | null) => (id ? `${m?.categories[id]?.emoji ?? ""} ${m?.categories[id]?.name ?? ""}`.trim() : "Ready to Assign");
@@ -200,8 +207,9 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
       <>
         {m && (
           <a href="#budget" className={card} style={cs}>
-            <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Budget check</span><span className="text-xs" style={{ color: "var(--muted)" }}>{overspent.length + under.length} of {cats.length} need attention ›</span></div>
-            {[{ items: overspent, label: "Overspent", bg: "var(--red-bg)", fg: "var(--red-text)", val: (c: typeof cats[number]) => c.available }, { items: under, label: "Underfunded", bg: "var(--yellow-bg)", fg: "var(--yellow-text)", val: (c: typeof cats[number]) => c.short }].map((s) => (
+            <div className="flex justify-between items-baseline"><span className="text-sm font-bold">Budget check</span><span className="text-xs" style={{ color: "var(--muted)" }}>{overspent.length + under.length === 0 ? "all clear ›" : `${overspent.length + under.length} of ${cats.length} need attention ›`}</span></div>
+            {overspent.length + under.length === 0 && <p className="text-[13px] m-0 py-1">{allClearLine(today, first)}</p>}
+            {[{ items: overspent, label: "Overspent", bg: "var(--red-bg)", fg: "var(--red-text)", val: (c: typeof cats[number]) => c.available }, { items: under, label: "Underfunded", bg: "var(--yellow-bg)", fg: "var(--yellow-text)", val: (c: typeof cats[number]) => c.short }].filter((s) => s.items.length > 0).map((s) => (
               <div key={s.label} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-[13px] font-semibold"><span>{s.label}</span><span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold" style={{ background: s.bg, color: s.fg }}>{s.items.length}</span></div>
                 {s.items.slice(0, 3).map((c) => <button key={c.categoryId} onClick={(e) => { e.preventDefault(); e.stopPropagation(); goCategory(c.categoryId); }} className="flex justify-between text-xs pl-2 w-full text-left rounded-md tb-btn" style={{ padding: "3px 4px 3px 8px", margin: "-3px 0" }}><span className="truncate" style={{ color: "var(--text-2)" }}>{catName(c.categoryId)}</span><span className="font-semibold shrink-0" style={{ color: s.fg }}>{formatMoney(s.val(c))} ›</span></button>)}
@@ -229,7 +237,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                   const pct = (v: number) => Math.max(0, Math.min(100, (v / scale) * 100));
                   const over = room > 0 ? c.spent > room : c.spent > 0;
                   return (
-                    <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: "110px minmax(0,1fr) 62px" }}>
+                    <div key={c.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: "104px minmax(0,1fr) auto" }}>
                       <span className="truncate" style={{ color: "var(--text-2)" }}>{c.emoji ? c.emoji + " " : ""}{c.name}</span>
                       <span className="relative block rounded" style={{ height: 10, background: "var(--track)" }}>
                         {carry > 0 && <span className="absolute top-0 h-full" style={{ left: `${pct(c.budget)}%`, width: `${pct(c.available) - pct(c.budget)}%`, background: "repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px)", borderRadius: "0 4px 4px 0" }} />}
@@ -237,7 +245,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
                         {c.budget > 0 && <span className="absolute" style={{ left: `calc(${pct(c.budget)}% - 1px)`, top: -2, width: 2, height: 14, background: "var(--text)" }} />}
                         {carry > 0 && c.available <= scale && <span className="absolute" style={{ left: `calc(${pct(c.available)}% - 1px)`, top: -1, width: 2, height: 12, background: "var(--muted)", opacity: 0.7 }} />}
                       </span>
-                      <span className="text-right font-semibold tabular-nums">{formatMoney(c.spent)}</span>
+                      <span className="text-right tabular-nums whitespace-nowrap"><span className="font-semibold">{formatMoney(c.spent)}</span>{room > 0 && <span style={{ color: "var(--muted)" }}> / {whole(room)}</span>}</span>
                     </div>
                   );
                 })}
@@ -302,7 +310,9 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[13px] opacity-75">{DAYS[today.getDay()]}, {MON[today.getMonth()]} {today.getDate()}</div>
-            <div className="text-[22px] font-bold">{greet}, {me.name.split(" ")[0]}</div>
+            <div className="text-[22px] font-bold leading-tight">{hello.line}</div>
+            {hello.sub && <div className="text-[13px] opacity-75 mt-0.5">{hello.sub}</div>}
+            {hello.confetti && <Confetti dayKey={todayISO()} />}
           </div>
           <button onClick={() => setEditing(true)} className="rounded-full px-3 text-[12px] font-semibold shrink-0 mt-1" style={{ height: 30, background: "rgba(255,255,255,0.14)", color: "#fff" }}>Edit Home</button>
         </div>

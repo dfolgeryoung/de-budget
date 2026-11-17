@@ -129,7 +129,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const shared = tm.byOwner.find((o) => o.who === "shared");
   const sharedParts = shared?.parts ?? [];
   // shared sub-slices: a family of blues and teals that stay "shared" at a glance but tell apart (biggest first)
-  const SHARED_HUES = ["#2456A6", "#4FA3E0", "#1A9C9C", "#7D87DC", "#8ECAE6", "#2F6F8F", "#A9B8F0"];
+  const SHARED_HUES = [1, 2, 3, 4, 5, 6, 7].map((i) => `var(--hue-${i})`);
   const shade = (i: number, _n: number) => SHARED_HUES[i % SHARED_HUES.length]!;
   const slices: { key: string; label: string; amount: number; color: string }[] = [
     ...(sharedParts.length ? sharedParts.map((p, i) => ({ key: "s:" + p.name, label: p.name, amount: p.amount, color: shade(i, sharedParts.length) })) : shared?.spent ? [{ key: "shared", label: "Shared", amount: shared.spent, color: WHO.shared.color }] : []),

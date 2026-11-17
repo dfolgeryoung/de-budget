@@ -110,7 +110,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
       {tm && r && (
         <section className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
           <Tile label="Spent so far" value={whole(tm.spent)} sub={`of ${whole(tm.budgeted)} budgeted`}>
-            <Bar pct={tm.budgeted ? tm.spent / tm.budgeted : 0} tick={elapsedPct} color={tm.spent > tm.budgeted * Math.max(elapsedPct, 0.01) * 1.1 ? "var(--neg)" : "var(--navy)"} />
+            <Bar pct={tm.budgeted ? tm.spent / tm.budgeted : 0} tick={elapsedPct} color={tm.spent > tm.budgeted * Math.max(elapsedPct, 0.01) * 1.1 ? "var(--neg)" : "var(--ink)"} />
           </Tile>
           <Tile label="On pace to spend" value={whole(tm.onPace)} sub={paceDiff > 0 ? `${whole(paceDiff)} over budget` : `${whole(-paceDiff)} under budget`} color={paceDiff > 0 ? "var(--neg)" : "var(--green-text)"} onClick={() => { location.hash = "reports"; }} />
           <Tile label="Ready to assign" value={whole(m.view.readyToAssign)} sub={m.view.readyToAssign === 0 ? "All money assigned" : m.view.readyToAssign > 0 ? "waiting for a job" : "over-assigned"} color={m.view.readyToAssign < 0 ? "var(--neg)" : m.view.readyToAssign > 0 ? "var(--green-text)" : undefined} onClick={() => { location.hash = "budget"; }} />
@@ -211,10 +211,10 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
           {owners.length > 0 && tm && tm.spent > 0 && (
             <Card title="Whose spending" sub="shared household lines vs each person's own">
               <div className="flex h-3 rounded-full overflow-hidden" style={{ background: "var(--track)" }}>
-                {owners.map((o) => <div key={o.who} style={{ width: `${o.share * 100}%`, background: o.who === "shared" ? "var(--navy)" : o.who === "D" ? "#4FA3E0" : "#7D87DC" }} title={`${o.who}: ${formatMoney(o.spent)}`} />)}
+                {owners.map((o) => <div key={o.who} style={{ width: `${o.share * 100}%`, background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} title={`${o.who}: ${formatMoney(o.spent)}`} />)}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-                {owners.map((o) => <span key={o.who} className="inline-flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: o.who === "shared" ? "var(--navy)" : o.who === "D" ? "#4FA3E0" : "#7D87DC" }} />{o.who === "shared" ? "Shared" : r?.people[o.who]} <strong className="tabular-nums">{whole(o.spent)}</strong><span style={{ color: "var(--muted)" }}>{Math.round(o.share * 100)}%</span></span>)}
+                {owners.map((o) => <span key={o.who} className="inline-flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: o.who === "shared" ? "var(--classic-shared)" : o.who === "D" ? "var(--classic-david)" : "var(--classic-eliz)" }} />{o.who === "shared" ? "Shared" : r?.people[o.who]} <strong className="tabular-nums">{whole(o.spent)}</strong><span style={{ color: "var(--muted)" }}>{Math.round(o.share * 100)}%</span></span>)}
               </div>
             </Card>
           )}
@@ -250,7 +250,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
               {openTracked_.map((x, i) => (
                 <button key={x.id} onClick={() => openTracked(x.id)} className="w-full text-left px-4 py-2.5 flex flex-col gap-1.5" style={{ borderBottom: i < openTracked_.length - 1 ? "1px solid var(--border-soft)" : undefined }}>
                   <span className="flex justify-between gap-3 text-sm"><span className="font-medium truncate">{x.emoji ? `${x.emoji} ` : ""}{x.name}</span><span className="tabular-nums shrink-0"><strong>{formatMoney(x.left)}</strong><span style={{ color: "var(--muted)" }}> left of {formatMoney(x.amount)}</span></span></span>
-                  <Bar pct={x.amount ? x.spent / x.amount : 0} color="var(--navy)" thin />
+                  <Bar pct={x.amount ? x.spent / x.amount : 0} color="var(--ink)" thin />
                 </button>
               ))}
             </Card>
@@ -351,15 +351,15 @@ function CumulativeChart({ daily, budget, onPace, daysElapsed, month, prevMonth 
   return (
     <div>
       <div className="flex items-center justify-end text-[12px] mb-1" style={{ color: "var(--muted)" }}>
-        <span className="flex gap-3"><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--navy)" }} />{monthName(month)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--muted)", opacity: 0.7 }} />{monthName(prevMonth)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--navy)", opacity: 0.5 }} />on pace</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--neg)" }} />budget</span></span>
+        <span className="flex gap-3"><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--ink)" }} />{monthName(month)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--muted)", opacity: 0.7 }} />{monthName(prevMonth)}</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--ink)", opacity: 0.5 }} />on pace</span><span><span className="inline-block w-3 h-0.5 align-middle mr-1" style={{ background: "var(--neg)" }} />budget</span></span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }} onMouseLeave={() => setHot(null)} onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; setHot(Math.max(1, Math.min(dim, Math.round(1 + ((px - L) / (W - L - R)) * (dim - 1))))); }}>
         {ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--border-soft)" /><text x={L - 6} y={y(v) + 3} fontSize="10" textAnchor="end" fill="var(--muted)">{whole(v)}</text></g>)}
         {budget > 0 && <line x1={L} x2={W - R} y1={y(budget)} y2={y(budget)} stroke="var(--neg)" strokeDasharray="4 3" strokeWidth="1" />}
         <path d={path(daily.lastMonth, pdim, pdim)} fill="none" stroke="var(--muted)" strokeWidth="1.5" opacity="0.6" strokeDasharray="3 3" />
-        {daysElapsed > 0 && <path d={path(daily.thisMonth, dim, daysElapsed)} fill="none" stroke="var(--navy)" strokeWidth="3" strokeLinejoin="round" />}
-        {daysElapsed > 0 && daysElapsed < dim && <line x1={x(daysElapsed, dim)} y1={y(daily.thisMonth[daysElapsed - 1] ?? 0)} x2={x(dim, dim)} y2={y(onPace)} stroke="var(--navy)" strokeWidth="1.5" strokeDasharray="2 3" opacity="0.7" />}
-        {daysElapsed > 0 && <circle cx={x(daysElapsed, dim)} cy={y(daily.thisMonth[daysElapsed - 1] ?? 0)} r="3.5" fill="var(--navy)" />}
+        {daysElapsed > 0 && <path d={path(daily.thisMonth, dim, daysElapsed)} fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round" />}
+        {daysElapsed > 0 && daysElapsed < dim && <line x1={x(daysElapsed, dim)} y1={y(daily.thisMonth[daysElapsed - 1] ?? 0)} x2={x(dim, dim)} y2={y(onPace)} stroke="var(--ink)" strokeWidth="1.5" strokeDasharray="2 3" opacity="0.7" />}
+        {daysElapsed > 0 && <circle cx={x(daysElapsed, dim)} cy={y(daily.thisMonth[daysElapsed - 1] ?? 0)} r="3.5" fill="var(--ink)" />}
         {[1, 5, 10, 15, 20, 25, dim].map((d) => <text key={d} x={x(d, dim)} y={H - 6} fontSize="10" textAnchor="middle" fill="var(--muted)">{d}</text>)}
         {hover && <g><line x1={x(hover.day, dim)} x2={x(hover.day, dim)} y1={T} y2={H - B} stroke="var(--text)" opacity="0.25" />
           <rect x={Math.min(W - R - 150, Math.max(L, x(hover.day, dim) - 75))} y={T} width="150" height="34" rx="6" fill="var(--card)" stroke="var(--border)" />

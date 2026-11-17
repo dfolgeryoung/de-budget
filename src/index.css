@@ -23,6 +23,9 @@
   --rail-text: rgba(255, 255, 255, 0.8);
   --navy: #3a4f7d;
   --navy-text: #ffffff;
+  /* data marks: lines, bars, dots. Navy on light; a bright blue on dark, where navy sinks into the card. */
+  --ink: #3a4f7d;
+  --hue-1: #2456A6; --hue-2: #4FA3E0; --hue-3: #1A9C9C; --hue-4: #7D87DC; --hue-5: #8ECAE6; --hue-6: #2F6F8F; --hue-7: #A9B8F0;
   --accent-text: #3a4f7d;
   --green: #22b35a;
   --green-bg: #cdf3d8;
@@ -60,6 +63,9 @@
   --rail-text: rgba(255, 255, 255, 0.8);
   --navy: #2b3a5e;
   --navy-text: rgba(255, 255, 255, 0.8);
+  --ink: #8fb4ff;
+  --hue-1: #5B8DEF; --hue-2: #6FB8F0; --hue-3: #3FC1C1; --hue-4: #9AA3F0; --hue-5: #A9D8F0; --hue-6: #5A9BC0; --hue-7: #C0CBF5;
+  --classic-shared: #5a9be0; --classic-shared-2: #7fb6ea; --classic-david: #7cc262; --classic-eliz: #ec7b7b;
   --accent-text: #9db4f0;
   --green-bg: #14402a;
   --green-text: #7ee2a3;
@@ -76,7 +82,9 @@
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --bg: #121418; --card: #1b1f26; --card-alt: #1f242c; --border: #2a303a; --border-soft: #262c35; --group: #232830; --selected: #263249; --hover: #222833;
     --text: #eef1f5; --text-2: #d3d9e1; --muted: #aab3bf; --faint: #8b95a2; --field: #3a4250; --rail: #1a1d23; --navy: #2b3a5e;
-    --navy-text: rgba(255, 255, 255, 0.8); --accent-text: #9db4f0; --green-bg: #14402a; --green-text: #7ee2a3; --green-stripe: #7ad99a;
+    --navy-text: rgba(255, 255, 255, 0.8); --accent-text: #9db4f0; --green-bg: #14402a;
+    --ink: #8fb4ff; --hue-1: #5B8DEF; --hue-2: #6FB8F0; --hue-3: #3FC1C1; --hue-4: #9AA3F0; --hue-5: #A9D8F0; --hue-6: #5A9BC0; --hue-7: #C0CBF5; --classic-shared: #5a9be0; --classic-shared-2: #7fb6ea; --classic-david: #7cc262; --classic-eliz: #ec7b7b;
+    --green-text: #7ee2a3; --green-stripe: #7ad99a;
     --yellow-bg: #4a3a0a; --yellow-text: #f3d27a; --yellow-row: #2a2614; --red-bg: #4a1b18; --red-text: #f2a09a; --neg: #f2a09a; --track: #2f3640;
   }
 }

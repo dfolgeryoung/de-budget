@@ -212,3 +212,12 @@ select.sel.on { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http:
     font-size: max(16px, 1em);
   }
 }
+
+/* the entry box's echo: a blurred blue card that drops into the ledger and fades, ~half a second */
+.entry-ghost { background: var(--selected); border: 1px solid var(--navy); opacity: 0; animation: entry-drop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards; will-change: transform, opacity, filter; }
+@keyframes entry-drop {
+  0% { transform: translateY(0) scale(1); opacity: 0.55; filter: blur(1px); }
+  60% { opacity: 0.35; }
+  100% { transform: translateY(var(--drop, 80px)) scale(0.985); opacity: 0; filter: blur(6px); }
+}
+@media (prefers-reduced-motion: reduce) { .entry-ghost { animation-duration: 1ms; } }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { api, apiCached, categoryOptions, type Lists, tagText } from "./api";
 import { formatMoney } from "../budget/money";
 import { useToast } from "./Toast";
@@ -32,6 +32,16 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
   const isDesktop = typeof matchMedia !== "undefined" && matchMedia("(min-width: 768px)").matches;
   const [menu, setMenu] = useState<string | null>(null);
   const [flagging, setFlagging] = useState<LedgerRow | null>(null);
+  // a blurred echo of the entry box slides down into the ledger when an entry is filed, so the eye follows it
+  const newBox = useRef<HTMLDivElement>(null);
+  const [ghost, setGhost] = useState<{ key: number; top: number; height: number; drop: number } | null>(null);
+  function dropGhost() {
+    const el = newBox.current; if (!el) return;
+    const wrap = el.parentElement!; const r = el.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    const firstRow = wrap.querySelector<HTMLElement>("[data-row]"); const drop = firstRow ? firstRow.getBoundingClientRect().top - r.top : r.height + 60;
+    setGhost({ key: Date.now(), top: r.top - w.top, height: r.height, drop });
+    setTimeout(() => setGhost(null), 700);
+  }
   const [dupFocus, setDupFocus] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [balances, setBalances] = useState<Map<string, number>>(new Map());
@@ -191,8 +201,9 @@ export function Transactions({ me, lists, openEntry, refreshKey, account, setAcc
       </div>
 
       {/* below LEDGER_MIN the entry box and ledger scroll sideways together rather than clipping the last columns */}
-      <div className="flex flex-col gap-3 overflow-x-auto pb-1"><div className="flex flex-col gap-3" style={{ minWidth: LEDGER_MIN }}>
-      {isDesktop && <EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { setPrefill(undefined); dispatchEvent(new Event("lists-changed")); }} />}
+      <div className="flex flex-col gap-3 overflow-x-auto pb-1"><div className="flex flex-col gap-3 relative" style={{ minWidth: LEDGER_MIN }}>
+      {isDesktop && <div ref={newBox}><EntryRow key="new" mode="new" lists={lists} me={me} account={account} initial={prefill} onSaved={() => { dropGhost(); setPrefill(undefined); dispatchEvent(new Event("lists-changed")); }} /></div>}
+      {ghost && <div key={ghost.key} aria-hidden className="entry-ghost absolute left-0 right-0 rounded-xl pointer-events-none" style={{ top: ghost.top, height: ghost.height, "--drop": `${ghost.drop}px` } as CSSProperties} />}
 
       <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         {isDesktop && (

@@ -302,10 +302,11 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     );
     return (
       <>
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: ph ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))" }}>
           <Tile label={ph ? "Projected" : "Projected spend"} value={money(pr.totalProjected, ph)} sub={`by ${mon(d.month)} ${d.daysInMonth}`} box={pr.explain} />
           <Tile label="Budgeted" value={money(pr.totalBudgeted, ph)} sub={ph ? "assigned or goal" : "assigned, or what each goal needs"} />
           <Tile label={short > 0 ? "Over budget" : "Under budget"} value={money(Math.abs(short), ph)} sub={ph ? "if it holds" : "if spending holds its pace"} tone={short > 0 ? "var(--red-text)" : "var(--green-text)"} />
+          {pr.savings && <Tile label={ph ? "Put away" : "Put away at month end"} value={money(pr.savings.putAwayProjected, ph)} sub={ph ? `${money(pr.savings.putAwaySoFar, true)} so far` : `${money(pr.savings.putAwaySoFar, true)} so far · income − spending, contributions aside`} tone={pr.savings.putAwayProjected >= 0 ? "var(--green-text)" : "var(--red-text)"} box={pr.savings.explain} />}
         </div>
         {ph && <div className="flex gap-3 px-1 -mt-1 text-[11px]" style={{ color: "var(--muted)" }}><button onClick={() => setExplain(pr.explain)} className="underline decoration-dotted underline-offset-2">How the projection works</button></div>}
         {pr.headingOver.length > 0 && (

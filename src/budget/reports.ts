@@ -64,6 +64,8 @@ export interface ReportsView {
     totalBudgeted: Cents;
     headingOver: ProjectedCategory[];
     explain: ExplainBox;
+    /** the Savings tab's "put away" (income − spending, contributions aside) if the projection holds and no more income lands */
+    savings: { incomeSoFar: Cents; putAwaySoFar: Cents; contributionsSoFar: Cents; contributionsProjected: Cents; putAwayProjected: Cents; explain: ExplainBox };
   };
 }
 
@@ -379,6 +381,25 @@ export function computeReports(r: ReportsInput): ReportsView {
     note: "A category with a recurring bill counts its bills, not a daily rate. An everyday category (three or more entries so far, or spending in each of the last two months) keeps its average daily rate; a one-off is not extrapolated and lands at the larger of what it spent and its budget. A category is heading over when its projection passes what it has available, carry-over included.",
   };
 
+  // tie the projection to the Savings tab: put away = income − spending with contributions aside
+  const contribIds = new Set(r.categories.filter((c) => /retirement|529|\b401|\bira\b|pension|hsa\b/i.test(c.name)).map((c) => c.id));
+  const incomeSoFar = incomeToRTA(input, month, through);
+  const contributionsSoFar = sum([...byCat].filter(([id]) => contribIds.has(id)).map(([, v]) => v));
+  const contributionsToCome = sum(billsToCome.filter((b) => b.categoryId && contribIds.has(b.categoryId)).map((b) => b.amount)) + sum(untouched.filter((c) => contribIds.has(c.id)).map((c) => c.budget));
+  const contributionsProjected = contributionsSoFar + contributionsToCome;
+  const putAwaySoFar = incomeSoFar - (spent - contributionsSoFar);
+  const putAwayProjected = incomeSoFar - (totalProjected - contributionsProjected);
+  const projSavings = {
+    incomeSoFar, putAwaySoFar, contributionsSoFar, contributionsProjected, putAwayProjected,
+    explain: { title: "Put away at month end", rows: [
+      { k: "Income so far (more may land)", v: money(incomeSoFar) },
+      { k: "Projected spend at month end", v: money(totalProjected), op: "−" },
+      { k: `of which retirement & 529 contributions, which count as put away (${fmt(contributionsSoFar)} so far)`, v: money(contributionsProjected), op: "+" },
+      { k: "Put away if this holds", v: money(putAwayProjected), result: true },
+      { k: "Put away so far (the Savings tab's figure)", v: money(putAwaySoFar), sub: true },
+    ], note: "Under or over budget compares the projection with what you assigned; put away compares it with income. The two only agree when every dollar of income is assigned and nothing is carried over, so this row is the one to read for savings." } as ExplainBox,
+  };
+
   return {
     month, prevMonth, daysElapsed, daysInMonth: dim, daysLeft, isCurrent,
     thisMonth: {
@@ -389,7 +410,7 @@ export function computeReports(r: ReportsInput): ReportsView {
     },
     daily: { thisMonth: cumulativeByDay(input, month, through), lastMonth: cumulativeByDay(input, prevMonth, null) },
     trends: { months: trendMonths.map(({ full: _f, ...t }) => t), categories: trendCategories, explain: explainTrends },
-    projection: { categories: projCats, totalProjected, totalAvailable, totalBudgeted, headingOver, explain: explainProjection },
+    projection: { categories: projCats, totalProjected, totalAvailable, totalBudgeted, headingOver, explain: explainProjection, savings: projSavings },
   };
 }
 

@@ -8,6 +8,7 @@ import { Chevron } from "./icons";
 import { Sheet } from "./Sheet";
 import { monthLabel } from "./Budget";
 import { SavingsReport } from "./SavingsReport";
+import { Sankey } from "./Sankey";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const mon = (m: string) => MON[Number(m.slice(5, 7)) - 1]!;
@@ -213,6 +214,11 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     const H = ph ? 120 : 160, W = 100 / tr.months.length;
     return (
       <>
+        {d.flows && (
+          <Card title="Where the money went" sub={`${monthLabel(d.month)}${d.isCurrent ? " so far" : ""} · income → spending by group, contributions, saved`}>
+            <Sankey flows={d.flows} phone={ph} />
+          </Card>
+        )}
         <Card title="Spent vs income, by month" sub="current month to date" box={tr.explain}>
           <div className="flex items-end gap-2" style={{ height: H + 26 }}>
             {tr.months.map((m) => (

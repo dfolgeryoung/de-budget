@@ -5,6 +5,7 @@ import * as t from "../db/schema.js";
 import { computeReports, type ReportsView } from "../budget/reports.js";
 import { loadBudget } from "./month.js";
 import { computeSavings, isContribution, type SavingsView } from "../budget/savings.js";
+import { computeFlows, type Flows } from "../budget/flows.js";
 import { monthOf } from "../budget/dates.js";
 import { computeClassic } from "../budget/classic.js";
 import { buildClassicInput } from "./classic.js";
@@ -15,10 +16,12 @@ import type { MonthKey } from "../budget/dates.js";
 export interface ReportsPayload extends ReportsView {
   people: { D: string; E: string };
   accountNames: Record<string, string>;
+  /** income → groups / contributions / saved, for the Sankey */
+  flows: Flows;
 }
 
 export async function reportsPayload(db: Db, month: MonthKey, today: string, me = ""): Promise<ReportsPayload> {
-  const [{ input, cats }, recurring, users] = await Promise.all([
+  const [{ input, cats, groups }, recurring, users] = await Promise.all([
     loadBudget(db),
     db.select().from(t.recurring).where(eq(t.recurring.active, true)),
     db.select({ name: t.users.displayName, initial: t.users.initial }).from(t.users),
@@ -42,7 +45,8 @@ export async function reportsPayload(db: Db, month: MonthKey, today: string, me 
   const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;
   const accountNames: Record<string, string> = {};
   for (const a of await db.select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)) accountNames[a.id] = a.name;
-  return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, accountNames };
+  const flows = computeFlows(input, month, view.isCurrent ? today : null, cats.map((c) => ({ id: c.id, name: c.name, groupId: c.groupId })), groups.map((g) => ({ id: g.id, name: g.name })));
+  return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, accountNames, flows };
 }
 
 export interface SavingsPayload extends SavingsView {

@@ -272,10 +272,23 @@ export function computeReports(r: ReportsInput): ReportsView {
     })
     .filter((c) => c.spent || c.billsLeft) // a category with no spending and no bills just holds its balance
     .sort((a, b) => b.over - a.over || b.projected - a.projected);
-  // categories with nothing spent and no bill due are assumed to spend what they were budgeted
+  // categories with nothing spent and no bill due are assumed to spend what they were budgeted — but only the ones that
+  // get spent from at all: a line that has never had an entry in the last three months (next month's money, a savings
+  // pot, an emergency fund) is holding money, not about to spend it
   const activeIds = new Set(projCats.map((c) => c.id));
-  const untouched = byCategory.filter((c) => !activeIds.has(c.id) && c.budget > 0);
+  const recentSpend = new Set<string>();
+  for (const t of input.transactions) {
+    if (t.confirmed === false || t.transferToAccountId) continue;
+    const tm = monthOf(t.date);
+    if (tm !== prevMonth && tm !== addMonths(month, -2) && tm !== addMonths(month, -3)) continue;
+    for (const l of t.lines) if (l.categoryId && l.amount < 0) recentSpend.add(l.categoryId);
+  }
+  const idle = byCategory.filter((c) => !activeIds.has(c.id) && c.budget > 0);
+  const untouched = idle.filter((c) => meta.get(c.id)?.kind !== "next_month" && (recentSpend.has(c.id) || recurringCats.has(c.id)));
+  const holding = idle.filter((c) => !untouched.includes(c));
   const untouchedBudget = sum(untouched.map((c) => c.budget));
+  const holdingBudget = sum(holding.map((c) => c.budget));
+  const listNames = (cs: CategorySpend[]) => cs.slice(0, 8).map((c) => `${c.name} ${fmt(c.budget)}`).join(", ") + (cs.length > 8 ? ` and ${cs.length - 8} more` : "");
   const everydayProjected = sum(projCats.filter((c) => c.how === "daily").map((c) => c.projected - c.spent - c.billsLeft));
   const oneOffs = projCats.filter((c) => c.how === "one-off");
   const oneOffTopUp = sum(oneOffs.map((c) => c.projected - c.spent - c.billsLeft));
@@ -305,7 +318,8 @@ export function computeReports(r: ReportsInput): ReportsView {
       { k: `÷ ${daysElapsed} days elapsed = average per day`, v: fmt(Math.round(avgDaily)), sub: true },
       { k: `Everyday categories (${projCats.filter((c) => c.how === "daily").length}): their average per day × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
       { k: `One-offs (${oneOffs.length}): the rest of their budget, not extrapolated`, v: money(oneOffTopUp), op: "+" },
-      { k: `Budgets of the ${untouched.length} categories with nothing spent yet`, v: money(untouchedBudget), op: "+" },
+      { k: `Budgets of the ${untouched.length} categories with nothing spent yet${untouched.length ? ` (${listNames(untouched)})` : ""}`, v: money(untouchedBudget), op: "+" },
+      ...(holding.length ? [{ k: `Not counted: ${holding.length} ${holding.length === 1 ? "category" : "categories"} holding money that's never spent from (${listNames(holding)})`, v: money(holdingBudget), sub: true }] : []),
       { k: "On pace to spend", v: money(onPace), result: true },
       { k: "Budgeted", v: money(budgeted), op: "−" },
       { k: onPace > budgeted ? "Over budget if it holds" : "Under budget if it holds", v: money(Math.abs(onPace - budgeted)), result: true },
@@ -355,7 +369,8 @@ export function computeReports(r: ReportsInput): ReportsView {
       { k: "Bills still to come", v: money(billsTotal), op: "+" },
       { k: `Everyday categories (${projCats.filter((c) => c.how === "daily").length}) at their average daily rate × ${daysLeft} days left`, v: money(everydayProjected), op: "+" },
       { k: `One-offs (${oneOffs.length}): the rest of their budget, not extrapolated`, v: money(oneOffTopUp), op: "+" },
-      { k: `Budgets of the ${untouched.length} categories with nothing spent yet`, v: money(untouchedBudget), op: "+" },
+      { k: `Budgets of the ${untouched.length} categories with nothing spent yet${untouched.length ? ` (${listNames(untouched)})` : ""}`, v: money(untouchedBudget), op: "+" },
+      ...(holding.length ? [{ k: `Not counted: ${holding.length} ${holding.length === 1 ? "category" : "categories"} holding money that's never spent from (${listNames(holding)})`, v: money(holdingBudget), sub: true }] : []),
       { k: "Projected spend at month end", v: money(totalProjected), result: true },
       { k: "Budgeted (assigned, or what each goal needs this month)", v: money(totalBudgeted), op: "−" },
       { k: totalProjected > totalBudgeted ? "Over budget if it holds" : "Under budget if it holds", v: money(Math.abs(totalBudgeted - totalProjected)), result: true },

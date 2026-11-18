@@ -128,3 +128,29 @@ describe("one-off entries", () => {
     expect(r.projection.categories[0]!.projected).toBe(65900 + 12000);
   });
 });
+
+describe("untouched categories in the projection", () => {
+  const input: BudgetInput = {
+    firstMonth: "2026-10-01",
+    accounts: [{ id: "d", type: "checking", onBudget: true, owner: "D", startingBalance: 1000000, startingDate: "2026-10-01" }],
+    categories: [{ id: "groc", groupId: "g", kind: "normal" }, { id: "gifts", groupId: "g", kind: "normal" }, { id: "pot", groupId: "g", kind: "normal" }, { id: "nm", groupId: "g", kind: "next_month" }],
+    transactions: [
+      { id: "o1", date: "2026-10-12", accountId: "d", amount: -8000, payee: "Shop", lines: [{ categoryId: "gifts", amount: -8000 }] },
+      { id: "n1", date: "2026-11-03", accountId: "d", amount: -20000, payee: "Store", lines: [{ categoryId: "groc", amount: -20000 }] },
+      { id: "n2", date: "2026-11-06", accountId: "d", amount: -20000, payee: "Store", lines: [{ categoryId: "groc", amount: -20000 }] },
+      { id: "n3", date: "2026-11-09", accountId: "d", amount: -20000, payee: "Store", lines: [{ categoryId: "groc", amount: -20000 }] },
+    ],
+    assignments: [{ categoryId: "groc", month: "2026-11-01", amount: 60000 }, { categoryId: "gifts", month: "2026-11-01", amount: 10000 }, { categoryId: "pot", month: "2026-11-01", amount: 300000 }, { categoryId: "nm", month: "2026-11-01", amount: 500000 }],
+    goals: [],
+  };
+  const cats = [{ id: "groc", name: "Groceries", emoji: null, kind: "normal" }, { id: "gifts", name: "Gifts", emoji: null, kind: "normal" }, { id: "pot", name: "Money market savings", emoji: null, kind: "normal" }, { id: "nm", name: "Next Month's Money", emoji: null, kind: "next_month" }];
+  const r = computeReports({ input, categories: cats, recurring: [], month: "2026-11-01", today: "2026-11-10" });
+  it("counts the budget of a line that gets spent from, not of pots that only hold money", () => {
+    // groceries 60000 spent over 10 days → 6000/day × 20 = 120000 more; gifts (spent from last month) assumes its 10000; the pot and next month's money are left out
+    expect(r.thisMonth.onPace).toBe(60000 + 120000 + 10000);
+    const rows = r.thisMonth.explain.onPace.rows.map((x) => x.k);
+    expect(rows.find((k) => k.includes("nothing spent yet"))).toContain("Gifts $100.00");
+    expect(rows.find((k) => k.includes("holding money"))).toContain("Next Month's Money");
+    expect(rows.find((k) => k.includes("holding money"))).toContain("Money market savings");
+  });
+});

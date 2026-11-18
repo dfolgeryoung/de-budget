@@ -16,8 +16,8 @@ import type { MonthKey } from "../budget/dates.js";
 export interface ReportsPayload extends ReportsView {
   people: { D: string; E: string };
   accountNames: Record<string, string>;
-  /** income → groups / contributions / saved, for the Sankey */
-  flows: Flows;
+  /** income → groups / contributions / saved, for the Sankey: the household, and each person the Classic way */
+  flows: { all: Flows; D: Flows; E: Flows };
 }
 
 export async function reportsPayload(db: Db, month: MonthKey, today: string, me = ""): Promise<ReportsPayload> {
@@ -45,7 +45,8 @@ export async function reportsPayload(db: Db, month: MonthKey, today: string, me 
   const first = (i: string, fallback: string) => users.find((u) => u.initial === i)?.name?.split(" ")[0] ?? fallback;
   const accountNames: Record<string, string> = {};
   for (const a of await db.select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)) accountNames[a.id] = a.name;
-  const flows = computeFlows(input, month, view.isCurrent ? today : null, cats.map((c) => ({ id: c.id, name: c.name, groupId: c.groupId })), groups.map((g) => ({ id: g.id, name: g.name })));
+  const fc = cats.map((c) => ({ id: c.id, name: c.name, groupId: c.groupId })), fg = groups.map((g) => ({ id: g.id, name: g.name })), thr = view.isCurrent ? today : null;
+  const flows = { all: computeFlows(input, month, thr, fc, fg), D: computeFlows(input, month, thr, fc, fg, "D"), E: computeFlows(input, month, thr, fc, fg, "E") };
   return { ...view, people: { D: first("D", "David"), E: first("E", "Elizabeth") }, accountNames, flows };
 }
 

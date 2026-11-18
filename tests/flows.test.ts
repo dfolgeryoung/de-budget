@@ -39,3 +39,22 @@ describe("money flows", () => {
     expect(lean.saved).toBe(0);
   });
 });
+
+describe("per-person flows", () => {
+  const input2: BudgetInput = { ...input, accounts: [...input.accounts, { id: "e", type: "checking", onBudget: true, owner: "E", startingBalance: 0, startingDate: "2026-11-01" }, { id: "cap", type: "credit_card", onBudget: true, owner: "shared", startingBalance: 0, startingDate: "2026-11-01" }],
+    transactions: [...input.transactions,
+      { id: "ep", date: "2026-11-05", accountId: "e", amount: 200000, payee: "Red Hat", lines: [{ categoryId: null, amount: 200000 }] },
+      { id: "sh", date: "2026-11-12", accountId: "cap", amount: -40000, payee: "Wegmans", lines: [{ categoryId: "groc", amount: -40000 }] },
+      { id: "ff", date: "2026-11-12", accountId: "d", amount: -10000, payee: "Sitter", sharedFiftyFifty: true, lines: [{ categoryId: "fun", amount: -10000 }] },
+    ] };
+  it("own accounts in full, shared and 50/50 by half; the two people add up to the household", () => {
+    const all = computeFlows(input2, "2026-11-01", null, cats, groups), D = computeFlows(input2, "2026-11-01", null, cats, groups, "D"), E = computeFlows(input2, "2026-11-01", null, cats, groups, "E");
+    expect(D.income).toBe(350000); expect(E.income).toBe(200000);
+    expect(D.nodes.find((n) => n.name === "Household")?.amount).toBe(120000 + 20000);
+    expect(E.nodes.find((n) => n.name === "Household")?.amount).toBe(20000);
+    expect(D.nodes.find((n) => n.name === "Personal")?.amount).toBe(30000 + 5000);
+    expect(E.nodes.find((n) => n.name === "Personal")?.amount).toBe(5000);
+    expect(D.spending + E.spending).toBe(all.spending);
+    expect(D.contributions + E.contributions).toBe(all.contributions);
+  });
+});

@@ -34,6 +34,7 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   const [explain, setExplain] = useState<ExplainBox | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [hot, setHot] = useState<string | null>(null); // legend row under the pointer → its donut slice stands out
+  const [flowWho, setFlowWho] = useState<"all" | "D" | "E">("all");
   const isPhone = typeof matchMedia !== "undefined" && !matchMedia("(min-width: 768px)").matches;
   useEffect(() => { setErr(null); api<ReportsPayload>(month ? `/reports/${month}` : "/reports").then(setData).catch((e) => setErr(String(e))); }, [month, refreshKey]);
 
@@ -80,12 +81,14 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
   // on the phone the info dots live under the tiles, one row
   const phoneInfo = ph && <div className="flex gap-3 px-1 -mt-1 text-[11px] flex-wrap" style={{ color: "var(--muted)" }}><span className="font-semibold">Day {d.daysElapsed} of {d.daysInMonth}</span>{[tm.explain.spent, tm.explain.onPace, tm.explain.vsLast].map((b) => <button key={b.title} onClick={() => setExplain(b)} className="inline-flex items-center gap-1 underline decoration-dotted underline-offset-2">{b.title}</button>)}</div>;
 
-  const Card = ({ title, sub, box, children, className = "" }: { title: string; sub?: string; box?: ExplainBox; children: ReactNode; className?: string }) => (
+  const Card = ({ title, sub, box, action, children, className = "" }: { title: string; sub?: string; box?: ExplainBox; action?: ReactNode; children: ReactNode; className?: string }) => (
     <section aria-label={title} className={"rounded-xl flex flex-col " + className} style={{ background: "var(--card)", border: "1px solid var(--border)", padding: ph ? "12px 12px" : "14px 16px", gap: 10 }}>
-      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="m-0 text-[14px] font-bold inline-flex items-center gap-1.5">{title}{box && <Info box={box} />}</h2>
-        {sub && <span className="text-[11px]" style={{ color: "var(--muted)" }}>{sub}</span>}
+        {action}
+        {sub && !action && <span className="text-[11px]" style={{ color: "var(--muted)" }}>{sub}</span>}
       </div>
+      {sub && action && <div className="text-[11px] -mt-1" style={{ color: "var(--muted)" }}>{sub}</div>}
       {children}
     </section>
   );
@@ -215,8 +218,11 @@ export function Reports({ refreshKey }: { refreshKey: number }) {
     return (
       <>
         {d.flows && (
-          <Card title="Where the money went" sub={`${monthLabel(d.month)}${d.isCurrent ? " so far" : ""} · income → spending by group, contributions, saved`}>
-            <Sankey flows={d.flows} phone={ph} />
+          <Card title="Where the money went" sub={`${monthLabel(d.month)}${d.isCurrent ? " so far" : ""} · ${flowWho === "all" ? "income → spending by group, contributions, saved" : `${d.people[flowWho]}'s income and spending: own accounts in full, shared and 50/50 by half`}`}
+            action={<div role="group" aria-label="Whose money" className="flex gap-0.5 rounded-[10px] p-0.5" style={{ background: ph ? "var(--group)" : "var(--card)", border: "1px solid var(--border)" }}>
+              {([["all", "Combined"], ["D", d.people.D], ["E", d.people.E]] as const).map(([k, l]) => <button key={k} onClick={() => setFlowWho(k)} aria-pressed={flowWho === k} className="rounded-lg px-2.5 text-[12px] font-semibold" style={{ height: 26, background: flowWho === k ? "var(--selected)" : "transparent" }}>{l}</button>)}
+            </div>}>
+            <Sankey flows={d.flows[flowWho]} phone={ph} />
           </Card>
         )}
         <Card title="Spent vs income, by month" sub="current month to date" box={tr.explain}>

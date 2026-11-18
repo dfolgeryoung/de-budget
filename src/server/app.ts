@@ -13,6 +13,21 @@ import { reportsPayload, savingsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
 import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
+/** A 50/50 entry is both of yours: tell the other person it landed (just so they know; nothing to approve). */
+async function notifySplit(by: string, e: { payee: string; amount: number; date: string; accountId: string; lines: { categoryId: string | null; amount: number }[]; categoryId?: string | null }, how: "new" | "now split") {
+  try {
+    const [users, cats, accts] = await Promise.all([db.select({ id: t.users.id, name: t.users.displayName }).from(t.users), db.select({ id: t.categories.id, name: t.categories.name, emoji: t.categories.emoji }).from(t.categories), db.select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)]);
+    const who = users.find((u) => u.id === by)?.name.split(" ")[0] ?? "Someone";
+    const catId = e.lines[0]?.categoryId ?? e.categoryId ?? null;
+    const cat = cats.find((x) => x.id === catId);
+    const half = Math.round(Math.abs(e.amount) / 2);
+    const money = (c: number) => "$" + (c / 100).toFixed(2);
+    const title = how === "new" ? `${who} split ${money(Math.abs(e.amount))} 50/50: ${e.payee || "(no payee)"}` : `${who} made ${e.payee || "an entry"} a 50/50 split`;
+    const body = `Your half is ${money(half)}${cat ? ` · ${cat.emoji ? cat.emoji + " " : ""}${cat.name}` : ""} · ${accts.find((a) => a.id === e.accountId)?.name ?? ""} · ${e.date.slice(5).replace("-", "/")}. Just so you know — nothing to do.`;
+    for (const u of users) if (u.id !== by) await pushToUser(db, u.id, { title, body, url: "/#transactions", tag: "split" });
+  } catch { /* best effort */ }
+}
+
 /** When the last possible duplicate is dealt with, quietly replace the "possible duplicate" alert on the other phone. */
 async function settledDuplicates(by: string) {
   try {
@@ -196,12 +211,15 @@ app.post("/transactions", async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") }, 400);
   const id = await createTransaction(db, c.get("user").id, parsed.data);
   void notifyDuplicates(db, [id], c.get("user").id);
+  if (parsed.data.sharedFiftyFifty && !parsed.data.transferToAccountId) void notifySplit(c.get("user").id, parsed.data, "new");
   return c.json({ id });
 });
 app.put("/transactions/:id", async (c) => {
   const parsed = entrySchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") }, 400);
+  const before = (await db.select({ split: t.transactions.sharedFiftyFifty }).from(t.transactions).where(eq(t.transactions.id, c.req.param("id"))))[0];
   await updateTransaction(db, c.get("user").id, c.req.param("id"), parsed.data);
+  if (parsed.data.sharedFiftyFifty && !parsed.data.transferToAccountId && before && !before.split) void notifySplit(c.get("user").id, parsed.data, "now split");
   return c.json({ ok: true });
 });
 app.delete("/transactions/:id", async (c) => {

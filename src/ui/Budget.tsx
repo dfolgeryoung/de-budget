@@ -12,6 +12,7 @@ import { Sheet } from "./Sheet";
 import { MonthPanel } from "./MonthPanel";
 import { AddCategory } from "./AddCategory";
 import { ZeroCheckSheet } from "./ZeroCheck";
+import { MovesSheet, type MoveRow } from "./MovesSheet";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
@@ -135,7 +136,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
     try { await api("/move", { method: "POST", json: { month: data!.month, from: categoryId, to: null, amount, how: "release" } }); toast(`Released ${formatMoney(amount)} into Ready to Assign`); load(); onChanged(); }
     catch (e) { toast(`Couldn't release: ${(e as Error).message}`); }
   }
-  const [recent, setRecent] = useState<{ id: string; at: string; fromCategoryId: string | null; toCategoryId: string | null; amount: number; how: string; undone: boolean }[] | null>(null);
+  const [movesOpen, setMovesOpen] = useState(false);
   const undoStack = useRef<string[][]>([]);
   const redoStack = useRef<{ month: string; from: string | null; to: string | null; amount: number }[][]>([]);
   const toast = useToast();
@@ -158,8 +159,8 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
   async function undo() {
     const ids = undoStack.current.pop();
     if (!ids) return toast("Nothing to undo");
-    const rows = recent ?? (await api<typeof recent>(`/moves/${data!.month}`));
-    const replay = ids.map((id) => rows?.find((r) => r.id === id)).filter(Boolean).map((r) => ({ month: data!.month, from: r!.fromCategoryId, to: r!.toCategoryId, amount: r!.amount }));
+    const rows = await api<MoveRow[]>(`/moves/${data!.month}`);
+    const replay = ids.map((id) => rows.find((r) => r.id === id)).filter(Boolean).map((r) => ({ month: data!.month, from: r!.fromCategoryId, to: r!.toCategoryId, amount: r!.amount }));
     await api("/move/undo", { method: "POST", json: { moveIds: ids } });
     redoStack.current.push(replay);
     load(); onChanged(); toast("Undid the last move");
@@ -279,19 +280,13 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
             { label: "Category", title: "Add a category", on: () => setAddOpen(true), icon: <svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> },
             { label: "Undo", title: "Undo the last move", on: undo, icon: <svg {...ic}><polyline points="9 14 4 9 9 4" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg> },
             { label: "Redo", title: "Redo", on: redo, icon: <svg {...ic}><polyline points="15 14 20 9 15 4" /><path d="M20 9H10a6 6 0 0 0 0 12h3" /></svg> },
-            { label: "Moves", title: "Recent moves", on: async () => setRecent(recent ? null : await api(`/moves/${data.month}`)), active: !!recent, icon: <svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg> },
+            { label: "Moves", title: "Money moves this month", on: () => setMovesOpen(true), active: movesOpen, icon: <svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg> },
             { label: bars ? "Bars" : "Bars", title: bars ? "Hide progress bars" : "Show progress bars", on: () => setBars((b) => !b), active: bars, icon: <svg {...ic}><rect x="3" y="6" width="18" height="4" rx="2" /><rect x="3" y="14" width="11" height="4" rx="2" /></svg> },
           ].map((b) => (
             <button key={b.label} title={b.title} aria-pressed={b.active} onClick={b.on} className={"pill" + (b.active ? " on" : "")} style={{ padding: "0 12px", gap: 6, background: b.active ? "var(--navy)" : "var(--card)", color: b.active ? "var(--navy-text)" : "var(--text-2)", border: `1px solid ${b.active ? "var(--navy)" : "var(--field)"}` }}>{b.icon}<span className="tb">{b.label}</span></button>
           ))}
         </div>
-        {recent && (
-          <div className="mx-3 rounded-xl px-3 py-2 text-xs flex flex-col gap-1" style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-2)" }}>
-            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent moves</div>
-            {recent.length === 0 && <span>No moves this month yet.</span>}
-            {recent.slice(0, 12).map((m) => <span key={m.id} style={{ textDecoration: m.undone ? "line-through" : undefined }}>{m.at.slice(5, 16).replace("T", " ")} · {formatMoney(m.amount)} {catName(m.fromCategoryId)} → {catName(m.toCategoryId)} <em style={{ color: "var(--muted)" }}>({m.how})</em></span>)}
-          </div>
-        )}
+        {movesOpen && <MovesSheet month={data.month} monthLabel={monthLabel(data.month)} catName={catName} onClose={() => setMovesOpen(false)} onChanged={() => { load(); onChanged(); }} phone />}
         {addOpen && <Sheet onClose={() => setAddOpen(false)}><AddCategory data={data} onDone={() => { setAddOpen(false); load(); onChanged(); }} /></Sheet>}
         {data.check && !data.check.ok && (
           <div className="mx-3 rounded-xl p-3 text-xs" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>Differs from the spreadsheet in {data.check.diffs.length} place{data.check.diffs.length === 1 ? "" : "s"} (expected while testing entries here).</div>
@@ -382,7 +377,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
               <button className={tb} onClick={() => setAddOpen(true)}><svg {...ic}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Category</button>
               <button className={tb} onClick={undo} title="Undo the last move"><svg {...ic}><polyline points="9 14 4 9 9 4" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg>Undo</button>
               <button className={tb} onClick={redo} title="Redo"><svg {...ic}><polyline points="15 14 20 9 15 4" /><path d="M20 9H10a6 6 0 0 0 0 12h3" /></svg>Redo</button>
-              <button className={tb + (recent ? " on" : "")} onClick={async () => setRecent(recent ? null : await api(`/moves/${data.month}`))}><svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>Recent moves</button>
+              <button className={tb + (movesOpen ? " on" : "")} onClick={() => setMovesOpen(true)}><svg {...ic}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>Recent moves</button>
             </div>
             <div className="flex rounded-md p-0.5" style={{ background: "var(--group)" }} role="group" aria-label="Row density">
               <button aria-label="Show progress bars" title="Show progress bars" aria-pressed={bars} onClick={() => setBars(true)} className="w-9 h-7 rounded inline-flex items-center justify-center" style={bars ? { background: "var(--card)", color: "var(--accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } : { color: "var(--muted)" }}>
@@ -395,12 +390,6 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
               </button>
             </div>
           </div>
-          {recent && (
-            <div className="px-4 py-2 text-xs flex flex-col gap-1" style={{ background: "var(--card-alt)", borderBottom: "1px solid var(--border)", color: "var(--text-2)" }}>
-              {recent.length === 0 && <span>No moves this month yet.</span>}
-              {recent.slice(0, 12).map((m) => <span key={m.id} style={{ textDecoration: m.undone ? "line-through" : undefined }}>{m.at.slice(5, 16).replace("T", " ")} · {formatMoney(m.amount)} {catName(m.fromCategoryId)} → {catName(m.toCategoryId)} <em style={{ color: "var(--muted)" }}>({m.how})</em></span>)}
-            </div>
-          )}
           <div className="grid items-center text-[11px] font-semibold uppercase tracking-wider px-4 py-2" style={{ gridTemplateColumns: "36px minmax(0,1fr) 90px 90px 130px", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
             <input type="checkbox" aria-label="Select all" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(visibleIds) : new Set())} className="m-0" />
             <span>Category</span><span className="text-right hidden md:block">Assigned</span><span className="text-right hidden md:block">Activity</span><span className="text-right">Available</span>
@@ -474,6 +463,7 @@ export function Budget({ me, showBarsDefault, refreshKey, onChanged }: { me: { i
         </div>
 
         {!isPhone && <aside className="w-[340px] shrink-0 sticky top-4">{panel ?? <MonthPanel data={data} onPick={(id) => setOpen(id)} onRelease={release} />}</aside>}
+        {movesOpen && <MovesSheet month={data.month} monthLabel={monthLabel(data.month)} catName={catName} onClose={() => setMovesOpen(false)} onChanged={() => { load(); onChanged(); }} />}
         {addOpen && <Sheet onClose={() => setAddOpen(false)}><AddCategory data={data} onDone={() => { setAddOpen(false); load(); onChanged(); }} /></Sheet>}
       </div>
       {panel && isPhone && <Sheet onClose={() => setOpen(null)}>{panel}</Sheet>}

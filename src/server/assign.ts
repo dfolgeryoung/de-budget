@@ -44,9 +44,10 @@ export async function undoMove(db: Db, me: string, moveId: string) {
   await db.update(t.moneyMoves).set({ undone: true }).where(eq(t.moneyMoves.id, moveId));
 }
 
-export async function recentMoves(db: Db, month: MonthKey, limit = 30) {
-  const rows = await db.select().from(t.moneyMoves).where(eq(t.moneyMoves.month, month)).orderBy(desc(t.moneyMoves.at)).limit(limit);
-  return rows;
+export async function recentMoves(db: Db, month: MonthKey, limit = 60) {
+  const [rows, users] = await Promise.all([db.select().from(t.moneyMoves).where(eq(t.moneyMoves.month, month)).orderBy(desc(t.moneyMoves.at)).limit(limit), db.select({ id: t.users.id, name: t.users.displayName }).from(t.users)]);
+  const by = new Map(users.map((u) => [u.id, u.name.split(" ")[0]]));
+  return rows.map((r) => ({ ...r, by: r.byUserId ? by.get(r.byUserId) ?? null : null }));
 }
 
 /** Auto-assign options (YNAB's set). `only` limits to selected categories; otherwise the whole plan minus hidden. */

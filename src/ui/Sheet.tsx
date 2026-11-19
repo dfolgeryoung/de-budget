@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /** Bottom sheet on the phone, side panel on desktop; slides in, dims the page, closes on backdrop tap, Escape, or dragging the handle down. */
-export function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+export function Sheet({ children, onClose, wide }: { children: ReactNode; onClose: () => void; /** a roomier side panel on desktop, for tables */ wide?: boolean }) {
   const [open, setOpen] = useState(false);
   const [drag, setDrag] = useState<{ y: number; moving: boolean } | null>(null);
   // Size to the visible area so the on-screen keyboard shrinks the sheet instead of pushing its top off screen.
@@ -43,7 +43,7 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose: () 
     <div className="fixed inset-x-0 z-50 flex items-end md:items-stretch md:justify-end" onClick={onClose} style={{ top: vv?.top ?? 0, height: vv?.height ?? "100%", background: `rgba(20,28,40,${open ? 0.55 : 0})`, transition: "background 200ms" }}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full md:w-[440px] max-h-[92%] md:max-h-none md:h-full overflow-y-auto rounded-t-[22px] md:rounded-none px-5 pb-8 md:p-6 pt-0 md:pt-6"
+        className={(wide ? "w-full md:w-[720px] " : "w-full md:w-[440px] ") + "max-h-[92%] md:max-h-none md:h-full overflow-y-auto rounded-t-[22px] md:rounded-none px-5 pb-8 md:p-6 pt-0 md:pt-6"}
         style={{ background: "var(--card)", color: "var(--text)", boxShadow: "0 -8px 30px rgba(0,0,0,0.18)", transform, transition: drag?.moving ? "none" : "transform 220ms cubic-bezier(0.22,1,0.36,1)", paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
         {/* the grab handle: a full-width, 28px-tall touch target that stays put while the sheet scrolls */}

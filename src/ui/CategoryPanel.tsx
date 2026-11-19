@@ -136,19 +136,28 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
     <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
       {boxHead("Move money")}
       <div className="px-4 py-3 flex flex-col gap-2">
-        <div className="flex gap-2 items-center">
-          {!rtaMode && (
-            <Select ariaLabel="Direction" value={dir} onChange={(v) => setDir((v as "to" | "from") ?? "to")} options={[{ value: "to", label: "To" }, { value: "from", label: "From" }]} style={{ width: 84, height: 36, borderRadius: 8 }} />
-          )}
-          <Select ariaLabel={rtaMode ? "Category" : "Other category"} value={other} onChange={(v) => setOther(v ?? "")} placeholder="Pick a category…" className="flex-1" style={{ height: 36, borderRadius: 8 }} menuWidth={300}
-            options={[...(rtaMode ? [] : [{ value: "rta", label: "Ready to Assign", hint: formatMoney(data.view.readyToAssign) }]), ...cats.filter((x) => x.id !== categoryId).map((x) => ({ value: x.id, label: x.name, hint: formatMoney(x.available) }))]} />
-        </div>
-        <div className="flex gap-2 items-center">
-          <span className="flex items-center rounded-lg px-2.5" style={{ border: "1px solid var(--field)", background: "var(--card)", width: 120 }}><span className="text-[13px]" style={{ color: "var(--muted)" }}>$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" className="w-full py-2 text-[13px] bg-transparent outline-none" placeholder="0.00" /></span>
-          <button onClick={go} disabled={busy || !other} className="flex-1 min-w-0 rounded-lg py-2 text-[13px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis disabled:opacity-60" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>
-            {rtaMode ? "Assign" : dir === "to" ? `Move to ${meta?.name}` : `Move out of ${meta?.name}`}
-          </button>
-        </div>
+        {/* reads as a sentence, top to bottom: Move $X · from A · to B — the swap button flips which end is this category */}
+        {(() => {
+          const otherSel = <Select ariaLabel={rtaMode ? "Category" : "Other category"} value={other} onChange={(v) => setOther(v ?? "")} placeholder="Pick a category…" className="flex-1 min-w-0" style={{ height: 36, borderRadius: 8 }} menuWidth={300}
+            options={[...(rtaMode ? [] : [{ value: "rta", label: "Ready to Assign", hint: formatMoney(data.view.readyToAssign) }]), ...cats.filter((x) => x.id !== categoryId).map((x) => ({ value: x.id, label: x.name, hint: formatMoney(x.available) }))]} />;
+          const thisCat = <span className="flex-1 min-w-0 flex items-center rounded-lg px-2.5 text-[13px] font-semibold truncate" style={{ height: 36, background: "var(--selected)", border: "1px solid var(--border)" }}>{rtaMode ? "Ready to Assign" : meta?.name}<span className="ml-auto pl-2 font-normal" style={{ color: "var(--muted)" }}>{formatMoney(rtaMode ? data.view.readyToAssign : c?.available ?? 0)}</span></span>;
+          const label = (t: string) => <span className="w-12 shrink-0 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{t}</span>;
+          const fromEnd = rtaMode || dir === "from" ? thisCat : otherSel, toEnd = rtaMode || dir === "from" ? otherSel : thisCat;
+          return (
+            <>
+              <div className="flex gap-2 items-center">
+                {label(rtaMode ? "Assign" : "Move")}
+                <span className="flex items-center rounded-lg px-2.5" style={{ border: "1px solid var(--field)", background: "var(--card)", width: 120, height: 36 }}><span className="text-[13px]" style={{ color: "var(--muted)" }}>$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" className="w-full text-[13px] bg-transparent outline-none" placeholder="0.00" /></span>
+                {!rtaMode && <button type="button" onClick={() => setDir(dir === "to" ? "from" : "to")} title="Swap from and to" className="ml-auto rounded-lg px-2.5 text-[13px]" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>⇅ swap</button>}
+              </div>
+              <div className="flex gap-2 items-center">{label("from")}{fromEnd}</div>
+              <div className="flex gap-2 items-center">{label("to")}{toEnd}</div>
+              <button onClick={go} disabled={busy || !other} className="rounded-lg py-2 text-[13px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis disabled:opacity-60" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>
+                {(() => { const o = other === "rta" ? "Ready to Assign" : cats.find((x) => x.id === other)?.name ?? "…"; const a = parseMoney(amt); const amount = a && a > 0 ? formatMoney(a) : "money"; return rtaMode ? `Assign ${amount} to ${o}` : dir === "to" ? `Move ${amount} from ${o} to ${meta?.name}` : `Move ${amount} from ${meta?.name} to ${o}`; })()}
+              </button>
+            </>
+          );
+        })()}
         {!rtaMode && cats.length > 0 && <button onClick={() => { const next = cats[(cats.findIndex((x) => x.id === categoryId) + 1) % cats.length]; if (next) onOpenOther(next.id); }} className="text-xs text-left" style={{ color: "var(--accent-text)" }}>Next category ›</button>}
       </div>
     </div>

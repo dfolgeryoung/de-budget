@@ -25,11 +25,12 @@ export interface ClassicInput {
   today: ISODate;
   layout: ClassicLineDef[];
   keywords: string[];
-  categories: { id: string; name: string; bucket: string | null; rule: ClassicRule }[];
+  categories: { id: string; name: string; bucket: string | null; rule: ClassicRule; /** actual = what was assigned this month; its entries don't count (set aside monthly, paid in lumps) */ funded?: boolean }[];
   accounts: { id: string; owner: "D" | "E" | "shared" }[];
   needed: Record<string, Cents>; // categoryId -> needed this month (Misc shared sums these)
   goalMonthly: Record<string, Cents>; // categoryId -> the goal's monthly amount (every other bucket line shows this)
   typed: Record<string, Cents>; // "<column>:<name>" -> typed budget for this month
+  assigned?: Record<string, Cents>; // category id -> assigned this month (for funded categories)
   income: Record<"D" | "E", { budget: Cents; actual: Cents }>;
   transactions: { id: string; date: ISODate; accountId: string; payee: string | null; hidden: boolean; masked: boolean; transferToAccountId: string | null; sharedFiftyFifty: boolean; oneOff?: boolean; tags?: string[]; lines: { categoryId: string | null; amount: Cents }[] }[];
 }
@@ -93,6 +94,8 @@ export function computeClassic(input: ClassicInput): ClassicView {
     if (!target) continue;
     target.categories.push({ id: c.id, name: c.name, needed });
     if (!target.typed) target.budget += target.name === "Misc shared" ? needed : (input.goalMonthly[c.id] ?? 0);
+    // a funded category's "actual" is the money put aside this month, whatever was paid out of it
+    if (c.funded) { const a = Math.max(0, input.assigned?.[c.id] ?? 0); target.actual += a; if (a) target.entries.push({ id: `funded-${c.id}`, date: month, payee: "Set aside this month", category: c.name, amount: a, half: false }); }
   }
 
   // actuals: each transaction line onto a line (or half onto each Fun Money)
@@ -103,6 +106,7 @@ export function computeClassic(input: ClassicInput): ClassicView {
     for (const l of x.lines) {
       if (!l.categoryId) continue; // income
       const c = cats.get(l.categoryId); if (!c) continue;
+      if (c.funded) continue; // the quarterly payment comes out of money already counted when it was set aside
       const spend = -l.amount; // outflow positive
       const payee = x.masked ? "[Hidden]" : x.payee || "—";
       const add = (line: ClassicLine | null, amount: Cents, half = false) => { if (!line) return; line.actual += amount; if (x.oneOff) line.oneOff += amount; line.entries.push({ id: x.id, date: x.date, payee, category: c.name, amount, half, oneOff: !!x.oneOff }); };

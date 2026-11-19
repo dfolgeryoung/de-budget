@@ -93,6 +93,7 @@ export const categories = pgTable(
     kind: categoryKind("kind").notNull().default("normal"),
     classicBucket: text("classic_bucket"), // e.g. "Misc shared", "Groceries", "Gas", "Fun Money", or a typed line name
     classicRule: classicRule("classic_rule").notNull().default("none"),
+    classicFunded: boolean("classic_funded").notNull().default(false), // Classic actual = assigned this month, entries ignored (saved monthly, paid in lumps)
     classicSection: classicSection("classic_section").notNull().default("variable"),
     sortOrder: integer("sort_order").notNull().default(0),
     hiddenInBudget: boolean("hidden_in_budget").notNull().default(false),

@@ -67,3 +67,17 @@ describe("phone_split tags", () => {
     expect(line(without, "Cell Phone") - line(withTag, "Cell Phone")).toBe(10500);
   });
 });
+
+describe("funded categories (estimated taxes)", () => {
+  const base = classicInputFromState(state, c.month, "2026-11-11");
+  const taxCat = base.categories.find((x) => /estimated tax/i.test(x.name));
+  const line = (v: ReturnType<typeof computeClassic>) => v.lines.find((l) => l.name === "Estimated taxes")!;
+  it.skipIf(!taxCat)("actual is what was set aside this month, and the quarterly payment doesn't add to it", () => {
+    const input = { ...base, categories: base.categories.map((x) => (x.id === taxCat!.id ? { ...x, funded: true } : x)), assigned: { ...(base.assigned ?? {}), [taxCat!.id]: 315167 } };
+    const before = computeClassic(input);
+    expect(line(before).actual).toBe(315167);
+    const paid = computeClassic({ ...input, transactions: [...input.transactions, { id: "irs", date: "2026-11-09", accountId: input.transactions[0]!.accountId, payee: "IRS", hidden: false, masked: false, transferToAccountId: null, sharedFiftyFifty: false, lines: [{ categoryId: taxCat!.id, amount: -1104400 }] }] });
+    expect(line(paid).actual).toBe(315167);
+    expect(line(paid).entries.some((e) => e.payee === "IRS")).toBe(false);
+  });
+});

@@ -211,7 +211,7 @@ function MirrorSection() {
 interface SettingsAll {
   accounts: { id: string; name: string; type: "checking" | "savings" | "credit_card"; onBudget: boolean; owner: "D" | "E" | "shared"; startingBalance: number; startingDate: string; closed: boolean }[];
   groups: { id: string; name: string; system: boolean }[];
-  categories: { id: string; name: string; emoji: string | null; groupId: string; kind: string; hidden: boolean; classicBucket: string | null; classicRule: "none" | "by_account" | "utilities_split" | "phone_split" | "drive_split"; favourite: number | null }[];
+  categories: { id: string; name: string; emoji: string | null; groupId: string; kind: string; hidden: boolean; classicBucket: string | null; classicFunded?: boolean; classicRule: "none" | "by_account" | "utilities_split" | "phone_split" | "drive_split"; favourite: number | null }[];
   classicLines: { name: string; column: string; section: string }[];
 }
 const sec = "rounded-xl p-4 md:p-5 flex flex-col gap-3 min-w-0";
@@ -402,6 +402,7 @@ function CategoriesSection() {
                         <>
                           <div className={lbl} style={lblStyle}>Group<Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 40 }} className="w-full" /></div>
                           <div className={lbl} style={lblStyle}>Classic line / rule<Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 40 }} className="w-full" menuWidth={280} /></div>
+                          {c.classicBucket && c.classicRule === "none" && <label className="flex items-start gap-2 text-[13px]"><input type="checkbox" className="mt-0.5" checked={!!c.classicFunded} onChange={(e) => put(c.id, { classicFunded: e.target.checked })} /><span>Set-aside counts as spent<span style={{ color: "var(--muted)" }}> — Classic shows what was assigned this month, and ignores the entries (for money saved monthly and paid in lumps, like estimated taxes)</span></span></label>}
                         </>
                       )}
                       <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-soft)" }}>
@@ -432,7 +433,7 @@ function CategoriesSection() {
                   <TextCell value={c.name} onSave={(name) => put(c.id, { name })} />
                   {c.kind === "normal" ? <Select ariaLabel="Group" value={c.groupId} onChange={(v) => v && put(c.id, { groupId: v })} options={all.groups.filter((x) => !x.system).map((x) => ({ value: x.id, label: x.name }))} style={{ height: 32 }} className="w-full" /> : <span className="text-[13px]" style={{ color: "var(--muted)" }}>{g.name}</span>}
                   {c.kind === "card_payment" ? <span className="text-[13px]" style={{ color: "var(--muted)" }}>—</span> : <Select ariaLabel="Classic" value={classicValue(c)} onChange={(v) => setClassic(c, v)} options={lineOptions} style={{ height: 32 }} className="w-full" menuWidth={260} />}
-                  <span className="text-[13px]" style={{ color: "var(--text-2)" }}>{classicColumn(c)}</span>
+                  <span className="text-[13px] inline-flex items-center gap-1.5" style={{ color: "var(--text-2)" }}>{classicColumn(c)}{c.classicBucket && c.classicRule === "none" && <button title={c.classicFunded ? "Set-aside counts as spent in Classic (assigned this month; entries ignored). Click to switch off." : "Count the set-aside as spent in Classic (for money saved monthly, paid in lumps)"} aria-pressed={!!c.classicFunded} onClick={() => put(c.id, { classicFunded: !c.classicFunded })} className="rounded px-1 text-[11px] font-semibold" style={{ border: "1px solid var(--field)", background: c.classicFunded ? "var(--selected)" : "var(--card)", color: c.classicFunded ? "var(--text)" : "var(--muted)" }}>🏦</button>}</span>
                   <button aria-label={c.favourite !== null ? "Unpin" : "Pin"} aria-pressed={c.favourite !== null} onClick={() => put(c.id, { favourite: c.favourite === null })} className="text-lg leading-none justify-self-start" style={{ color: c.favourite !== null ? "var(--yellow)" : "var(--faint)" }}>{c.favourite !== null ? "★" : "☆"}</button>
                   <input type="checkbox" checked={c.hidden} onChange={(e) => put(c.id, { hiddenInBudget: e.target.checked })} className="m-0 justify-self-start" />
                 </div>

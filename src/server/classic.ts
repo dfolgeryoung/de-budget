@@ -31,7 +31,8 @@ export async function buildClassicInput(db: Db, month: MonthKey, today: string, 
   ]);
   const view = computeMonth(input, month);
   const needed: Record<string, number> = {}, goalMonthly: Record<string, number> = {};
-  for (const c of view.categories) { needed[c.categoryId] = c.needed; goalMonthly[c.categoryId] = goalMonthlyAmount(c.goal, c.needed); }
+  const assigned: Record<string, number> = {};
+  for (const c of view.categories) { needed[c.categoryId] = c.needed; goalMonthly[c.categoryId] = goalMonthlyAmount(c.goal, c.needed); assigned[c.categoryId] = c.assigned; }
   // typed budgets: this month's rows, else the most recent earlier month's, else the layout defaults
   const typed: Record<string, number> = {};
   for (const r of cmRows) Object.assign(typed, r.typedBudgets ?? {});
@@ -43,9 +44,9 @@ export async function buildClassicInput(db: Db, month: MonthKey, today: string, 
   const txMeta = new Map(txns.map((x) => [x.id, x]));
   const ci: ClassicInput = {
     month, today, layout, keywords,
-    categories: cats.map((c) => ({ id: c.id, name: c.name, bucket: c.classicBucket, rule: c.classicRule })),
+    categories: cats.map((c) => ({ id: c.id, name: c.name, bucket: c.classicBucket, rule: c.classicRule, funded: c.classicFunded })),
     accounts: input.accounts.map((a) => ({ id: a.id, owner: a.owner })),
-    needed, goalMonthly, typed,
+    needed, goalMonthly, typed, assigned,
     income: { D: inc("D"), E: inc("E") },
     transactions: input.transactions.map((x) => {
       const m = txMeta.get(x.id);

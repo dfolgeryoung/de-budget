@@ -97,7 +97,7 @@ app.get("/settings/all", async (c) => {
   return c.json({
     accounts: accts.sort((a, b) => a.sortOrder - b.sortOrder).map((a) => ({ id: a.id, name: a.name, type: a.type, onBudget: a.onBudget, owner: a.owner, startingBalance: a.startingBalance, startingDate: a.startingDate, closed: a.closed })),
     groups: groups.sort((a, b) => a.sortOrder - b.sortOrder).map((g) => ({ id: g.id, name: g.name, system: g.system })),
-    categories: cats.sort((a, b) => a.sortOrder - b.sortOrder).map((x) => ({ id: x.id, name: x.name, emoji: x.emoji, groupId: x.groupId, kind: x.kind, hidden: x.hiddenInBudget, classicBucket: x.classicBucket, classicRule: x.classicRule, favourite: (() => { const v = x.favouriteOrder?.[me] ?? x.favouriteOrder?._ ?? null; return v === null || v < 0 ? null : v; })() })),
+    categories: cats.sort((a, b) => a.sortOrder - b.sortOrder).map((x) => ({ id: x.id, name: x.name, emoji: x.emoji, groupId: x.groupId, kind: x.kind, hidden: x.hiddenInBudget, classicBucket: x.classicBucket, classicRule: x.classicRule, classicFunded: x.classicFunded, favourite: (() => { const v = x.favouriteOrder?.[me] ?? x.favouriteOrder?._ ?? null; return v === null || v < 0 ? null : v; })() })),
     classicLines: layout.map((l) => ({ name: l.name, column: l.column, section: l.section })),
   });
 });
@@ -303,7 +303,7 @@ app.put("/categories/reorder", async (c) => {
   return c.json({ ok: true });
 app.put("/categories/:id", async (c) => {
   const p = z.object({ name: z.string().trim().min(1).max(60).optional(), emoji: z.string().trim().max(8).nullable().optional(), groupId: z.string().optional(), hiddenInBudget: z.boolean().optional(),
-    classicBucket: z.string().nullable().optional(), classicRule: z.enum(["none", "by_account", "utilities_split", "phone_split", "drive_split"]).optional(), favourite: z.boolean().optional() }).safeParse(await c.req.json());
+    classicBucket: z.string().nullable().optional(), classicRule: z.enum(["none", "by_account", "utilities_split", "phone_split", "drive_split"]).optional(), classicFunded: z.boolean().optional(), favourite: z.boolean().optional() }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "bad body" }, 400);
   const me = c.get("user").id, id = c.req.param("id");
   const { favourite, ...rest } = p.data;

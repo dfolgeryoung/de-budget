@@ -9,10 +9,11 @@ import type { DupPair } from "../server/duplicates";
 export function DupPairRow({ pair, onDone, last }: { pair: DupPair; onDone: (pair: DupPair) => void; last: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  async function act(what: "keep" | "delete", id?: string) {
+  async function act(what: "keep" | "delete" | "clear", id?: string) {
     setBusy(true);
     try {
       if (what === "keep") { await api("/duplicates/keep", { method: "POST", json: { a: pair.a.id, b: pair.b.id } }); toast("Kept both"); }
+      else if (what === "clear") { await api("/duplicates/clear", { method: "POST", json: { keys: [pair.key] } }); toast("Cleared"); }
       else { await api(`/transactions/${id}`, { method: "DELETE" }); toast(`Deleted the ${pair.a.payee} entry`); }
       onDone(pair); dispatchEvent(new Event("lists-changed"));
     } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
@@ -26,8 +27,20 @@ export function DupPairRow({ pair, onDone, last }: { pair: DupPair; onDone: (pai
           <button onClick={() => act("delete", e.id)} disabled={busy} className="text-[12px] font-semibold rounded-md px-2 h-7 shrink-0 disabled:opacity-50" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}>Delete</button>
         </div>
       ))}
-      <button onClick={() => act("keep")} disabled={busy} className="self-start text-[12px] font-semibold disabled:opacity-50" style={{ color: "var(--accent-text)" }}>Keep both — not a duplicate</button>
+      <div className="flex gap-4">
+        <button onClick={() => act("keep")} disabled={busy} className="text-[12px] font-semibold disabled:opacity-50" style={{ color: "var(--accent-text)" }}>Keep both — not a duplicate</button>
+        <button onClick={() => act("clear")} disabled={busy} title="Already dealt with elsewhere — just take it off the list" className="text-[12px] font-semibold disabled:opacity-50" style={{ color: "var(--muted)" }}>Clear</button>
+      </div>
     </div>
+  );
+}
+
+/** Header action for the cards: dismiss every pair at once. */
+export function ClearAllDupes({ onDone, count }: { onDone: () => void; count: number }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button onClick={async () => { setBusy(true); try { await api("/duplicates/clear", { method: "POST", json: {} }); toast(count === 1 ? "Cleared" : `Cleared ${count}`); onDone(); } catch (e) { toast((e as Error).message); } finally { setBusy(false); } }} disabled={busy} title="Already dealt with — take them all off the list" className="text-[12px] font-semibold disabled:opacity-50" style={{ color: "var(--accent-text)" }}>Clear all</button>
   );
 }
 

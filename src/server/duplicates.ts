@@ -76,6 +76,17 @@ export async function keepBoth(db: Db, a: string, b: string): Promise<void> {
   await db.insert(t.settings).values({ key: KEY, value: [...list] }).onConflictDoUpdate({ target: t.settings.key, set: { value: [...list], updatedAt: new Date() } });
 }
 
+/** "I've dealt with these elsewhere": dismiss every pair currently showing (or just the keys given). */
+export async function clearPairs(db: Db, keys?: string[]): Promise<number> {
+  const current = keys ?? (await possibleDuplicates(db)).map((p) => p.key);
+  if (!current.length) return 0;
+  const row = (await db.select().from(t.settings).where(eq(t.settings.key, KEY)))[0];
+  const list = new Set((row?.value as string[] | undefined) ?? []);
+  for (const k of current) list.add(k);
+  await db.insert(t.settings).values({ key: KEY, value: [...list] }).onConflictDoUpdate({ target: t.settings.key, set: { value: [...list], updatedAt: new Date() } });
+  return current.length;
+}
+
 /** Push everyone (except `except`) about any pair that one of `newIds` just formed. Never throws. */
 export async function notifyDuplicates(db: Db, newIds: string[], except?: string): Promise<number> {
   if (!newIds.length) return 0;

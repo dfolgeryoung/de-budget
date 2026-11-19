@@ -12,7 +12,7 @@ import type { UpcomingBill } from "../server/recurring";
 import type { ReportsPayload } from "../server/reports";
 import type { FlaggedEntry } from "../server/flags";
 import type { DupPair } from "../server/duplicates";
-import { DupPairRow } from "./Duplicates";
+import { DupPairRow, ClearAllDupes } from "./Duplicates";
 import { pickGreeting, allClearLine } from "./greeting";
 import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
@@ -133,7 +133,7 @@ export function Home({ me, lists, refreshKey, goTransactions, openEdit }: { me: 
           <div className="rounded-xl overflow-hidden" style={cs}>
             <div className="flex justify-between items-center px-3.5 py-2.5 gap-3" style={{ borderBottom: "1px solid var(--border-soft)" }}>
               <span className="text-sm font-bold">⚠️ Possible duplicates</span>
-              <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{dupes.length} to review</span>
+              <span className="flex items-center gap-3 shrink-0"><span className="text-xs" style={{ color: "var(--muted)" }}>{dupes.length} to review</span><ClearAllDupes count={dupes.length} onDone={() => { setDupes([]); setBump((b) => b + 1); }} /></span>
             </div>
             {dupes.slice(0, 5).map((d, i) => <DupPairRow key={d.key} pair={d} last={i === Math.min(dupes.length, 5) - 1 && dupes.length <= 5} onDone={(x) => { setDupes((ds) => ds.filter((y) => y.key !== x.key)); setBump((b) => b + 1); }} />)}
             {dupes.length > 5 && <div className="px-3.5 py-2 text-xs" style={{ color: "var(--muted)" }}>+ {dupes.length - 5} more after these</div>}

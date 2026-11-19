@@ -9,7 +9,7 @@ import { formatMoney } from "../budget/money";
 import { weeklyAllowance } from "../budget/engine";
 import { narrative, savingFacts, savingNarrative, monthName } from "../budget/narrative";
 import { useToast } from "./Toast";
-import { DupPairRow } from "./Duplicates";
+import { DupPairRow, ClearAllDupes } from "./Duplicates";
 import { pickGreeting, allClearLine } from "./greeting";
 import { Confetti } from "./Confetti";
 import { FlagSheet } from "./FlagSheet";
@@ -124,7 +124,7 @@ export function DesktopHome({ me, lists, refreshKey, goTransactions, openEdit }:
             </Card>
     ) : null,
     dupes: dupes.length > 0 ? (
-<Card title="⚠️ Possible duplicates" sub="same payee and amount within 3 days" flush>
+<Card title="⚠️ Possible duplicates" sub="same payee and amount within 3 days" flush action={<ClearAllDupes count={dupes.length} onDone={refresh} />}>
               {dupes.map((p, i) => <DupPairRow key={p.key} pair={p} last={i === dupes.length - 1} onDone={refresh} />)}
             </Card>
     ) : null,

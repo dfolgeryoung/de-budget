@@ -12,7 +12,7 @@ import { classicPayload, saveClassicTyped } from "./classic.js";
 import { reportsPayload, savingsPayload } from "./reports.js";
 import { exportSnapshot, exportLedgerCsv, describeSnapshot, restoreSnapshot, lastBackup, nightlyBackup } from "./backup.js";
 import { notesFor, addNote, resolveFlag, flagged } from "./flags.js";
-import { possibleDuplicates, keepBoth, notifyDuplicates } from "./duplicates.js";
+import { possibleDuplicates, keepBoth, notifyDuplicates, clearPairs } from "./duplicates.js";
 /** A 50/50 entry is both of yours: tell the other person it landed (just so they know; nothing to approve). */
 async function notifySplit(by: string, e: { payee: string; amount: number; date: string; accountId: string; lines: { categoryId: string | null; amount: number }[]; categoryId?: string | null }, how: "new" | "now split") {
   try {
@@ -186,6 +186,12 @@ app.get("/payees/nearby", async (c) => {
 // ---------- flags (a question on an entry) ----------
 app.get("/flags", async (c) => c.json({ flagged: await flagged(db) }));
 app.get("/duplicates", async (c) => c.json({ duplicates: await possibleDuplicates(db) }));
+app.post("/duplicates/clear", async (c) => {
+  const p = z.object({ keys: z.array(z.string()).optional() }).safeParse(await c.req.json().catch(() => ({})));
+  const n = await clearPairs(db, p.success ? p.data.keys : undefined);
+  void settledDuplicates(c.get("user").id);
+  return c.json({ ok: true, cleared: n });
+});
 app.post("/duplicates/keep", async (c) => {
   const p = z.object({ a: z.string().min(1), b: z.string().min(1) }).safeParse(await c.req.json());
   if (!p.success) return c.json({ error: "Two entry ids are needed" }, 400);

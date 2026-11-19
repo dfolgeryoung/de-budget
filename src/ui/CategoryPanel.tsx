@@ -22,6 +22,12 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
   const meta = categoryId ? data.categories[categoryId] : null;
   const [tab, setTab] = useState<Tab>("summary");
   const [txns, setTxns] = useState<LedgerRow[] | null>(null);
+  const [assignEdit, setAssignEdit] = useState<string | null>(null); // the Assigned figure edits in place, like the table's column
+  function commitAssign() {
+    if (assignEdit === null || !c) return;
+    const n = parseMoney(assignEdit); setAssignEdit(null);
+    if (n !== null && n !== c.assigned) onAssign(c.categoryId, n);
+  }
   const [hist, setHist] = useState<{ months: { month: string; assigned: number; activity: number; available: number }[]; averageAssigned: number; averageSpent: number } | null>(null);
   const rtaMode = categoryId === null;
   const [other, setOther] = useState<string | "rta">(rtaMode ? "" : "rta");
@@ -92,7 +98,13 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
           <>
             {row("Left over from last month", formatMoney(c.carriedIn))}
             <div className="flex justify-between items-center text-[13px]"><span style={{ color: "var(--muted)" }}>Assigned this month</span>
-              <button onClick={() => { const v = prompt("Assigned this month", (c.assigned / 100).toFixed(2)); const n = v === null ? null : parseMoney(v); if (n !== null) onAssign(c.categoryId, n); }} className="inline-flex items-center gap-1.5" title="Change">{formatMoney(c.assigned)} <span style={{ color: "var(--muted)" }}>✎</span></button></div>
+              {assignEdit !== null ? (
+                <input autoFocus value={assignEdit} inputMode="decimal" onChange={(e) => setAssignEdit(e.target.value)} onFocus={(e) => e.target.select()}
+                  onBlur={() => commitAssign()} onKeyDown={(e) => { if (e.key === "Enter") commitAssign(); if (e.key === "Escape") setAssignEdit(null); }}
+                  className="w-28 text-right rounded px-1.5 py-0.5 text-[13px] outline-none" style={{ border: "1px solid var(--field)", background: "var(--card)", color: "var(--text)" }} />
+              ) : (
+                <button onClick={() => setAssignEdit((c.assigned / 100).toFixed(2))} className="inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:opacity-70" title="Click to change">{formatMoney(c.assigned)} <span style={{ color: "var(--muted)" }}>✎</span></button>
+              )}</div>
             {row("Activity", formatMoney(c.activity))}
             <div style={{ borderTop: "1px solid var(--border-soft)" }} className="pt-2">{row("Available", formatMoney(c.available), true, c.available < 0 ? "var(--red-text)" : "var(--green-text)")}</div>
             {c.goal && (

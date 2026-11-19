@@ -70,6 +70,7 @@ export const accounts = pgTable("accounts", {
   startingDate: date("starting_date").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   closed: boolean("closed").notNull().default(false),
+  bankLast4: text("bank_last4"), // learned from the first bank CSV imported for this account; lets the reconciler spot transfers between the two of you
   ...audit,
 });
 

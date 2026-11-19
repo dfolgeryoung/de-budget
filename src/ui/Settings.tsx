@@ -588,8 +588,10 @@ interface Preview {
   bank: { account: string | null; balance: number | null; asOf: string | null; rows: number; from: string | null; to: string | null };
   appBalance: number;
   matched: { id: string; date: string; payee: string | null; amount: number; bankDate: string; bankPayee: string }[];
-  newRows: { key: number; date: string; postedDate: string; payee: string; description: string; amount: number; transfer: boolean; suggestedCategoryId: string | null; suggestedPayee: string | null; bankCategory: string | null }[];
+  newRows: { key: number; date: string; postedDate: string; payee: string; description: string; amount: number; transfer: boolean; suggestedCategoryId: string | null; suggestedPayee: string | null; bankCategory: string | null; near?: { id: string; date: string; payee: string | null; amount: number } }[];
   missing: { id: string; date: string; payee: string | null; amount: number; pending: boolean }[];
+  settlements: { key: number; date: string; payee: string; description: string; amount: number }[];
+  splits: { me: string; other: string; owedToMe: number; settled: number; stillOwed: number; items: { date: string; payee: string | null; amount: number; paidBy: string }[] } | null;
 }
 const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const shortDate = (d: string) => `${MONS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
@@ -659,7 +661,7 @@ function CsvSection() {
     try {
       const p = await api<Preview>("/reconcile/preview", { method: "POST", json: { accountId, csv: await f.text() } });
       setPreview(p);
-      const a: typeof add = {}; for (const r of p.newRows) a[r.key] = { on: !r.transfer, payee: r.suggestedPayee ?? r.payee, categoryId: r.suggestedCategoryId, transferToAccountId: null };
+      const a: typeof add = {}; for (const r of p.newRows) a[r.key] = { on: !r.transfer && !r.near, payee: r.suggestedPayee ?? r.payee, categoryId: r.suggestedCategoryId, transferToAccountId: null };
       setAdd(a);
       const fl: typeof flag = {}; for (const m of p.missing) fl[m.id] = !m.pending; setFlag(fl);
     } catch (e) { toast(`Couldn't read that file: ${(e as Error).message}`); } finally { setBusy(false); }
@@ -696,6 +698,7 @@ function CsvSection() {
             <span><strong>{preview.matched.length}</strong> matched</span>
             <span><strong>{preview.newRows.length}</strong> not in the app</span>
             <span><strong>{preview.missing.length}</strong> not at the bank</span>
+            {preview.settlements?.length > 0 && <span><strong>{preview.settlements.length}</strong> between the two of you</span>}
             {preview.bank.balance !== null && <span>Bank balance {formatMoney(preview.bank.balance)} · app {formatMoney(preview.appBalance)} <strong style={{ color: preview.bank.balance === preview.appBalance ? "var(--green-text)" : "var(--yellow-text)" }}>{preview.bank.balance === preview.appBalance ? "✓ same" : `(${formatMoney(preview.bank.balance - preview.appBalance)} apart)`}</strong></span>}
           </div>
           {preview.newRows.length > 0 && (
@@ -712,8 +715,27 @@ function CsvSection() {
                     <Select ariaLabel="Category" value={a.categoryId} onChange={(v) => setAdd({ ...add, [n.key]: { ...a, categoryId: v } })} options={cats} placeholder="Category…" style={{ height: 32 }} className="w-56" menuWidth={280} />
                   )}
                   <span className="text-[13px] font-semibold w-20 text-right">{money(n.amount)}</span>
+                  {n.near && <div className="basis-full text-[12px] pl-6" style={{ color: "var(--yellow-text)" }}>Amount differs: the app has {n.near.payee ?? "an entry"} {money(n.near.amount)} on {shortDate(n.near.date)}. A Venmo cashout that bundled a reimbursement, or a typo? Fix that entry rather than adding this one — left unticked.</div>}
                 </div>
               ); })}
+            </div>
+          )}
+          {preview.settlements?.length > 0 && (
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider" style={{ background: "var(--group)", color: "var(--text-2)" }}>Between the two of you — settles 50/50 halves, not entered</div>
+              {preview.settlements.map((r) => (
+                <div key={r.key} className="flex items-center gap-2 px-3 py-1.5 text-[13px]" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                  <span className="w-14 shrink-0" style={{ color: "var(--muted)" }}>{shortDate(r.date)}</span>
+                  <span className="flex-1 truncate" title={r.description}>{r.payee}</span>
+                  <span className="font-semibold w-20 text-right" style={{ color: r.amount > 0 ? "var(--green-text)" : undefined }}>{money(r.amount)}</span>
+                </div>
+              ))}
+              {preview.splits && (
+                <div className="px-3 py-2 text-[12px] flex flex-col gap-0.5" style={{ borderTop: "1px solid var(--border-soft)", background: "var(--card-alt)" }}>
+                  <div>Splits in this period say <strong>{preview.splits.other} owes {preview.splits.me} {money(preview.splits.owedToMe)}</strong> ({preview.splits.items.length} shared {preview.splits.items.length === 1 ? "entry" : "entries"}); <strong>{money(preview.splits.settled)}</strong> has moved between you at the bank.</div>
+                  <div style={{ color: preview.splits.stillOwed === 0 ? "var(--green-text)" : "var(--yellow-text)" }}>{preview.splits.stillOwed === 0 ? "Square." : preview.splits.stillOwed > 0 ? `${preview.splits.other} still owes ${money(preview.splits.stillOwed)} — the bank will be that much below the app until it's paid.` : `${preview.splits.me} has been paid ${money(-preview.splits.stillOwed)} more than the splits call for — a reimbursement may be sitting in a cashout entered as income.`}</div>
+                </div>
+              )}
             </div>
           )}
           {preview.missing.length > 0 && (

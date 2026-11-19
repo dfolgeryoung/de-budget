@@ -25,7 +25,7 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
   const [hist, setHist] = useState<{ months: { month: string; assigned: number; activity: number; available: number }[]; averageAssigned: number; averageSpent: number } | null>(null);
   const rtaMode = categoryId === null;
   const [other, setOther] = useState<string | "rta">(rtaMode ? "" : "rta");
-  const [dir, setDir] = useState<"to" | "from">(rtaMode ? "to" : "to");
+  const [dir, setDir] = useState<"to" | "from">(rtaMode ? "from" : "to"); // RTA panel starts as "assign out of RTA"; swap to pull money back
   const [amt, setAmt] = useState("");
   const [busy, setBusy] = useState(false);
   const cats = data.groups.flatMap((g) => g.categories.filter((id) => !data.categories[id]?.hidden && data.categories[id]?.kind !== "card_payment").map((id) => ({ id, name: `${data.categories[id]?.emoji ?? ""} ${data.categories[id]?.name}`.trim(), available: data.view.categories.find((x) => x.categoryId === id)?.available ?? 0 })));
@@ -44,7 +44,7 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
     if (!cents || cents <= 0) return;
     setBusy(true);
     try {
-      if (rtaMode) await onMove(null, other === "rta" ? null : other, cents);
+      if (rtaMode) await onMove(dir === "from" ? null : other, dir === "from" ? other : null, cents); // swapped: pull money back out of a category
       else if (dir === "to") await onMove(other === "rta" ? null : other, categoryId, cents);
       else await onMove(categoryId, other === "rta" ? null : other, cents);
       setAmt("");
@@ -142,18 +142,18 @@ export function CategoryPanel({ month, categoryId, data, onClose, onMove, onAssi
             options={[...(rtaMode ? [] : [{ value: "rta", label: "Ready to Assign", hint: formatMoney(data.view.readyToAssign) }]), ...cats.filter((x) => x.id !== categoryId).map((x) => ({ value: x.id, label: x.name, hint: formatMoney(x.available) }))]} />;
           const thisCat = <span className="flex-1 min-w-0 flex items-center rounded-lg px-2.5 text-[13px] font-semibold truncate" style={{ height: 36, background: "var(--selected)", border: "1px solid var(--border)" }}>{rtaMode ? "Ready to Assign" : meta?.name}<span className="ml-auto pl-2 font-normal" style={{ color: "var(--muted)" }}>{formatMoney(rtaMode ? data.view.readyToAssign : c?.available ?? 0)}</span></span>;
           const label = (t: string) => <span className="w-12 shrink-0 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{t}</span>;
-          const fromEnd = rtaMode || dir === "from" ? thisCat : otherSel, toEnd = rtaMode || dir === "from" ? otherSel : thisCat;
+          const fromEnd = dir === "from" ? thisCat : otherSel, toEnd = dir === "from" ? otherSel : thisCat;
           return (
             <>
               <div className="flex gap-2 items-center">
-                {label(rtaMode ? "Assign" : "Move")}
+                {label(rtaMode && dir === "from" ? "Assign" : "Move")}
                 <span className="flex items-center rounded-lg px-2.5" style={{ border: "1px solid var(--field)", background: "var(--card)", width: 120, height: 36 }}><span className="text-[13px]" style={{ color: "var(--muted)" }}>$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" className="w-full text-[13px] bg-transparent outline-none" placeholder="0.00" /></span>
-                {!rtaMode && <button type="button" onClick={() => setDir(dir === "to" ? "from" : "to")} title="Swap from and to" className="ml-auto rounded-lg px-2.5 text-[13px]" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>⇅ swap</button>}
+                {<button type="button" onClick={() => setDir(dir === "to" ? "from" : "to")} title="Swap from and to" className="ml-auto rounded-lg px-2.5 text-[13px]" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>⇅ swap</button>}
               </div>
               <div className="flex gap-2 items-center">{label("from")}{fromEnd}</div>
               <div className="flex gap-2 items-center">{label("to")}{toEnd}</div>
               <button onClick={go} disabled={busy || !other} className="rounded-lg py-2 text-[13px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis disabled:opacity-60" style={{ background: "var(--navy)", color: "var(--navy-text)" }}>
-                {(() => { const o = other === "rta" ? "Ready to Assign" : cats.find((x) => x.id === other)?.name ?? "…"; const a = parseMoney(amt); const amount = a && a > 0 ? formatMoney(a) : "money"; return rtaMode ? `Assign ${amount} to ${o}` : dir === "to" ? `Move ${amount} from ${o} to ${meta?.name}` : `Move ${amount} from ${meta?.name} to ${o}`; })()}
+                {(() => { const o = other === "rta" ? "Ready to Assign" : cats.find((x) => x.id === other)?.name ?? "…"; const a = parseMoney(amt); const amount = a && a > 0 ? formatMoney(a) : "money"; const here = rtaMode ? "Ready to Assign" : meta?.name; return rtaMode && dir === "from" ? `Assign ${amount} to ${o}` : dir === "to" ? `Move ${amount} from ${o} to ${here}` : `Move ${amount} from ${here} to ${o}`; })()}
               </button>
             </>
           );

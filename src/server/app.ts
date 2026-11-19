@@ -426,11 +426,11 @@ app.get("/cron/daily", async (c) => {
   const auth = c.req.header("authorization");
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) return c.text("forbidden", 403);
   const ran: Record<string, unknown> = {};
-  if (mirrorConfigured() && (await sheetId(db))) {
+  if (mirrorConfigured() && (await sheetId(db)) && !(await mirrorPaused())) {
     const system = (await db.select().from(t.users))[0]?.id ?? "system";
     try { ran.inbox = await pickUpInbox(db, system); } catch (e) { ran.inboxError = (e as Error).message; }
     try { ran.mirror = await mirrorToSheet(db, system, { backup: true }); } catch (e) { ran.mirrorError = (e as Error).message; }
-  }
+  } else if (await mirrorPaused()) ran.mirror = "paused";
   try {
     const system = (await db.select().from(t.users))[0]?.id ?? "system";
     const r = await createDueRecurring(db, today(), system); ran.recurring = r;
@@ -518,9 +518,20 @@ app.post("/reconcile/apply", async (c) => {
 });
 
 // ---------- sheet mirror (manual runs from Settings) ----------
+/** The nightly mirror can be switched off from Settings (the buttons still work by hand). */
+async function mirrorPaused(): Promise<boolean> {
+  const row = (await db.select().from(t.settings).where(eq(t.settings.key, "mirror_paused")))[0];
+  return row?.value === true;
+}
 app.get("/mirror/status", async (c) => {
   const last = await db.select().from(t.settings).where(eq(t.settings.key, "mirror_last"));
-  return c.json({ configured: mirrorConfigured(), sheetId: await sheetId(db), last: last[0]?.value ?? null, backupFolder: !!process.env.BACKUP_FOLDER_ID });
+  return c.json({ configured: mirrorConfigured(), sheetId: await sheetId(db), last: last[0]?.value ?? null, backupFolder: !!process.env.BACKUP_FOLDER_ID, paused: await mirrorPaused() });
+});
+app.put("/mirror/paused", async (c) => {
+  const p = z.object({ paused: z.boolean() }).safeParse(await c.req.json());
+  if (!p.success) return c.json({ error: "paused must be true or false" }, 400);
+  await db.insert(t.settings).values({ key: "mirror_paused", value: p.data.paused }).onConflictDoUpdate({ target: t.settings.key, set: { value: p.data.paused, updatedAt: new Date() } });
+  return c.json({ ok: true, paused: p.data.paused });
 });
 app.put("/mirror/sheet", async (c) => {
   const p = z.object({ sheetId: z.string().trim().min(10) }).safeParse(await c.req.json());

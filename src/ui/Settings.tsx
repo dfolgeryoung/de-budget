@@ -80,7 +80,7 @@ export function Settings() {
   );
 }
 
-interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; reconciled?: number; backup?: string; warnings: string[]; by?: string } | null }
+interface MirrorStatus { configured: boolean; sheetId: string | null; backupFolder: boolean; paused?: boolean; last: { at: string; ledgerRows: number; months: string[]; moves: number; inboxAdded?: number; reconciled?: number; backup?: string; warnings: string[]; by?: string } | null }
 
 /** The bridge to the spreadsheet: which sheet, when it last ran, and buttons to run it now. */
 function BackupSection() {
@@ -194,6 +194,10 @@ function MirrorSection() {
         <input value={link} onChange={(e) => setLink(e.target.value)} placeholder={st?.sheetId ? `Spreadsheet: …${st.sheetId.slice(-8)} (paste a link to change)` : "Paste the spreadsheet link"} className="fld rounded-lg px-3 text-sm flex-1 min-w-[16rem] outline-none" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }} />
         <button disabled={!link.trim() || !!busy} onClick={() => run("save", async () => { const r = await api<{ sheetId: string }>("/mirror/sheet", { method: "PUT", json: { sheetId: link.trim() } }); setLink(""); return `Spreadsheet saved (…${r.sheetId.slice(-8)}).`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, background: "var(--navy)", color: "var(--navy-text)" }}>Save</button>
       </div>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-0.5" checked={!(st?.paused ?? false)} disabled={!st || !!busy} onChange={async (e) => { const paused = !e.target.checked; try { await api("/mirror/paused", { method: "PUT", json: { paused } }); setSt((s) => (s ? { ...s, paused } : s)); setMsg({ ok: true, text: paused ? "Nightly mirror paused. The app is on its own until you switch it back on; Mirror now and Pick up inbox still work by hand." : "Nightly mirror on again." }); } catch (err) { setMsg({ ok: false, text: (err as Error).message }); } }} />
+        <span><strong>Mirror every night</strong><span style={{ color: "var(--muted)" }}> — off means nothing moves between the app and the spreadsheet on its own; recurring bills and backups still run.{st?.paused ? " Currently paused." : ""}</span></span>
+      </label>
       <div className="flex flex-wrap items-center gap-2">
         <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("mirror", async () => { const r = await api<NonNullable<MirrorStatus["last"]>>("/mirror/run", { method: "POST" }); return `${r.reconciled ? `Took ${r.reconciled} new ${r.reconciled === 1 ? "entry" : "entries"} from the sheet. ` : ""}Wrote ${r.ledgerRows} ledger rows, Assigned for ${r.months.join(", ") || "no months"}, ${r.moves} money moves.${r.warnings.length ? " " + r.warnings.join(" · ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "mirror" ? "Writing…" : "Mirror to the sheet now"}</button>
         <button disabled={!st?.configured || !st?.sheetId || !!busy} onClick={() => run("inbox", async () => { const r = await api<{ added: number; skipped: string[] }>("/mirror/inbox", { method: "POST" }); return `Picked up ${r.added} Inbox ${r.added === 1 ? "entry" : "entries"}.${r.skipped.length ? " Skipped: " + r.skipped.join("; ") : ""}`; })} className="rounded-lg px-3 text-sm font-semibold disabled:opacity-50" style={{ height: 36, border: "1px solid var(--field)", background: "var(--card)" }}>{busy === "inbox" ? "Reading…" : "Pick up the Inbox now"}</button>

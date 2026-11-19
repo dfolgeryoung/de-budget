@@ -63,7 +63,8 @@ export async function classicPayload(db: Db, month: MonthKey, today: string, me:
   // acceptance check against the sheet's own Classic figures for the exported month
   let check: ClassicPayload["check"] = null;
   const expected = await setting<{ month: string; layout: { name: string; column: string; section: string; budget: number; actual: number }[]; source?: string } | null>(db, "classic_expected", null);
-  if (expected && expected.month === month) {
+  const paused = await setting<boolean>(db, "mirror_paused", false); // mirror off → the sheet's figures are stale, so no check
+  if (expected && expected.month === month && !paused) {
     const diffs: string[] = [];
     for (const l of expected.layout) {
       const got = result.lines.find((x) => x.column === l.column && x.name === l.name);

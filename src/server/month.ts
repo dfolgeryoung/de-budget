@@ -84,7 +84,9 @@ export async function monthPayload(db: Db, month: MonthKey, today: string): Prom
   const importAt = await db.select().from(t.settings).where(eq(t.settings.key, "import_at"));
   const expSrc = await db.select().from(t.settings).where(eq(t.settings.key, "expected_source"));
   let check: MonthPayload["check"] = null;
-  const expected = (expRow[0]?.value as Record<string, { rta: number; available: Record<string, number>; activity: Record<string, number>; accounts: Record<string, number> }> | undefined)?.[month];
+  // with the nightly mirror switched off the sheet is no longer kept in step, so its figures aren't a check on anything
+  const paused = (await db.select().from(t.settings).where(eq(t.settings.key, "mirror_paused")))[0]?.value === true;
+  const expected = paused ? undefined : (expRow[0]?.value as Record<string, { rta: number; available: Record<string, number>; activity: Record<string, number>; accounts: Record<string, number> }> | undefined)?.[month];
   if (expected) {
     const diffs: string[] = [];
     const money = (c: number) => (c < 0 ? "−" : "") + "$" + (Math.abs(c) / 100).toFixed(2);
